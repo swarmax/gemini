@@ -8,8 +8,9 @@ import pytest
 
 import gemini as gm
 from gemini.data import legacy
-from gemini.data.legacy._loader import _data_columns, from_legacy_design, node_kinds
 from gemini.errors import GeminiWarning, ValidationError
+from gemini.plants._utils.legacy import tables
+from gemini.plants._utils.legacy.design import _data_columns, from_legacy_design, node_kinds
 from tests.fixtures import OLD_PROJECT
 from tests.fixtures.errors import raises
 
@@ -29,7 +30,7 @@ def _copy(tmp_path):
 def test_a_project_without_the_power_column_of_its_pump_has_no_efficiency(project, monkeypatch):
     """The efficiency comes from the data column: there is no default to fall back on."""
     monkeypatch.setattr(
-        "gemini.data.legacy._loader._data_columns",
+        "gemini.plants._utils.legacy.design._data_columns",
         lambda parsed: _data_columns(parsed) - {"InjectorPump_PowerDraw"},
     )
     with raises(ValidationError, "missing_value") as caught:
@@ -47,7 +48,7 @@ def _edit_param(folder, name, edit):
 def test_design_maps_every_node_and_the_riser(project):
     """Every old node becomes one plant path; the buried ESP splits the production well."""
     design = from_legacy_design(project)
-    assert set(design.modules) == set(legacy.tables.NODE_PATHS.values()) | {"doublet.riser"}
+    assert set(design.modules) == set(tables.NODE_PATHS.values()) | {"doublet.riser"}
     assert design.modules["doublet.riser"].params[0].params["segment"] == "above_esp"
     assert design.modules["doublet.well"].params[0].params["esp_depth"] == 600
     assert design.bindings["filters.hot"].measured["pressure_drop"].column == "FilterA_PDrop"

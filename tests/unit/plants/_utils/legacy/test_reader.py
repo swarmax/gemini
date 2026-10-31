@@ -1,7 +1,7 @@
 """Converting an old project folder to a plant spec."""
 
 import gemini as gm
-from gemini.data.legacy import project as legacy_project
+from gemini.plants._utils.legacy import reader as legacy_project
 from tests.fixtures import OLD_PROJECT
 from tests.fixtures.errors import raises
 

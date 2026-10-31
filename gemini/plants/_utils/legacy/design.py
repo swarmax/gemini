@@ -15,7 +15,7 @@ from gemini.types.bindings import Binding, ConfigModel, DatedParams, ModuleBindi
 from gemini.types.fluid import BRINE, Fluid
 
 from . import tables
-from .files import GeminiTags, parameter_times
+from .project import GeminiTags, parameter_times
 
 
 class ModuleDesign(ConfigModel):

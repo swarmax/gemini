@@ -11,6 +11,7 @@ from gemini.modules.module import Module
 from gemini.physics import energy
 from gemini.plants._utils import circuits, inputs, listing, loops, outputs, reader, writer
 from gemini.plants._utils.factory import make_module
+from gemini.plants._utils.legacy import reader as reader_of_legacy
 from gemini.plants._utils.plan import STATE, Constraint, compile_plan, is_group, port_ends
 from gemini.plants._utils.ports import PortResolver
 from gemini.plants._utils.run import Run
@@ -363,12 +364,9 @@ class Plant(PortResolver, Module):
         The folder holds what the old application saved: ``diagram.json`` (the nodes and links),
         one ``<node>_<id>.param`` file per diagram node with its properties, dated values and tag
         names, and any other file (the data CSV, ``well_trajectory.csv``, ``plant.conf``), which is
-        read as-is and not converted. See ``gemini.data.legacy.project.from_folder``.
-        ``gemini.data`` sits above this package in the import order, so it is imported here.
+        read as-is and not converted.
         """
-        from gemini.data.legacy.project import from_folder
-
-        return from_folder(folder)
+        return reader_of_legacy.from_folder(folder)
 
     @classmethod
     def from_dict(cls, data):

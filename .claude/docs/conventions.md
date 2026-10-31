@@ -24,10 +24,9 @@ A package may import only the packages to its left:
 
 The **run folders** are `modules`, `plants`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`,
 `units`, `errors` and `_utils`. They import none of `compiler`, `data`, `optim`, `evaluate` and
-`analysis`. `modules` never imports `plants`. The exceptions run inside a function:
+`analysis`, not even inside a function, and `modules` imports neither `plants` nor `run`.
+Two imports below the rule stay inside a function, neither of them across these layers:
 
-- `Plant.from_legacy` imports `gemini.data.legacy`, because the legacy bridge sits above the plants.
-- `gm.modules.check` imports `gemini.run.call`, because `run` sits above `modules`.
 - `Stream.__init__` in `gemini.types.flows` imports `gemini.runtime` to read the default fluid,
   because a module-level import would form a cycle through `gemini.types.fluid`.
 - `gemini.physics.hydraulics` imports `Stream` and `Fluid` for type checking only.
@@ -56,8 +55,10 @@ raises `inputs_missing` wherever it is needed.
 `tests/unit/test_code_quality.py` enforces the run-folder rule and the rule on `modules`
 ([testing.md](testing.md#structure-and-quality-tests)).
 
-Packages outside `gemini.data.legacy` never interpret old project names, tags, tables or node
-mappings. Old-format knowledge stays in `gemini.data.legacy`, which is internal; its one public entry is
+Packages outside `gemini/plants/_utils/legacy/` and `gemini.data.legacy` never interpret old
+project names, tags, tables or node mappings. The reader that builds a plant is in the first, the
+CSV files and the way back to the old project in the second; both are internal, and the one public
+entry is
 `gm.Plant.from_legacy(folder)`.
 Equipment performs no file or database access. Calibration predicts only through public replay.
 A leaf module computes and a plant connects; no class does both. A leaf `Module` has physics calls
@@ -106,7 +107,7 @@ formula twice.
 
 - A file that defines a core class users subclass or build goes directly in `gemini/modules/`:
   `module.py` (`Module`), `declarations.py` (`Parameter`, `Inlet`, `Outlet`, `Output`, `Control`,
-  `Boundary`, `State`), `container.py` (`ModuleList`, `ModuleDict`) and `check.py`
+  `Boundary`, `State`), `container.py` (`ModuleList`, `ModuleDict`), `call.py` (`gm.call`) and `check.py`
   (`gm.modules.check`). `Plant` is `gemini/plants/plant.py`.
 - Machinery goes in an `_utils/` folder, even if some of its functions are exported publicly:
   `gemini/modules/_utils/` (`balance`, `description`, `design`, `serialization`, `wiring`),

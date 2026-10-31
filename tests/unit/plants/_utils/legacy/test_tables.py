@@ -2,7 +2,7 @@
 
 import pytest
 
-from gemini.data.legacy import tables
+from gemini.plants._utils.legacy import tables
 
 
 def test_tables_are_centralised():

@@ -231,7 +231,7 @@ mirrors still holding only a docstring is empty and must never grow.
 `tests/unit/test_package_boundaries.py` checks that `gemini.errors` and the topic files of
 `gemini._utils` import nothing else from `gemini` (`paths.py` and `registry.py` may import
 `gemini.errors`), that `gemini/run/dataset.py` imports no module or engine code and that
-`gemini.data.legacy` imports no engine code. `tests/unit/test_code_quality.py` enforces the comment rule, the
+`gemini.data.legacy` and `gemini/plants/_utils/legacy/` import no engine code. `tests/unit/test_code_quality.py` enforces the comment rule, the
 nesting limit, the function-length limit with its `LONG_FUNCTIONS` exceptions and the ban on the
 framework name (see [conventions.md](conventions.md#code-quality)); flake8 enforces complexity.
 The same file fails on a formula in a module and on two physics functions with one normalised body;
@@ -283,7 +283,7 @@ builds the problem and the plants of a sample (`sample_problem()`, `shallow_prob
 
 ## Old formats, examples and e2e coverage
 
-Old-format files are read only by `tests/unit/data/legacy/`, `tests/e2e/test_legacy_bridge.py`,
+Old-format files are read only by `tests/unit/data/legacy/`, `tests/unit/plants/_utils/legacy/`, `tests/e2e/test_legacy_bridge.py`,
 the `check_wiring` audit in `tests/e2e/test_full_replay.py`, and the golden reconstructions that
 build equipment from the original `.param` files: the subsurface, wells and exchangers unit tests,
 `tests/unit/physics/test_geometry.py`, `tests/integration/test_plant.py` and the historical

@@ -1,117 +1,23 @@
 """Conversion between old GEMINI files and the new plant, Dataset and Results objects."""
 
-import warnings
 from copy import deepcopy
 
 import pandas as pd
 
 from gemini import units
-from gemini._utils.mappings import set_nested
-from gemini._utils.strings import did_you_mean, join_path
+from gemini._utils.strings import join_path
 from gemini._utils.time import to_utc
-from gemini.errors import GeminiWarning, ValidationError
+from gemini.errors import ValidationError
 from gemini.modules._utils.wiring import trace_wiring
+from gemini.plants._utils.legacy import tables
+from gemini.plants._utils.legacy.design import from_legacy_design, node_kinds, node_paths
+from gemini.plants._utils.legacy.reader import converted_bindings, si_unit
 from gemini.run.dataset import Dataset
-from gemini.types import Binding, ModuleBindings
-
-from . import tables
-from ._loader import from_legacy_design, node_kinds, node_paths
-
-_SECTIONS = ("controls", "boundaries", "inlets", "measured", "state")
-
-
-def _si_unit(unit):
-    """Return the SI unit an old tag unit converts to."""
-    if unit not in tables.SI_UNITS:
-        raise ValidationError(
-            f"old tag: unit = {unit!r}; expected one of {sorted(tables.SI_UNITS)}"
-            f"{did_you_mean(unit, tables.SI_UNITS)}",
-            code="invalid_format",
-        )
-    return tables.SI_UNITS[unit]
 
 
 def _from_si(value, unit):
     """Convert an SI value back to the old tag unit."""
-    return units.convert(value, _si_unit(unit), unit)
-
-
-def _entries(section, values):
-    """Yield ``(keys, binding)`` of one bindings section; inlet keys are ``(port, field)``."""
-    if section != "inlets":
-        return [((field,), binding) for field, binding in values.items()]
-    return [
-        ((port, field), binding)
-        for port, fields in values.items()
-        for field, binding in fields.items()
-    ]
-
-
-def _data_column(path, keys):
-    """Return the column of the shipped datasets for the binding ``keys`` of the module at ``path``.
-
-    The datasets were written before the port names of the ``<role>_in`` rule and stay as they are.
-    """
-    port = tables.DATA_PORTS.get((path, keys[0]), keys[0])
-    name = join_path(path, ".".join((port, *keys[1:])))
-    return tables.DATA_COLUMNS.get(name, name)
-
-
-def _converted_bindings(design):
-    """Return SI bindings to new column names, and the old binding of each new column.
-
-    New columns are the bound module path joined with the field (``doublet.esp.frequency``)
-    or with the port and field (``doublet.esp.suction.p``).
-    """
-    converted, sources = {}, {}
-    for path, old in design.bindings.items():
-        bound = ModuleBindings()
-        for section in _SECTIONS:
-            for keys, binding in _entries(section, getattr(old, section)):
-                name = _data_column(path, keys)
-                new = Binding(column=name, unit=_si_unit(binding.unit))
-                set_nested(getattr(bound, section), keys, new)
-                sources[name] = binding
-        converted[path] = bound
-    return converted, sources
-
-
-def _filled_module(plant, path, item):
-    """Return the plant module at ``path`` with the converted history of ``item``.
-
-    The current values are the latest snapshot (with any explicit override applied once), and
-    explicit overrides are cleared because the old project now defines the design.
-    """
-    module = plant.get_submodule(path)
-    expected = tables.MODULE_CLASSES[item.type]
-    if not isinstance(module, expected):
-        raise ValidationError(
-            f"{path}: module type = {type(module).__name__}; expected {expected.__name__} for "
-            f"old kind {item.type!r}",
-            code="invalid_format",
-        )
-    module._param_history = [snapshot.model_copy(deep=True) for snapshot in item.params]
-    values = module._params_at(None)
-    module._param_overrides = {}
-    return {"params": values, "fluid": item.fluid.model_dump()}
-
-
-def to_plant(project, plant):
-    """Fill an existing example plant with converted SI parameters, histories and bindings.
-
-    Old fields the bridge cannot map are listed in one ``GeminiWarning``.
-    """
-    design = from_legacy_design(project)
-    if design.unmapped:
-        warnings.warn(
-            f"Unmapped GEMINI fields: {', '.join(design.unmapped)}", GeminiWarning, stacklevel=2
-        )
-    state = {path: _filled_module(plant, path, item) for path, item in design.modules.items()}
-    state[""] = {"params": {}, "fluid": next(iter(design.modules.values())).fluid.model_dump()}
-    plant.set_state_dict(state, strict=False)
-    plant.bindings, _ = _converted_bindings(design)
-    plant.boundary = deepcopy(design.boundary)
-    return plant.set_inputs(design.inputs)
+    return units.convert(value, si_unit(unit), unit)
 
 
 def to_dataset(project, frame):
@@ -119,7 +25,7 @@ def to_dataset(project, frame):
 
     Status columns are kept as text and ``tables.EXTRA_COLUMNS`` are kept converted to SI.
     """
-    _, sources = _converted_bindings(from_legacy_design(project))
+    _, sources = converted_bindings(from_legacy_design(project))
     frame = frame.copy()
     time_column = next(
         (name for name in frame.columns if pd.api.types.is_datetime64_any_dtype(frame[name])),
@@ -134,13 +40,13 @@ def to_dataset(project, frame):
     converted, metadata = {}, {}
     for name, source in sources.items():
         converted[name] = _si_column(frame[source.column], source.unit)
-        metadata[name] = _si_unit(source.unit)
+        metadata[name] = si_unit(source.unit)
     for name in frame.filter(like="status").columns:
         converted[name] = frame[name]
     for old, (name, unit) in tables.EXTRA_COLUMNS.items():
         if old in frame:
             converted[name] = _si_column(frame[old], unit)
-            metadata[name] = _si_unit(unit)
+            metadata[name] = si_unit(unit)
     columns = {name: values.to_numpy() for name, values in converted.items()}
     return Dataset.from_frame(pd.DataFrame(columns, index=index), units=metadata)
 

@@ -115,12 +115,12 @@ gemini/
 ├── units/            # unit conversions and Quantity
 ├── types/            # quantities, streams, fluids, profiles, bindings, costs, return shapes
 ├── runtime/          # context-local backend, precision, display units and default fluid
-├── modules/          # module.py, declarations.py, container.py, check.py, _utils/; one folder per category with its _physics.py
+├── modules/          # module.py, declarations.py, container.py, call.py, check.py, _utils/; one folder per category with its _physics.py
 ├── plants/           # plant.py (Plant) and the plant classes, one file each; _utils/ holds the plant tools
 ├── engine/           # Engine, Clock, executor.py, eager.py, rows.py, loader, runner, chunks, checkpoint, callbacks
 ├── run/              # Problem, Constraint, Assumptions, schedule, simulate, replay, live, resume, call, Results, Dataset; _utils/ (demand, roles, limits, sources)
 ├── compiler/         # graph/ (Tracer, Graph, passes, cache), executor.py, gm.compiler.compile; optional, registers itself
-├── data/             # from_csv, from_values, profile_schema, synthesize (stub), legacy/ (all old-format I/O)
+├── data/             # from_csv, from_values, profile_schema, synthesize (stub), legacy/ (old CSV files and the way back to the old project)
 ├── optim/            # minimize, sample, size (stub), sensitivity (stub)
 ├── evaluate/         # totals, constraints, balances, bounds, run_all, capex, opex, lcoh, lcoc, lcts, annualised_cost, co2, npv, payback; capacities, report, compare (stubs)
 └── analysis/         # calibrate, nodal, injectivity, pump curve, corrosion, erosion, fits

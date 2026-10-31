@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 
 from gemini.compiler.graph import run
-from gemini.data.legacy import tables as mapping
 from gemini.modules.wells import ProductionWell
+from gemini.plants._utils.legacy import tables as mapping
 from gemini.types.flows import Stream
 from tests.fixtures import OLD_PROJECT
 from tests.fixtures.equivalence import assert_function_matches, assert_module_matches

@@ -33,7 +33,7 @@ from their topic module, for example `from gemini._utils.strings import did_you_
 - `collect_env.py`: `python -m gemini._utils.collect_env` prints the versions a bug report needs.
 
 The demand frame is not here: it is `gemini/run/_utils/demand.py`, and the old-format bridge is
-`gemini/data/legacy/` ([legacy.md](legacy.md)). The place of every folder in the dependency order is
+`gemini/plants/_utils/legacy/` with `gemini/data/legacy/` ([legacy.md](legacy.md)). The place of every folder in the dependency order is
 in [conventions.md](conventions.md#dependencies).
 
 ## Adding a helper

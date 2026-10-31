@@ -185,6 +185,7 @@ EXAMPLE_FILES = [path for path in PYTHON_FILES if path.startswith("examples/")]
 IMPORTS_EXAMPLES = re.compile(r"^\s*(from|import) examples\b", re.MULTILINE)
 CORE_MODULE_FILES = (
     "__init__.py",
+    "call.py",
     "check.py",
     "container.py",
     "declarations.py",
@@ -694,24 +695,31 @@ RUN_FOLDERS = (
     "_utils",
 )
 ABOVE_THE_RUN = ("compiler", "data", "optim", "evaluate", "analysis")
-LAZY_IMPORTS = {
-    ("gemini/plants/plant.py", "gemini.data.legacy.project"),
-    ("gemini/plants/plant.py", "gemini.data.legacy.project.from_folder"),
-}
-"""What a run folder imports inside a function: an old project reader on ``gm.Plant``."""
 REMOVED_FOLDERS = {"core", "base", "testing", "backends", "checks", "economics", "profiles"}
-READ_WRITE_PREFIX = re.compile(r"_?(read|write|load|save|parse|dump)_")
+READ_WRITE_NAME = re.compile(r"^\s*(?:def|class) (_?(?:read|write|load|save|parse|dump)_\w*)", re.M)
 """What a reader or a writer is never called: ``from_<format>`` and ``to_<format>`` are the rule."""
 
 
+IMPORTS = re.compile(
+    r"^\s*from (gemini[\w.]*) import (\([^)]*\)|[^\n]*)|^\s*import (gemini[\w.]*)", re.M
+)
+"""An absolute import of ``gemini``: from what, which names, or the module it names."""
+
+
 def every_import(path):
-    """Return the absolute names of the modules one file imports, in functions too."""
-    return imported_modules(path) | {
-        f"{node.module}.{alias.name}"
-        for node in ast.walk(ast.parse((ROOT / path).read_text()))
-        if isinstance(node, ast.ImportFrom) and node.module
-        for alias in node.names
-    }
+    """Return the absolute names one file imports, inside functions too, with each ``a.b`` name.
+
+    A regular expression on the text: these guards read every file, so they stay within the budget.
+    """
+    found = set()
+    for module, names, plain in IMPORTS.findall((ROOT / path).read_text()):
+        found.add(module or plain)
+        found |= {
+            f"{module}.{name.split()[0]}"
+            for name in names.strip("()\n ").split(",")
+            if name.strip()
+        }
+    return found
 
 
 def test_the_run_folders_import_nothing_above_the_run():
@@ -723,17 +731,17 @@ def test_the_run_folders_import_nothing_above_the_run():
         for name in every_import(path)
         if name.startswith(tuple(f"gemini.{folder}" for folder in ABOVE_THE_RUN))
     }
-    assert wrong - LAZY_IMPORTS == set()
+    assert wrong == set()
 
 
 def test_modules_never_import_plants():
-    """A plant is built from modules, never the other way round."""
+    """A plant is built from modules and a run from plants, never the other way round."""
     assert [
         (path, name)
         for path in PACKAGE_FILES
         if path.startswith("gemini/modules/")
         for name in every_import(path)
-        if name.startswith("gemini.plants")
+        if name.startswith(("gemini.plants", "gemini.run.")) or name == "gemini.run"
     ] == []
 
 
@@ -751,9 +759,8 @@ def test_no_folder_keeps_a_removed_name():
 def test_no_reader_or_writer_breaks_the_naming_rule():
     """Every reader is ``from_<format>`` and every writer ``to_<format>``."""
     assert [
-        f"{path}::{node.name}"
+        f"{path}::{name}"
         for path in PYTHON_FILES
         if path.startswith("gemini/")
-        for node in ast.walk(ast.parse((ROOT / path).read_text()))
-        if isinstance(node, (ast.FunctionDef, ast.ClassDef)) and READ_WRITE_PREFIX.match(node.name)
+        for name in READ_WRITE_NAME.findall((ROOT / path).read_text())
     ] == []

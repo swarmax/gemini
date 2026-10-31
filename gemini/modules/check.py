@@ -5,6 +5,7 @@ import json
 
 from gemini._utils.jsonable import to_plain
 from gemini._utils.registry import CATEGORIES
+from gemini.modules.call import evaluate
 from gemini.modules.module import Module
 
 _NUMERIC = ("number", "integer")
@@ -53,8 +54,6 @@ def _describe(cls, instance):
 def _call(cls, instance, example):
     """Run one call through ``evaluate``; a missing value without an example is undecided."""
     example = example or {}
-    from gemini.run.call import evaluate
-
     result = evaluate(
         cls,
         example.get("parameters"),

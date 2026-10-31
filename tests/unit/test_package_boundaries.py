@@ -56,7 +56,8 @@ def test_the_legacy_bridge_knows_no_engine():
     """Old formats reach the package through plants and datasets, never the engine."""
     bad = [
         name
-        for path in sorted((ROOT / "gemini/data/legacy").rglob("*.py"))
+        for folder in ("gemini/data/legacy", "gemini/plants/_utils/legacy")
+        for path in sorted((ROOT / folder).rglob("*.py"))
         for name in imported_modules(path)
         if name.startswith("gemini.engine")
     ]

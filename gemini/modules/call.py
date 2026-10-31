@@ -55,7 +55,8 @@ def _check_mass_flows(inlets):
     """Refuse a volume flow given as ``m_dot``, pointing to ``flow``."""
     for port, fields in inlets.items():
         flow = fields.get("m_dot") if isinstance(fields, Mapping) else None
-        if unit_table.fits(str(flow).rpartition(" ")[2], "volume_flow"):
+        *_, unit = str(flow).rpartition(" ")
+        if unit_table.fits(unit, "volume_flow"):
             raise ValidationError(
                 f"evaluate: {port}.m_dot = {flow!r}; expected a mass flow; give it as 'flow'",
                 path=f"{port}.m_dot",

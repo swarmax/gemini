@@ -9,9 +9,10 @@ The run lives in `engine/` (`Engine`, `Clock`, `executor.py`, `eager.py`, `rows.
 
 **Dependency rules.** The run folders are `modules`, `plants`, `physics`, `ops`, `runtime`,
 `engine`, `run`, `types`, `units`, `errors` and `_utils`. They import none of `compiler`, `data`,
-`optim`, `evaluate` and `analysis`; those sit above the run and import it. Two exceptions run inside
-a function: `Plant.from_legacy` imports `gemini.data.legacy`, and `gm.modules.check` imports
-`gemini.run.call`. `modules` never imports `plants`.
+`optim`, `evaluate` and `analysis`, not even inside a function; those sit above the run and import
+it. `modules` imports neither `plants` nor `run`: `gm.call` is `gemini/modules/call.py`, which needs
+no engine, and `run` re-exports it. The old project reader that builds a plant is
+`gemini/plants/_utils/legacy/`.
 
 `engine` imports `run` for `Results` and `Dataset`, and `run` imports `engine.engine`.
 `gemini/engine/__init__.py` imports `gemini.run` first and never `.engine`, which keeps one import

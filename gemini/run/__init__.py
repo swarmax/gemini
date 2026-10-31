@@ -1,7 +1,8 @@
 """One run: the problem, its schedule and the run functions, ``Results`` and ``Dataset``."""
 
+from gemini.modules.call import evaluate as call
+
 from .assumptions import Assumptions
-from .call import evaluate as call
 from .constraint import Constraint
 from .dataset import Dataset
 from .problem import Problem

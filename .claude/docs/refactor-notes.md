@@ -167,7 +167,7 @@ reservoir pressure/temperature and an appropriate variable-UA reference are the 
 - NumPy 2.0 is the lower bound because the float32 ESP golden path relies on its NEP 50 type
   promotion: under NumPy 1.x `np.float32 / float` stays float32 by value-based casting, and the
   captured ESP head becomes 37.05164 bar instead of 37.05164337158203
-  (`tests/unit/data/legacy/test_monitoring_golden.py` fails).
+  (`tests/unit/plants/_utils/legacy/test_monitoring_golden.py` fails).
 - `NOTE(refactor)`: pandas 3 parses decimal CSV text correctly rounded, as pandas 2 did only with
   `float_precision="round_trip"`. The pandas 2 default parser reads 44,022 cells of the July CSV
   differently, by up to 2.3e-15 relative, so replay under pandas 3 differs from the committed

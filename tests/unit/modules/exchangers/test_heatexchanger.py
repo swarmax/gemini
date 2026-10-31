@@ -6,8 +6,8 @@ import pytest
 
 import gemini as gm
 from gemini import units
-from gemini.data.legacy import tables as mapping
 from gemini.modules.exchangers import HeatExchanger
+from gemini.plants._utils.legacy import tables as mapping
 from gemini.types.flows import Stream
 from gemini.types.fluid import WATER
 from gemini.types.results import NOT_ASSESSED
