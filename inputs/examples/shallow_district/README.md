@@ -28,10 +28,10 @@ measured data. Only `examples/` and `tests/` read this folder, and nothing under
 | Pump efficiency | 0.65, both pumps | |
 | Injection pressure | 36 bar | Lower values gave a negative head |
 | Heat exchanger | 250 kW/K | Small network |
-| Heat pump | 1.6 MW, source not below 27 °C | Lifts to the supply |
+| Heat pump | 1.6 MW, source not below 27 °C, Carnot fraction 0.5 | Lifts to the supply; "close to 50 percent of the Carnot value", H. U. Frutschi, ABB Review 5/1996, pp. 33-34 |
 | Boiler | 3.5 MW, efficiency 0.92 | Covers the peak |
 | Heating supply, return | 65 °C, 38 °C at 5 bar | A low-temperature network |
-| Compression chiller | 0.4 MW, supply 16 °C, return 22 °C at 3 bar | Heat-free cooling |
+| Compression chiller | 0.4 MW, supply 16 °C, return 22 °C at 3 bar, Carnot fraction 0.5 | Heat-free cooling; the same source |
 | Cooler | 1 MW, 6 K approach, 18 °C, 60 kg/s | Rejects the chiller heat |
 | Air | 6 °C | A cold season |
 | Pipes | 400 m, 0.2 m inside diameter | |

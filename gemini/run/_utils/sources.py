@@ -66,12 +66,16 @@ def pump_efficiency(doublet, brine_cooling, maximum_flow):
 def heat_pump_cop(module, heating, sink_outlet, source_outlet):
     """Return the COP of a heat pump at design outlet temperatures [K].
 
-    NOTE(refactor): the COP of the Carnot fraction at the setpoint and a source outlet is a design
-    estimate; the Lorenz model of the module is read as its Carnot fraction, because the glides
-    need the simulation.
+    The fraction is the parameter of the module's COP model: ``carnot_fraction``, or
+    ``lorenz_fraction`` for a Lorenz machine. A plant states it, or the default of the parameter
+    applies, whose source is ``refrigeration.DEFAULT_CARNOT_FRACTION``.
+
+    NOTE(refactor): this is a design estimate at the setpoint and a source outlet. A Lorenz machine
+    takes its fraction on the outlet temperatures, because the glides need the simulation.
     """
+    fraction = module.lorenz_fraction if module.cop_model == "lorenz" else module.carnot_fraction
     return dispatch.heat_pump_cop(
-        heating, module.carnot_fraction, module.minimum_temperature_lift, sink_outlet, source_outlet
+        heating, fraction, module.minimum_temperature_lift, sink_outlet, source_outlet
     )
 
 

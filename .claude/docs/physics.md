@@ -532,7 +532,7 @@ Electricity exchange of a plant with a grid connection of limited capacity.
 The energy balance of `gm.schedule` at each step, on arrays over the steps: `doublet_flow(heat_need,
 heat_per_flow, minimum_flow, maximum_flow)`, `loaded_by_cost(demand, capacities, costs)`, what each
 source takes when the cheapest loads first, `marginal_cost(price, efficiency, co2_price,
-emission_factor)`, `methane_emission_factor()`, `heat_pump_cop(heating, fraction, minimum_lift,
+emission_factor)`, `methane_emission_factor()`, `heat_pump_cop(heating, carnot_fraction, minimum_lift,
 sink_outlet, source_outlet)`, `temperature_after(start, end, share)`, `circuit_flow(heat,
 specific_heat, temperature_difference)` and `flow_share(first, second)`.
 

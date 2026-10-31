@@ -110,7 +110,8 @@
       "params": {
         "mode": "heating",
         "capacity": 15000000.0,
-        "minimum_source_outlet_temperature": 320.15
+        "minimum_source_outlet_temperature": 320.15,
+        "carnot_fraction": 0.5
       }
     },
     "loads": {

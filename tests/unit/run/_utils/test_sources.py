@@ -1,9 +1,12 @@
 """The marginal cost of a source, from the prices of a problem."""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 import gemini as gm
+from gemini.physics import refrigeration
 from gemini.run._utils import sources
 from tests.fixtures.errors import raises
 
@@ -37,6 +40,31 @@ def test_a_missing_price_names_the_carrier_and_the_source():
     """The price is a part of the problem: ``missing_value``."""
     with raises(gm.errors.ValidationError, "missing_value", match="boiler"):
         costs().gas("boiler", 0.9)
+
+
+def _heat_pump(**params):
+    """Return a heat pump with the values of ``params``."""
+    return gm.modules.HeatPump().set_params("", {"mode": "heating", "capacity": "1 MW"} | params)
+
+
+def test_the_cop_of_the_estimate_follows_the_parameter_of_the_module():
+    """No fraction is held in the dispatch: changing the parameter changes the COP."""
+    low = sources.heat_pump_cop(_heat_pump(carnot_fraction=0.4), True, 373.15, 323.15)
+    high = sources.heat_pump_cop(_heat_pump(carnot_fraction=0.6), True, 373.15, 323.15)
+    assert high == pytest.approx(1.5 * low)
+
+
+def test_a_lorenz_machine_is_estimated_with_its_own_fraction():
+    """``lorenz_fraction`` counts for a Lorenz machine and ``carnot_fraction`` does not."""
+    lorenz = {"cop_model": "lorenz", "lorenz_fraction": 0.3, "carnot_fraction": 0.6}
+    plain = sources.heat_pump_cop(_heat_pump(carnot_fraction=0.3), True, 373.15, 323.15)
+    assert sources.heat_pump_cop(_heat_pump(**lorenz), True, 373.15, 323.15) == plain
+
+
+def test_the_default_fraction_is_a_named_value_with_a_source():
+    """The default of the parameter is the named constant, and its docstring cites the source."""
+    assert gm.modules.HeatPump().carnot_fraction == refrigeration.DEFAULT_CARNOT_FRACTION
+    assert "ABB Review 5/1996" in Path(refrigeration.__file__).read_text()
 
 
 def test_drive_heat_costs_the_cheapest_heat_over_the_cop():

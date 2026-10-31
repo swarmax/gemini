@@ -49,7 +49,9 @@
     "compression_cooler.approach": "6 K",
     "compression_cooler.specific_fan_power": 0.02,
     "compression_cooler.loop_pressure": "3 bar",
-    "compression_cooler.capacity": "1 MW"
+    "compression_cooler.capacity": "1 MW",
+    "heat_pump.carnot_fraction": 0.5,
+    "compression_chiller.carnot_fraction": 0.5
   },
   "fluids": {
     "d0": {

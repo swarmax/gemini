@@ -55,6 +55,12 @@ standard conditions.
 | Heating supply temperature | 100 °C | Fixed |
 | Cooling supply temperature | 20 °C | Fixed |
 
+## Heat pump performance
+
+Every heat pump and compression chiller states `carnot_fraction` 0.5 in its plant dict, which the
+cost dispatch and the run read: "close to 50 percent of the Carnot value", H. U. Frutschi, ABB
+Review 5/1996, pp. 33-34. It is a general figure and no data of these machines.
+
 ## Files added for the examples
 
 These are not the organisers' files: they hold the requirements above, and the assumptions the

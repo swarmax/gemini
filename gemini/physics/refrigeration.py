@@ -8,14 +8,14 @@ from gemini.errors import PhysicsError
 from gemini.physics import heat_transfer
 
 DEFAULT_CARNOT_FRACTION = 0.5
-"""Carnot fraction of a water-to-water heat pump or chiller [-]: Arpagaus et al. (2018), "High
-temperature heat pumps: Market overview, state of the art, research status, refrigerants, and
-application potentials", Energy 152, 985-1010, report about 0.4 to 0.6."""
+"""Carnot fraction of a heat pump or chiller [-]: "close to 50 percent of the Carnot value",
+H. U. Frutschi, ABB Review 5/1996, pp. 33-34. It is the default of ``HeatPump.carnot_fraction``, a
+parameter a design should state from the data of its machine."""
 
 
 DEFAULT_LORENZ_FRACTION = 0.5
-"""Lorenz fraction of a water-to-water heat pump [-]; the same range as the Carnot fraction
-(Arpagaus et al. 2018)."""
+"""Lorenz fraction of a water-to-water heat pump [-]: an assumption, the value of
+``DEFAULT_CARNOT_FRACTION``; no source was found for a Lorenz value of its own."""
 
 
 DEFAULT_MINIMUM_LIFT = 10.0
@@ -302,7 +302,7 @@ def carnot_fraction_cop_heating(
     Notes
     -----
     Same signature as ``carnot_fraction_cop_cooling`` and ``lorenz_fraction_cop_heating``, so a
-    module picks the COP model structurally. Carnot fraction: Arpagaus et al. (2018).
+    module picks the COP model structurally. Carnot fraction: ``DEFAULT_CARNOT_FRACTION``.
 
     Validity: efficiency in (0, 1]; outlet temperatures positive and minimum_lift >= 0 with a
     positive floored lift (the divisor of the Carnot COP). The inlets are not used.

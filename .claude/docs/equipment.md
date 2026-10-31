@@ -782,8 +782,9 @@ Electric vapour-compression heat pump; in `cooling` mode it is an electric chill
   - `mode` (`"heating"` or `"cooling"`, required), `capacity` (`Power`, > 0, required): cap on
     the useful duty.
   - `cop_model` (`"carnot"` or `"lorenz"`, default `"carnot"`): Lorenz is heating only.
-  - `carnot_fraction` (`Efficiency`, default 0.5): Arpagaus et al. (2018), Energy 152,
-    985-1010, report 0.4 to 0.6.
+  - `carnot_fraction` (`Efficiency`, default 0.5): "close to 50 percent of the Carnot value", H. U. Frutschi, ABB Review 5/1996, pp. 33-34; a design should state
+    its machine's value. The cost dispatch of `gm.schedule` reads it too, or `lorenz_fraction` for a
+    Lorenz machine.
   - `lorenz_fraction` (`Efficiency`, default 0.5, the upstream GEMINI default): fraction of
     the Lorenz COP, used by `cop_model="lorenz"`.
   - `minimum_temperature_lift` (`TemperatureDifference`, > 0, default 10 K): floor of the lift

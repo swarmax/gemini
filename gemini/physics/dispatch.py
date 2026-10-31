@@ -117,15 +117,16 @@ def methane_emission_factor():
     return formed / combustion.METHANE_HEATING_VALUE
 
 
-def heat_pump_cop(heating, fraction, minimum_lift, sink_outlet, source_outlet):
+def heat_pump_cop(heating, carnot_fraction, minimum_lift, sink_outlet, source_outlet):
     """Return the Carnot-fraction COP of a heat pump at design outlet temperatures.
 
     Parameters
     ----------
     heating : bool
         True for the condenser duty (heating), False for the evaporator duty (a chiller).
-    fraction : float
-        Carnot fraction [-].
+    carnot_fraction : float
+        The share of the Carnot COP the machine reaches [-]; the caller gives it from the module,
+        as ``HeatPump.carnot_fraction``, whose default states its source.
     minimum_lift : float
         Lift floor [K].
     sink_outlet, source_outlet : float
@@ -139,14 +140,16 @@ def heat_pump_cop(heating, fraction, minimum_lift, sink_outlet, source_outlet):
     Notes
     -----
     Validity: As ``refrigeration.carnot_fraction_cop_heating``.
-    Source: Arpagaus et al. (2018), as in ``refrigeration``.
+    Source: the Carnot COP; the fraction is an argument, see ``refrigeration``.
     """
     function = (
         refrigeration.carnot_fraction_cop_heating
         if heating
         else refrigeration.carnot_fraction_cop_cooling
     )
-    return function(fraction, minimum_lift, sink_outlet, sink_outlet, source_outlet, source_outlet)
+    return function(
+        carnot_fraction, minimum_lift, sink_outlet, sink_outlet, source_outlet, source_outlet
+    )
 
 
 @ops.physics
