@@ -143,7 +143,8 @@ step; steps of equal demand go earliest first. It needs at least two rows at a c
 outage step a doublet has no flow and its heat goes to the next sources; a heat pump fed only by
 doublets that are off stops. Every other step a doublet with a duration runs, at the minimum flow
 when no heat is left for it. Every other constraint, and a duration with only `min`, is left to
-the check of a run: `plan.attrs["check_only"]` lists them (`to_dict()` of each), and
+the check of a run: `plan.attrs["check_only"]` lists them (`to_dict()` of each; a constraint enforced in part keeps only
+the bounds left, so a duration of `min` and `max` lists its `min`), and
 `gm.evaluate.constraints(plant, problem, results)` judges all of them, the enforced ones too.
 
 A heat-driven chiller on a bypass (a `Splitter` whose branches reach the users and the generator) has

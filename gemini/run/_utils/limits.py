@@ -8,7 +8,8 @@ A constraint is read by its path, with ``*`` matching one name, and by its ``ove
 - operating duration: ``<doublet>.reservoir.liquid_flow``, ``over="duration"``,
   ``when="running"``, ``max`` or ``equals`` a duration.
 
-Every other constraint, and a duration with only ``min``, is left to the check of a run.
+Every other constraint, a duration with only ``min``, and a bound of a constraint that the form
+does not read are left to the check of a run.
 """
 
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ from gemini import units
 from gemini._utils.strings import join_path
 from gemini._utils.time import to_timedelta
 from gemini.errors import ValidationError
+from gemini.run.constraint import BOUNDS
 
 FLOW = "reservoir.liquid_flow"
 """The path below a doublet of its flow."""
@@ -86,6 +88,21 @@ def _missing(doublet, name, form):
     )
 
 
+def _enforced(form, constraint):
+    """Return the names of the bounds of ``constraint`` a schedule enforces in ``form``."""
+    if form == "range":
+        return ("min", "max")
+    if form == "duration" and constraint.equals is not None:
+        return ("equals",)
+    return ("max",)
+
+
+def _left_over(constraint, enforced):
+    """Return ``to_dict()`` of ``constraint`` without ``enforced``; ``None`` if no bound is left."""
+    data = constraint.to_dict() | dict.fromkeys(enforced)
+    return data if any(data[name] is not None for name in BOUNDS) else None
+
+
 def _found(constraints, doublet):
     """Return ``{form: (index, constraint)}``, the first constraint of each form that fits."""
     found = {}
@@ -99,8 +116,9 @@ def _found(constraints, doublet):
 def of_doublet(constraints, doublet):
     """Return ``(DoubletLimits, used)`` of the doublet at path ``doublet``.
 
-    ``used`` is the set of indices in ``constraints`` that gave a limit. A flow range or a brine
-    cooling that no constraint gives raises ``ValidationError`` (code ``missing_value``).
+    ``used`` maps the index of each constraint that gave a limit to the bounds the schedule
+    enforces of it. A flow range or a brine cooling that no constraint gives raises
+    ``ValidationError`` (code ``missing_value``).
     """
     found = _found(constraints, doublet)
     if "range" not in found:
@@ -115,17 +133,21 @@ def of_doublet(constraints, doublet):
         _quantity(cooling.max, "K"),
         None if duration is None else _duration(duration[1]),
     )
-    return limits, {index for index, _ in found.values()}
+    return limits, {
+        index: _enforced(form, constraint) for form, (index, constraint) in found.items()
+    }
 
 
 def split(constraints, doublets):
     """Return ``({doublet: DoubletLimits}, check_only)`` for the doublet paths ``doublets``.
 
-    ``check_only`` lists the ``to_dict()`` of every constraint the schedule did not enforce.
+    ``check_only`` lists the ``to_dict()`` of every constraint the schedule did not enforce, and of
+    one it enforced in part with only the bounds left: a duration of ``min`` and ``max`` runs to
+    the maximum, so its entry keeps the minimum.
     """
-    limits, used = {}, set()
+    limits, used = {}, {}
     for doublet in doublets:
         limits[doublet], taken = of_doublet(constraints, doublet)
         used |= taken
-    left = [item.to_dict() for index, item in enumerate(constraints) if index not in used]
-    return limits, left
+    left = [_left_over(item, used.get(index, ())) for index, item in enumerate(constraints)]
+    return limits, [item for item in left if item is not None]

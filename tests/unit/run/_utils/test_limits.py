@@ -40,3 +40,53 @@ def test_a_star_stays_within_a_name():
     """``d*`` fits a doublet and not what lies below it."""
     found, _ = limits.split([FLOW, COOLING], ["d0", "d1"])
     assert set(found) == {"d0", "d1"}
+
+
+def _left_of(*constraints):
+    """Return what the schedule leaves to a check, with the required limits given."""
+    return limits.split([FLOW, COOLING, *constraints], ["d0"])
+
+
+def test_a_duration_with_a_maximum_and_a_minimum_leaves_the_minimum_to_the_check():
+    """The schedule enforces the maximum; only the minimum is listed, and it stays exact."""
+    both = gm.Constraint(
+        "d*.reservoir.liquid_flow", min="300 d", max="330 d", over="duration", when="running"
+    )
+    found, check_only = _left_of(both)
+    assert found["d0"].operating_time == pd.Timedelta(days=330)
+    assert check_only == [
+        {
+            "path": "d*.reservoir.liquid_flow",
+            "min": "300 d",
+            "max": None,
+            "equals": None,
+            "over": "duration",
+            "when": "running",
+        }
+    ]
+
+
+def test_a_duration_with_equals_and_a_bound_leaves_the_bound():
+    """``equals`` is what the schedule runs; the other bound is left to the check."""
+    both = gm.Constraint(
+        "d*.reservoir.liquid_flow", equals="320 d", max="330 d", over="duration", when="running"
+    )
+    found, check_only = _left_of(both)
+    assert found["d0"].operating_time == pd.Timedelta(days=320)
+    assert [(item["equals"], item["max"]) for item in check_only] == [(None, "330 d")]
+
+
+def test_a_minimum_on_the_brine_cooling_is_left_to_the_check():
+    """The schedule enforces the maximum of a cooling and nothing below it."""
+    cooling = gm.Constraint("d*.brine_cooling", min="5 K", max="40 K", when="running")
+    _, check_only = limits.split([FLOW, cooling], ["d0"])
+    assert [(item["min"], item["max"]) for item in check_only] == [("5 K", None)]
+
+
+def test_what_is_enforced_whole_is_not_listed():
+    """A flow range and a maximum are enforced as they stand."""
+    assert _left_of()[1] == []
+    only_maximum = gm.Constraint(
+        "d*.reservoir.liquid_flow", max="330 d", over="duration", when="running"
+    )
+    assert _left_of(only_maximum)[1] == []

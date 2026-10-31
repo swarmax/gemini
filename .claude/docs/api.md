@@ -378,6 +378,7 @@ and `ROW_CODES` the row codes with their meaning.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.2.0, unreleased changes | | `plan.attrs["check_only"]` lists a constraint the schedule enforces in part with only the bounds left: a duration of `min` and `max`, of `equals` and another bound, or a brine cooling with a `min`. |
 | 0.2.0, unreleased changes | | A `Doublet` with a `depth` and no `gradient` or `surface_temperature` when a run or a schedule starts raises `ValidationError` code `missing_value` with the path of each value, whatever `on_error` says; `missing_parameters` lists them. |
 | 0.2.0, unreleased changes | | Private paths only: `gm.call` is `gemini/modules/call.py`, and the old project reader `gemini/plants/_utils/legacy/`, so no run folder imports above the run, in a function or not. No change to a name of this page. |
 | 0.2.0, unreleased changes | | One folder per concern, flat public names. Top level: `gemini/modules`, `plants`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`, `units`, `errors`, `data`, `optim`, `evaluate`, `analysis`, `compiler`, `_utils`; `gm.__all__` is pinned. The folders `core`, `base`, `registry`, `testing`, `backends`, `checks`, `economics`, `profiles`, `utils` and `graph` at the top are gone. Run folders import none of `compiler`, `data`, `optim`, `evaluate`, `analysis`; importing `gm.compiler` registers its executor, and a run works without it. |
