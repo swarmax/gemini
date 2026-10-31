@@ -32,7 +32,8 @@ class Doublet(Plant):
     derives, through ``gemini/physics/doublet.py``:
 
     - from ``depth``, ``gradient`` and ``surface_temperature``, which have no default: a depth
-      waits for them, which a ``gm.Problem`` may give as site values. They give the reservoir
+      waits for them, which a ``gm.Problem`` may give as site values, and a run that starts
+      without them raises ``missing_value`` naming the path. They give the reservoir
       temperature at the midpoint, the hydrostatic reservoir pressure from the fluid density, the
       top depth and the soil temperature of the wells, the geotherm at half the depth;
     - with ``permeability``, ``thickness`` and ``well_diameter``: the productivity and injectivity
@@ -108,7 +109,7 @@ class Doublet(Plant):
             return super().set_params(path, params, valid_from)
         fluid = self.fluid.properties(0, 0)
         values = self._own_values(params, valid_from)
-        if self._lacks_geotherm(values):
+        if self._lacking(values):
             return super().set_params("", params, valid_from)
         derived = doublet.design(
             values,
@@ -119,11 +120,15 @@ class Doublet(Plant):
         )
         return super().set_params("", self._keep_derived(derived, params) | params, valid_from)
 
-    def _lacks_geotherm(self, values):
-        """Return whether a ``depth`` waits for its geotherm, which a ``gm.Problem`` may give."""
-        return values["depth"] is not None and any(
-            values[name] is None for name in doublet.COLUMN[1:]
-        )
+    def _lacking(self, values):
+        """Return the names of the geotherm a ``depth`` waits for, which a site may give."""
+        if values["depth"] is None:
+            return []
+        return [name for name in doublet.COLUMN[1:] if values[name] is None]
+
+    def _missing_design(self):
+        """Return the geotherm of a ``depth`` that is still missing: a run cannot start without."""
+        return self._lacking(self._params_at(None))
 
     def _stated_pressure(self, params):
         """Return the reservoir pressure [Pa] stated by hand, in this call or earlier, or None."""

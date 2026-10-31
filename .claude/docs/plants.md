@@ -298,7 +298,7 @@ The five template plants derive from `DoubletsPlant` (`plants/_utils/doublets.py
 n}`, 1 to 3 (`minimum_doublets`, `maximum_doublets` of the class, `invalid_design` outside), gives the
 doublets `d0` to `d{n-1}` in parallel through `production_mixers` and `injection_splitters`. A
 plant-level `depth` goes to every doublet, which derives its reservoir from it; a value stated on one
-doublet wins, now and later. A `Doublet` with a `depth` and no geotherm waits for it instead of
+doublet wins, now and later. A run that starts without a geotherm raises `missing_value` naming the path. A `Doublet` with a `depth` and no geotherm waits for it instead of
 raising: a plant holds the design and the `site` of a `gm.Problem` the geotherm and the rest of the
 site, so `gm.simulate(plant, problem)` applies them to a copy.
 

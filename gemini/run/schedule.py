@@ -477,6 +477,7 @@ def schedule(plant, problem):
 
 def scheduled(plant, problem):
     """Return the plan of ``schedule`` for a ``plant`` that already has the site of ``problem``."""
+    plant._check_design()
     demand = problem.demand
     doublets = [path for path, _ in _of_type(plant, Doublet)]
     limits, check_only = limit_forms.split(problem.constraints, doublets)

@@ -308,3 +308,33 @@ def test_compile_false_reaches_the_engine(monkeypatch):
     monkeypatch.setattr(sys.modules["gemini.run.simulate"], "Engine", Recording)
     gm.simulate(tank(), plan=_rows(), compile=False, on_error="record")
     assert seen == [False]
+
+
+def _no_geotherm():
+    """Return a plant whose doublet has a depth and neither value of its geotherm."""
+    plant = gm.Plant("Waiting")
+    plant.add("Doublet", "d0").set_params("", {"depth": "2500 m"})
+    return plant
+
+
+@pytest.mark.parametrize("on_error", ["raise", "record"])
+def test_a_run_without_the_geotherm_of_a_doublet_names_the_path(on_error):
+    """A run that cannot start raises before its first step, whatever ``on_error`` says."""
+    index = pd.date_range("2027-01-01", periods=2, freq="h", tz="UTC", name="time")
+    with raises(ValidationError, "missing_value", match="d0.gradient") as caught:
+        gm.simulate(_no_geotherm(), plan=pd.DataFrame(index=index), on_error=on_error)
+    assert caught.value.path == "d0.gradient"
+    assert [item["path"] for item in caught.value.problems] == [
+        "d0.gradient",
+        "d0.surface_temperature",
+    ]
+
+
+def test_a_gradient_alone_leaves_the_surface_temperature_missing():
+    """Each value that is still missing is named on its own."""
+    plant = _no_geotherm()
+    plant.set_params("d0", {"gradient": "30 K/km"})
+    index = pd.date_range("2027-01-01", periods=2, freq="h", tz="UTC", name="time")
+    with raises(ValidationError, "missing_value") as caught:
+        gm.Engine(plant).simulate(pd.DataFrame(index=index))
+    assert caught.value.path == "d0.surface_temperature"

@@ -1720,7 +1720,7 @@ plant.d0.fluid = gm.Fluid(density="1030 kg/m3", viscosity="0.4 mPa*s")
 | and `permeability`, `thickness`, `well_diameter` | `productivity_index`, `injectivity_index` (`hydraulics.radial_index`, with the fluid viscosity, `drainage_radius`, the wellbore radius and the reservoir's `skin`), `permeability`, `aquifer_thickness`, `top_depth`, `drainage_radius`, `wellbore_radius`, the vertical `pipe_path` of the wells (`geometry.vertical_path`, commercial steel) |
 | and `nominal_flow`, `pump_efficiency`, `nominal_wellhead_pressure` | `esp.setting_depth`, `esp_depth` and `segment` of `well` and `riser` (`hydraulics.pump_setting_depth`), and a one-stage ESP of constant head (`hydraulics.design_pump_head`, `pumps.constant_head_curves`) |
 
-A `depth` without `gradient` and `surface_temperature` derives nothing yet: the doublet waits for
+A run that starts without them raises `missing_value` naming the path. A `depth` without `gradient` and `surface_temperature` derives nothing yet: the doublet waits for
 them, so a plant holds the design and the `site` of a `gm.Problem` (`"d*.gradient": "30 K/km"`)
 gives the rest, applied on a copy of the plant at the start of a run. A site value for a parameter
 the plant states too raises `conflicting_value`.

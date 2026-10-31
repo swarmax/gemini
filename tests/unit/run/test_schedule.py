@@ -582,3 +582,19 @@ def test_a_pattern_matches_one_name():
     with raises(gm.errors.ValidationError, "missing_value") as refused:
         gm.schedule(plant_of_two(), problem)
     assert refused.value.path == "constraints.d1.reservoir.liquid_flow"
+
+
+def test_a_schedule_without_the_geotherm_of_a_doublet_names_the_path():
+    """The plan reads the reservoir, so the missing value is named before anything else."""
+    plant = plant_of_two()
+    plant = gm.Plant.from_dict(_without_geotherm(plant.to_dict(structure=True)))
+    with raises(gm.errors.ValidationError, "missing_value") as caught:
+        gm.schedule(plant, problem_of(demand(FULL)))
+    assert caught.value.path == "d0.gradient"
+
+
+def _without_geotherm(data):
+    """Return a structure plant dict whose doublets lost ``gradient``."""
+    for name in ("d0", "d1"):
+        data["modules"][name]["params"].pop("gradient")
+    return data

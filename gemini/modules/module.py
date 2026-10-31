@@ -39,6 +39,7 @@ from gemini._utils.strings import (
     split_path,
 )
 from gemini.errors import DefinitionError, PhysicsError, ValidationError
+from gemini.errors.base import problem
 from gemini.errors.lookup import UnknownMember
 from gemini.modules._utils import description, design
 from gemini.modules.declarations import (
@@ -653,9 +654,33 @@ class Module:
             owner._input_values[name] = value
         return self
 
+    def _missing_design(self):
+        """Return the names of what this module's design lacks; a class with such a rule says."""
+        return []
+
+    def _missing_designs(self):
+        """Return the dotted paths of what the designs of this module tree lack."""
+        return [
+            join_path(path, name)
+            for path, module in self.named_modules()
+            for name in module._missing_design()
+        ]
+
+    def _check_design(self):
+        """Raise ``missing_value`` for each design value the tree lacks, before a run starts."""
+        missing = self._missing_designs()
+        if missing:
+            raise ValidationError.of(
+                [
+                    problem(path, "missing_value", f"{path}: no value; expected one before a run")
+                    for path in missing
+                ]
+            )
+
     def missing_parameters(self):
-        """Return dotted paths of all uninitialized parameters."""
-        return [name for name, value in self.named_parameters() if not value.initialized]
+        """Return dotted paths of what the tree lacks: design values, then parameters."""
+        uninitialized = [name for name, value in self.named_parameters() if not value.initialized]
+        return self._missing_designs() + uninitialized
 
     def _prepare(self):
         """Reject uninitialized parameters, before any call."""

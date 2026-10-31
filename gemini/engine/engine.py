@@ -211,6 +211,7 @@ class Engine:
     def _run(self, kind, dataset, clock, only=None, continuing=False, max_gap=None, state=None):
         """Run the unfinished ticks of ``clock``; ``max_gap`` overrides the Loader default."""
         plant = self.plant
+        plant._check_design()
         if not continuing:
             self.runtime_state = runtime.state()
         plan = BindingPlan(plant, dataset, kind, only, self.on_error)

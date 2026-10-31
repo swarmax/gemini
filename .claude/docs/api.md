@@ -169,7 +169,7 @@ are in `gm.plants`, not in `gm.modules`; `gm.modules` never imports `gm.plants`.
 | `gm.plants.capabilities()` | what each plant class can serve and be sized by | later |
 | `gm.plants.<Plant class>` | the plant classes, see [plants.md](plants.md#registered-plants). The five template plants take `doublets=n`, `size={"doublets": n}` in a plant dict, and a plant-level `depth` | real |
 
-A `Doublet` with a `depth` and no geotherm waits for it: a plant holds the design and the problem
+A `Doublet` with a `depth` and no geotherm waits for it, and a run that starts without it raises code `missing_value` with the path: a plant holds the design and the problem
 the site (`site` of `gm.Problem`).
 
 On any plant, `path` being a dotted module path (`""` is the root):
@@ -378,6 +378,7 @@ and `ROW_CODES` the row codes with their meaning.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.2.0, unreleased changes | | A `Doublet` with a `depth` and no `gradient` or `surface_temperature` when a run or a schedule starts raises `ValidationError` code `missing_value` with the path of each value, whatever `on_error` says; `missing_parameters` lists them. |
 | 0.2.0, unreleased changes | | Private paths only: `gm.call` is `gemini/modules/call.py`, and the old project reader `gemini/plants/_utils/legacy/`, so no run folder imports above the run, in a function or not. No change to a name of this page. |
 | 0.2.0, unreleased changes | | One folder per concern, flat public names. Top level: `gemini/modules`, `plants`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`, `units`, `errors`, `data`, `optim`, `evaluate`, `analysis`, `compiler`, `_utils`; `gm.__all__` is pinned. The folders `core`, `base`, `registry`, `testing`, `backends`, `checks`, `economics`, `profiles`, `utils` and `graph` at the top are gone. Run folders import none of `compiler`, `data`, `optim`, `evaluate`, `analysis`; importing `gm.compiler` registers its executor, and a run works without it. |
 | 0.2.0, unreleased changes | | One `gm.Problem` for every call: `gm.Problem`, `gm.Constraint`, `gm.Assumptions`, with `to_dict`, `from_dict`, `schema`; `Problem.from_json`, `to_json`, `apply_site`. `gm.schedule(plant, problem)`; `gm.simulate(plant, problem=None, plan=None, ..., compile=True)`; every `gm.evaluate` function takes `(plant, problem, results, ...)`, `gm.optim.minimize` and `sample` `(plant, problem, ..., *, plan=None)`. A schedule loads sources by marginal cost and reads its limits from constraints; `attrs["check_only"]` lists the constraints it does not enforce. `Assumptions.prices` and `co2_price` replace the six flat price fields. A `Doublet` with a `depth` and no geotherm waits for the site. |

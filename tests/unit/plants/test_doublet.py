@@ -176,6 +176,13 @@ def test_a_dated_design_derives_at_its_date():
     assert plant.params_at("d0.reservoir", "2029-01-01")["temperature"] == pytest.approx(360.15)
 
 
+def test_a_waiting_depth_is_a_missing_parameter():
+    """``missing_parameters`` names the geotherm, and a doublet without a depth needs none."""
+    doublet = gm.plants.Doublet().set_params("", {"depth": "2500 m"})
+    assert doublet.missing_parameters()[:2] == ["gradient", "surface_temperature"]
+    assert "gradient" not in gm.plants.Doublet().missing_parameters()
+
+
 def test_a_depth_waits_for_its_geotherm():
     """A plant may hold the design and a problem the site: nothing is derived until both exist."""
     doublet = gm.plants.Doublet().set_params("", {"depth": "2500 m", "gradient": "30 K/km"})
