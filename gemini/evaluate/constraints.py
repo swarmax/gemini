@@ -7,6 +7,7 @@ from gemini.case import Constraint
 from gemini.case._utils.fields import si_unit_of
 from gemini.case.roletable import reads
 from gemini.errors import ValidationError
+from gemini.evaluate._utils.co2_steps import emitted_steps
 from gemini.evaluate._utils.columns import (
     field_of,
     fields,
@@ -14,7 +15,8 @@ from gemini.evaluate._utils.columns import (
     parameter_values,
     series,
 )
-from gemini.plants._utils.roles import units_of
+from gemini.evaluate._utils.series import edge_power
+from gemini.plants._utils.roles import delivery_ports, units_of
 from gemini.run._utils.apply import apply_case
 from gemini.types.shapes import check, measure
 from gemini.units import Quantity
@@ -65,7 +67,8 @@ def constraints(plant, case, results):
     list of dict
         One check ``{name, role, unit_path, quantity, passed, value, limit, worst_step}`` per unit
         and constraint: ``name`` is ``<unit path>.<field>``, ``role`` and ``quantity`` those of the
-        constraint, ``unit_path`` the path of the unit (``""`` for the plant). ``value`` is a
+        constraint, ``unit_path`` the path of the unit (``""`` for the plant, and for the role
+        ``plant``, whose figures are named by the quantity alone). ``value`` is a
         ``Quantity`` (SI, ``s`` for ``duration``): the worst value of the run for ``each`` and the
         figure otherwise, and ``limit`` the bound that was violated, else the nearest.
         ``worst_step`` is the ISO 8601 time of the worst step, ``None`` for a figure of the run and
@@ -84,7 +87,7 @@ def constraints(plant, case, results):
         found = units_of(sited, constraint.on)
         if not found:
             checks.append(_no_unit(constraint))
-        checks += [_check(sited, frame, results.durations, constraint, path) for path in found]
+        checks += [_check(sited, case, results, frame, constraint, path) for path in found]
     return checks
 
 
@@ -184,25 +187,78 @@ def _no_reason(values, keep, over):
     return None
 
 
-def _check(plant, frame, durations, constraint, unit_path):
-    """Return the check of one constraint on one unit of its role."""
+def _leaf_flags(plant, frame):
+    """Return, per step, whether any leaf of the plant carried flow."""
+    columns = [
+        join_path(path, "operating")
+        for path, module in plant.named_modules()
+        if module.is_leaf and join_path(path, "operating") in frame
+    ]
+    if not columns:
+        return np.zeros(len(frame), dtype=bool)
+    return frame[columns].to_numpy(dtype=bool).any(axis=1)
+
+
+def _plant_values(plant, case, results, frame, name):
+    """Return ``(values, active, unit)`` of a figure of the plant as a whole."""
+    if name == "co2":
+        return emitted_steps(plant, case, results), _leaf_flags(plant, frame), "kg"
+    found = edge_power(plant, frame, name)
+    if found is None:
+        return np.empty(0), np.empty(0, dtype=bool), "W"
+    return found.to_numpy(dtype=float), _leaf_flags(plant, frame), "W"
+
+
+def _delivery_values(plant, frame, constraint, path):
+    """Return ``(values, active)`` of the power a unit delivers: its two ports less one another."""
+    ports = delivery_ports(plant.get_submodule(path), constraint.on)
+    first, second = (f"{port}.enthalpy_flow" for port in ports)
+    one, active = series(plant, frame, path, first)
+    other, _ = series(plant, frame, path, second)
+    if not one.size or not other.size:
+        return np.empty(0), np.empty(0, dtype=bool)
+    return one - other, active
+
+
+def _values(plant, case, results, frame, constraint, unit_path):
+    """Return ``(values, keep, unit, label, timed)`` of what a constraint reads on one unit."""
     read = reads(constraint.on, constraint.quantity)
-    path, name = field_of(plant, join_path(unit_path, read.path))
-    unit = "s" if constraint.over == "duration" else fields(plant, path)[name][0]
-    bounds = _bounds(constraint)
+    label = join_path(unit_path, read.path)
+    if read.source == "plant":
+        values, active, unit = _plant_values(plant, case, results, frame, read.path)
+        keep = np.isfinite(values) & (active if constraint.when == "running" else True)
+        return values, keep, unit, label, True
+    if read.source == "delivery":
+        values, active = _delivery_values(plant, frame, constraint, unit_path)
+        keep = np.isfinite(values) & (active if constraint.when == "running" else True)
+        return values, keep, si_unit_of("power"), label, True
+    path, name = field_of(plant, label)
     values, keep = _reading(plant, frame, constraint, path, name)
-    label = join_path(path, name)
+    return (
+        values,
+        keep,
+        fields(plant, path)[name][0],
+        join_path(path, name),
+        not is_parameter(plant, path, name),
+    )
+
+
+def _check(plant, case, results, frame, constraint, unit_path):
+    """Return the check of one constraint on one unit of its role."""
+    values, keep, unit, label, timed = _values(plant, case, results, frame, constraint, unit_path)
+    unit = "s" if constraint.over == "duration" else unit
+    bounds = _bounds(constraint)
     reason = _no_reason(values, keep, constraint.over)
     if reason:
         limit = measure(bounds[0] if bounds[0] is not None else bounds[1], unit)
         verdict = check(label, None, measure(None, unit, reason), limit)
         return verdict | _where(constraint, unit_path, None)
-    measured, margin, position = _measure(constraint, values, keep, durations, bounds)
+    measured, margin, position = _measure(constraint, values, keep, results.durations, bounds)
     lower, upper = bounds
     passed = (lower is None or measured >= lower - margin) and (
         upper is None or measured <= upper + margin
     )
-    step = None if position is None or is_parameter(plant, path, name) else frame.index[position]
+    step = None if position is None or not timed else frame.index[position]
     limit = measure(_nearest(measured, lower, upper), unit)
     verdict = check(label, bool(passed), measure(measured, unit), limit)
     return verdict | _where(constraint, unit_path, step)

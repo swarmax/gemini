@@ -47,6 +47,14 @@ def test_what_the_schedule_cannot_enforce_is_check_only():
     assert check_only == [other.to_dict(), least.to_dict()] and found["d0"].operating_time is None
 
 
+def test_a_unit_output_and_a_plant_figure_are_check_only():
+    """The heat of a heat pump and the electricity bought by the plant: judged after the run."""
+    heat = constraint("heat_output", on="heat_pump", bounds={"max": (5, "MW")})
+    bought = constraint("electricity_bought", on="plant", over="sum", bounds={"max": (9, "MW")})
+    found, check_only = limits.split([FLOW, COOLING, heat, bought], ["d0"])
+    assert check_only == [heat.to_dict(), bought.to_dict()] and set(found) == {"d0"}
+
+
 @pytest.mark.parametrize(
     "constraints,name", [([COOLING], "production_flow"), ([FLOW], "brine_cool")]
 )

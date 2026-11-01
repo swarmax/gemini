@@ -18,6 +18,7 @@ def test_the_table_lists_every_role_with_its_quantities():
         "heat_exchanger",
         "heating_supply",
         "cooling_supply",
+        "plant",
     ]
     assert table["doublet"][:2] == ["production_flow", "brine_cooling"]
     table["doublet"].clear()

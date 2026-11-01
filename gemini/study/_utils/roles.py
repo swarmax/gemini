@@ -23,7 +23,8 @@ def concrete(plant, name):
     """Return the names of ``plant`` that the variable ``name`` stands for.
 
     ``<role>.<parameter>`` (a role of ``gm.case.roles()``) is that parameter of each unit of the
-    role, and none when the plant has no unit of it; a role wins over a path of the same text.
+    role (``plant.<parameter>`` that of the plant itself), and none when the plant has no unit of
+    it; a role wins over a path of the same text.
     ``depth`` on a plant with no depth of its own is the depth of each doublet. Any other name,
     such as a path or ``case.<path>``, stands for itself.
     """
