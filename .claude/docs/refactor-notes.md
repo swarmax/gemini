@@ -73,6 +73,15 @@ implementation or test.
   simulation it skips the step. Lack of a health model is reported as `assessed=False`, never as
   evidence of healthy operation.
 
+- Sizing a heat pump: `size` gives a heat pump the part of the heating peak the reservoir water
+  cannot reach, `peak (T_supply - T_reservoir) / (T_supply - T_return)`, and the boiler the whole
+  peak, because the boiler does not depend on the doublets. The share assumes an ideal exchanger
+  upstream of the heat pump; a finite approach leaves the water colder, so a plant with a heat pump
+  and no boiler can fall short at the peak (not corrected). The chillers sit in series on the chilled
+  water, each sized to the cooling peak shared, so they have no margin for the pipe heat gain and a
+  plant of three can miss the cooling supply by a few mK; `chiller.capacity` as a search variable
+  gives the margin. `Comparison` values stay SI floats: only `to_frame` converts.
+
 ## Measured reconciliation and explicit exceptions
 
 The full CSV has 17,280 rows, all labelled Normal. All eight bound models cover every row.

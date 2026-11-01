@@ -1,8 +1,11 @@
-"""The hackathon flow on the 2027 case: size, minimise, simulate, check, report, compare.
+"""The hackathon flow on the 2027 case: size, minimise, check, report, compare.
 
-Each candidate is sized, searched over the choices of the case on LCTS, simulated and reported; the
-reports are compared on LCTS and CO2, the best gets a sensitivity table, and all are saved in
-``.tmp/``. Shows ``gm.study.size``, ``minimize``, ``sensitivity`` and ``gm.evaluate.compare``.
+Every stored candidate, the hand design included, is sized, searched on LCTS with one list of
+variables in ``<role>.<parameter>`` names, simulated and reported. A candidate is feasible when no
+step fails and every constraint of the case passes; the table gives each one's reasons, the
+variables the plant could not take, the metrics in readable units and the Pareto front of the
+feasible designs only. Shows ``gm.study.size``, ``minimize``, ``sensitivity`` and
+``gm.evaluate.compare``.
 
 Run with ``python examples/hackathon.py``.
 """
@@ -14,10 +17,10 @@ import gemini as gm
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE = ROOT / "inputs/examples/hackathon_2027"
-EVALUATIONS = 5
-"""Simulations of the depth search for each doublet count."""
-SHOWN = {"heat_delivered": "GWh", "cold_delivered": "GWh", "boiler_heat": "GWh", "co2": "kt"}
-SHOWN |= {"capex": "MEUR", "opex": "MEUR/yr", "lcts": "EUR/MWh"}
+EVALUATIONS = 20
+"""Simulations of the search for each doublet count: five for each of four variables, the least."""
+SHARE = (0.1, 1.0)
+"""A capacity is searched from a tenth of the peak it serves to the whole peak, an assumption."""
 Q = gm.units.Quantity
 PARAMETERS = {
     "case.assumptions.finance.opex.electricity": {
@@ -28,38 +31,76 @@ PARAMETERS = {
 }
 
 
+def variable(path, parameter, lower, upper):
+    """Return a decision variable between two quantities or two counts."""
+    return {"path": path, "parameter": parameter, "lower": lower, "upper": upper}
+
+
+def variables(case):
+    """Return the variables every candidate is searched on, with bounds from the case."""
+    doublets, depth = case.choices.doublets, case.choices.depth
+    flow = next(
+        item
+        for item in case.constraints
+        if item.quantity == "production_flow" and item.over == "each"
+    )
+    peak = {s: case.demand.frame[f"{s}_demand"].max() for s in ("heating", "cooling")}
+    low, high = SHARE
+    return [
+        variable("size", "doublets", int(doublets.min), int(doublets.max)),
+        variable("", "depth", Q(depth.min, depth.unit), Q(depth.max, depth.unit)),
+        variable(
+            "heat_pump", "capacity", Q(low * peak["heating"], "W"), Q(high * peak["heating"], "W")
+        ),
+        variable(
+            "chiller", "capacity", Q(low * peak["cooling"], "W"), Q(high * peak["cooling"], "W")
+        ),
+        variable("doublet", "nominal_flow", Q(flow.min, "m3/s"), Q(flow.max, "m3/s")),
+    ]
+
+
 def design(plant, case):
-    """Return the plant sized by gemini, then the best of the search over the case's choices."""
+    """Return ``(searched design, search result)``; the sized plant and ``None`` if not searched."""
     sized = gm.study.size(plant, case)
     try:
-        return gm.study.minimize(sized, case, "lcts", evaluations=EVALUATIONS)["best"]["plant"]
+        found = gm.study.minimize(sized, case, "lcts", variables(case), evaluations=EVALUATIONS)
     except gm.errors.ValidationError as error:
-        print(f"  not searched: {error.code}")
-        return sized
+        print(f"  not searched: {error}")
+        return sized, None
+    return found["best"]["plant"], found
 
 
-def print_report(name, report):
-    """Print what a candidate delivers, costs and fails."""
-    failed = [item["name"] for item in report["constraints"] if not item["passed"]]
-    print(f"{name}: failed steps {report['failed_steps']}, failed constraints {failed}")
-    for key, unit in SHOWN.items():
-        value = report[key].to(unit)
-        print(f"  {key:<20} {value.reason or f'{value.value:10.2f} {unit}'}")
+def print_candidate(name, report, found):
+    """Print whether a candidate is feasible and why not, with what the search left fixed."""
+    entry = gm.evaluate.compare([report], by="lcts")[0]
+    reasons = [item["name"] for item in entry.get("reasons", [])]
+    trials = len(found["history"]) if found else 0
+    print(f"{name}: {trials} trials, feasible {entry['feasible']}, reasons {reasons}")
+    for item in found["fixed"] if found else []:
+        print(f"  fixed {item['name']} = {item['value']}: {item['reason']}")
 
 
 def main():
-    """Run the flow for every candidate and write the reports."""
+    """Search every candidate, print the table and the Pareto front, write the reports."""
     case = gm.Case.from_json(SAMPLE / "case.json")
     found = {}
     for path in sorted((SAMPLE / "plants").glob("*.json")):
-        plant = design(gm.Plant.from_json(path), case)
-        found[path.stem] = plant, gm.evaluate.report(plant, case, gm.simulate(plant, case))
-        print_report(path.stem, found[path.stem][1])
+        plant, result = design(gm.Plant.from_json(path), case)
+        report = gm.evaluate.report(plant, case, gm.simulate(plant, case))
+        found[path.stem] = plant, report
+        print_candidate(path.stem, report, result)
     ranked = gm.evaluate.compare([report for _, report in found.values()], by=["lcts", "co2"])
-    print(ranked.to_frame().to_string())
-    print("Pareto front:", [name for name, item in zip(found, ranked) if item["pareto"]])
-    best, _ = min(found.values(), key=lambda found: found[1]["lcts"].si)
-    print(gm.study.sensitivity(best, case, PARAMETERS, ["lcts"]).to_frame().to_string())
+    frame = ranked.to_frame()
+    frame.index = list(found)
+    print(frame.to_string(float_format="{:.4g}".format))
+    print("Pareto front of the feasible designs:", list(frame.index[frame["pareto"]]))
+    feasible = {name: found[name] for name in frame.index[frame["feasible"]]}
+    best, _ = min(feasible.values(), key=lambda item: item[1]["lcts"].si)
+    print(
+        gm.study.sensitivity(best, case, PARAMETERS, ["lcts"])
+        .to_frame()
+        .to_string(float_format="{:.4g}".format)
+    )
     (ROOT / ".tmp").mkdir(exist_ok=True)
     for name, (_, report) in found.items():
         (ROOT / ".tmp" / f"{name}.json").write_text(json.dumps(report.to_dict(), indent=2))

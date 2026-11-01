@@ -16,11 +16,11 @@ class Tornado(list):
     def to_frame(self, units=None):
         """Return a table of the rows: the parameter bounds in SI, the metric in a display unit.
 
-        ``at_low``, ``at_high`` and ``effect`` are numbers in the unit of ``unit``: the display unit
-        of the metric (``gm.evaluate.display_units``), or the one given in ``units``, a dict
-        ``{metric: unit}`` of the metrics of the rows. A metric without a display unit stays in
-        SI. A name that is not a metric of the rows raises ``invalid_value``; a unit of another
-        dimension, ``invalid_unit``.
+        ``at_low``, ``at_high`` and ``effect`` are numbers in the unit of ``unit``: the display
+        unit of the metric (MWh, MW, MEUR, EUR/MWh or kt, as in ``Comparison.to_frame``), or the
+        one given in ``units``, a dict ``{metric: unit}`` of the metrics of the rows. A metric
+        without a display unit stays in SI. A name that is not a metric of the rows raises
+        ``invalid_value``; a unit of another dimension, ``invalid_unit``.
         """
         shown = display_units(list(dict.fromkeys(row["metric"] for row in self)), units)
         rows = [

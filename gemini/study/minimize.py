@@ -10,7 +10,7 @@ from gemini.errors import ValidationError
 from gemini.study._utils.best import Best
 from gemini.study._utils.choices import STRUCTURE, from_choices, split
 from gemini.study._utils.resize import resized
-from gemini.study._utils.roles import expanded, quantities
+from gemini.study._utils.roles import concrete, expanded, quantities
 from gemini.study._utils.target import is_case_name, parameter_value
 from gemini.study._utils.trial import LARGEST_VIOLATION, checked_metric, limit_si, run_judged
 from gemini.types.shapes import Value, measure
@@ -113,8 +113,25 @@ def _best(history, sign, plant):
     return Best(found.value, found.unit, found.reason, found.parts, design), bool(feasible)
 
 
-def _search(evaluated, keys, bounds, evaluations):
-    """Run the search of the continuous variables; with none, evaluate the plant once."""
+def _start(design, keys, bounds):
+    """Return the point of the design itself, each value clipped to its bounds.
+
+    A variable of the plant takes the value the design has for it (the first unit of a role); a
+    number of the case, or a parameter with no number, takes the middle of its bounds.
+    """
+    point = []
+    for name, (low, high) in zip(keys, bounds):
+        found = None
+        if not is_case_name(name):
+            path, _, parameter = concrete(design, name)[0].rpartition(".")
+            found = getattr(design.get_submodule(path), parameter, None)
+        number = (low + high) / 2 if not isinstance(found, (int, float)) else found
+        point.append(min(max(float(number), low), high))
+    return point
+
+
+def _search(evaluated, keys, bounds, evaluations, start):
+    """Run the search of the continuous variables from ``start``; with none, evaluate once."""
     if not keys:
         evaluated(np.empty(0))
         return
@@ -124,6 +141,7 @@ def _search(evaluated, keys, bounds, evaluations):
         bounds,
         maxiter=generations,
         popsize=population,
+        x0=start,
         tol=0,
         polish=False,
         seed=SEED,
@@ -145,8 +163,10 @@ def minimize(
     Each trial copies the plant and the case, sets the variables, simulates the copy on the case
     (``gm.simulate`` plans the demand on that design) and reads the objective from
     ``gm.evaluate``. The continuous variables are searched with
-    ``scipy.optimize.differential_evolution`` from a Latin hypercube, with a fixed seed: it needs
-    no gradient and its population gives the exact number of simulations. A number of doublets is
+    ``scipy.optimize.differential_evolution`` from a Latin hypercube with a fixed seed. One member
+    is the plant as it is given (its own values, clipped to the bounds), so a start inside the
+    bounds is among the trials and the best is never worse than it. It needs no gradient and its
+    population gives the exact number of simulations. A number of doublets is
     a discrete variable: the search runs once for each count, from the lowest to the highest, on
     a new plant of that size (``size.doublets``), and the best trial of all counts wins. The
     plant and the case themselves are not changed.
@@ -236,7 +256,7 @@ def minimize(
             history.append(_entry(shown, metrics, name, reason, violation))
             return _ranked(sign, history[-1].value, reason, violation)
 
-        _search(evaluated, keys, bounds, evaluations)
+        _search(evaluated, keys, bounds, evaluations, _start(design, keys, bounds))
     best, feasible = _best(history, sign, plant)
     return {
         "best": best,

@@ -117,9 +117,10 @@ modules are equipment, with the size the factor multiplies ([economics.md](econo
 | `absorption_chiller`, `adsorption_chiller` | `AbsorptionUnit`, `AdsorptionChiller` |
 | `heat_exchanger`, `cooler`, `pipe`, `thermal_storage` | `HeatExchanger`, `Cooler`, `Pipe`, `ThermalStorage` |
 | `degasser`, `flare`, `gas_makeup` | `Degasser`, `Flare`, `GasMakeup` |
+| `injection_pump` | `InjectionPump` |
 
-No module has a kind and so no capex: `InjectionPump` (the kind `injection_pump` exists in the case,
-but the pump has no design flow or rating to size it), `IceStorage`, `ESP` and `LineShaftPump` (an
+`InjectionPump` is the kind `injection_pump`, sized by its shaft power at `nominal_flow`. No module
+has a kind and so no capex: `IceStorage`, `ESP` and `LineShaftPump` (an
 ESP is paid inside the `Doublet`), `AquiferStorage`, `BoreholeField`, `DownholeHeatExchanger`,
 `ORC`, `FlashTurbine`, `Separator`, `GasCompressor`, `PressurizationTank`, `Filter`, `Desander`,
 `Blowdown`, `InhibitorDosing`. The grids, `Atmosphere`, `Formation`, `Splitter`, `Mixer`, `Valve`
@@ -194,6 +195,10 @@ Injection (booster) pump that raises the brine to a discharge pressure.
   no default, calibratable, required unless both curves are given: `missing_value` when the power
   needs it; the example plant selects 0.8, see [refactor-notes.md](refactor-notes.md)), `head_coefficients`, `power_coefficients`
   (`list[float] | None`, shape 6, default `None`, ESP basis).
+- **Design point**: `nominal_flow` (`VolumeFlow | None`) and `nominal_head` (`PressureDifference |
+  None`), default `None`: they size the capex (kind `injection_pump`, shaft power of the design point,
+  the power curve at `nominal_flow` for a pump with curves); a missing one raises `missing_value`
+  from `capex`. `gm.study.size` sets them from the doublets the pump serves.
 - **Controls**: `pressure_setpoint` (`Pressure | None`, default `None`), `frequency`
   (`Frequency`, default 60 Hz, used with curves).
 - **Outputs**: `head` (soft sensor), `power` (soft sensor), `discharge_pressure` (soft sensor).

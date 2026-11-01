@@ -23,10 +23,11 @@ class Comparison(list):
         Parameters
         ----------
         units : dict, optional
-            ``{metric: unit}``. A metric is shown in its display unit (see ``display_units``)
-            unless a unit is given; its column is named ``<metric> [<unit>]``. A metric without a
-            display unit stays in SI under its own name. A name that is not a metric, or a unit of
-            another dimension, raises ``invalid_value`` or ``invalid_unit``.
+            ``{metric: unit}``. A metric is shown in its display unit (energy in MWh, power in
+            MW, money in MEUR, LCTS in EUR/MWh, mass in kt) unless a unit is given; its column is
+            named ``<metric> [<unit>]``. A metric without a display unit stays in SI under its
+            own name. A name that is not a metric, or a unit of another dimension, raises
+            ``invalid_value`` or ``invalid_unit``.
         """
         names = list(self[0]["values"]) if self else []
         shown = display_units(names, units)

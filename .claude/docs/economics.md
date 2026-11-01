@@ -80,10 +80,11 @@ The kinds, with the size the factor multiplies:
 | `heat_exchanger`, `cooler` | `HeatExchanger`; `Cooler` | conductance [W/K]; capacity [W] |
 | `pipe`, `thermal_storage` | `Pipe`; `ThermalStorage` | length [m]; volume [m3] |
 | `degasser`, `flare`, `gas_makeup` | `Degasser`, `Flare`, `GasMakeup` | a fixed amount |
-| `injection_pump`, `ice_storage` | none | no module has a size for them |
+| `injection_pump` | `InjectionPump` | shaft power at `nominal_flow` (and `nominal_head` without curves) [W] |
+| `ice_storage` | none | no module has a size for it |
 
-Known limits. `injection_pump` is a kind of the case but no module is priced with it:
-`InjectionPump` has no design flow or rating, so it adds no capex. `IceStorage` (its size in m3
+Known limits. `InjectionPump` without `nominal_flow` raises `missing_value` on `capex`; `size` sets it.
+`IceStorage` (its size in m3
 needs the water density, which is not a parameter), `ESP` and `LineShaftPump` (an ESP is paid
 inside the `Doublet`), `AquiferStorage`, `BoreholeField`, `DownholeHeatExchanger`, `ORC`,
 `FlashTurbine`, `Separator`, `GasCompressor`, `PressurizationTank`, `Filter`, `Desander`, `Blowdown`
@@ -243,8 +244,16 @@ the pressure. A rate the column of brine injects alone has no pressure to give: 
 `gm.study.size(plant, case)` returns a new plant with first sizes from the case, by gemini physics
 only: the number of doublets (the smallest in `case.choices.doublets` whose heat at the flow limit
 and the brine cooling limit of the case's constraints covers the heating peak, the largest with a
-note when none does), the nominal flow of each doublet, and the capacity of each boiler, heat pump
-and chiller from the peaks of the demand. The plant is not changed; the note is `plant.sizing`,
+note when none does), the nominal flow of each doublet, the capacity of each boiler, heat pump
+and chiller from the peaks of the demand, and the rating of the injection pump. A boiler gets the
+whole heating peak shared by its units, because it is the one unit that does not depend on the
+doublets and so carries the peak when a doublet is out; a heat pump gets the part of the peak the
+reservoir water cannot reach by itself, `peak (T_supply - T_reservoir) / (T_supply - T_return)`
+shared by its units, and none (listed with a note) when the reservoir is hotter than the supply; a
+chiller gets the cooling peak shared. The injection pump gets the flow of the doublets it serves
+and the head to inject at that flow less the wellhead pressure. The chillers of a plant sit in
+series on the chilled water, so a plant whose chillers are only just sized can miss the cooling
+supply temperature by a few mK; list `chiller.capacity` as a variable to give them margin. The plant is not changed; the note is `plant.sizing`,
 `{"sized": [{path, value, reason}], "unchanged": [{path, reason}]}`. A plant class that takes no
 structural size `doublets` (see `gm.plants.capabilities()`) keeps the doublets it has and says so in
 `unchanged`; a size the case lacks the input for raises `missing_value` naming its path. A size
@@ -255,29 +264,35 @@ plan=None)` searches design values. Each trial copies the plant and the case, se
 plans the demand of the case on that design with `gm.schedule`, simulates and reads the metric, so
 neither is changed. Without `variables` they are those of `case.choices`: `size.doublets` (a
 discrete variable: the search runs once for each count, from the lowest to the highest, on a new
-plant of that size, and the best trial of all counts wins) and `depth`. A name is a plant
+plant of that size, and the best trial of all counts wins) and `depth`; a list replaces them, so
+restate these to keep searching them, and a capacity is searched only when listed. A name is a plant
 `path.parameter`, a number of the case as `case.<path>` (the path of `case.json`, for example
-`case.assumptions.finance.opex.electricity`), or `size.doublets`. `size.doublets` needs a plant
-class that takes that structural size: on a plant whose dict has none, `minimize` raises
-`ValidationError` code `invalid_design` (path `size.doublets`) before any run, where `size` keeps
-the doublets it has. A `plan` stays fixed over the trials and lets `case` be `None` for a building
-block; with neither the call raises `missing_value`. `evaluations` is the largest number of
-simulations **for each doublet count**. The search is `scipy.optimize.differential_evolution` from
-a Latin hypercube, seed fixed, with five candidates per variable: the population times the
-generations is the number of simulations, so a smaller budget than one population raises
-`ValidationError`. A trial that fails, has no value or breaks a limit is in `history` with its
-`reason` and is never `best`. The result is `{best, history, evaluations}`; `best` is the objective
-as a `Value` whose `parts["parameters"]` are `{name: Quantity}` and whose `["plant"]` is the best
-plant.
+`case.assumptions.finance.opex.electricity`), `size.doublets`, or `<role>.<parameter>` with a role
+of `gm.case.roles()` (`heat_pump.capacity`, `chiller.capacity`, `doublet.nominal_flow`,
+`doublet.depth`): it sets that parameter on every unit of the role, after the doublet count, so one
+list serves plants of other paths and counts. `depth` on a plant with no depth of its own is the
+depth of each doublet. A variable the plant cannot take, a role it lacks or `size.doublets` on a
+plant whose dict has none, is not searched and is in the result's `fixed`
+(`{name, value, reason}`); `invalid_design` is raised only when nothing is left to search. A `plan`
+stays fixed over the trials and lets `case` be `None` for a building block; with neither the call
+raises `missing_value`. `evaluations` is the largest number of simulations **for each doublet
+count**; with three variables 15 gave 45 trials. The search is
+`scipy.optimize.differential_evolution` from a Latin hypercube, seed fixed, with five candidates per
+variable, so a smaller budget than one population raises `ValidationError`.
 
-**The constraints of the case are not enforced in the search.** `minimize` judges a trial by its
-objective only. The `constraints` argument is a list of limits on *metrics*
-(`{metric, minimum, maximum}`, `Quantity` limits), not the `case.constraints` on roles, and a
-trial that breaks one is rejected. `gm.schedule` enforces the flow range and the brine cooling of
-the case when it plans each trial, and `gm.evaluate.constraints` or `report` of the best plant says
-which constraints it still violates; `minimize` does not search for a plant that satisfies them.
-A real run takes about 0.7 s per trial on the three-week shallow case and more on a year with the
-drive-water loop of a heat-driven chiller, so the multi-run tests are in the e2e tier.
+A trial is feasible when its run has no failed step, every constraint of the case passes
+(`gm.evaluate.constraints`, the supply temperatures of the services included) and every limit of
+the `constraints` argument (limits on *metrics*, `{metric, minimum, maximum}`, not the
+`case.constraints` on roles) holds. A check with no value (no flow, a role the plant lacks) does
+not fail a trial. A trial that does not run, such as a negative injection head at great depth, is
+infeasible and the search goes on. The optimiser sees every feasible trial as better than every
+infeasible one and the infeasible ones ordered by their relative violation. `history` holds every
+trial with its `reason` (`None` when feasible; the first failed check, a dict, or a text) and
+`parts["violation"]`. The result is `{best, feasible, fixed, history, evaluations}`; `best` is the
+objective as a `Value` whose `parts["parameters"]` are `{name: Quantity}` and whose `["plant"]` is
+the best feasible plant, or with none the least violating trial that ran, then `feasible` is
+`False`. A real run takes about 0.7 s per trial on the three-week shallow case and seconds on a
+year, so the multi-run tests are in the e2e tier.
 
 `gm.study.sample(plant, case, distributions, metrics, count, seed=0, *, plan=None)` draws `normal`,
 `uniform` and `triangular` values (a plant parameter or `case.<path>`, each field a `Quantity`) with
@@ -285,7 +300,8 @@ drive-water loop of a heat-driven chiller, so the multi-run tests are in the e2e
 `p50`, `p95`; a draw whose run failed has its `reason` and stays out of the summary.
 `gm.study.sensitivity(plant, case, parameters, metrics, *, plan=None)` runs each value at its `low`
 and its `high` with the others as they are, and returns a list of `{parameter, metric, low, high,
-at_low, at_high, effect}`, the largest effect first, with `to_frame()`.
+at_low, at_high, effect}`, the largest effect first, with `to_frame(units=None)`: the metric columns
+in the display unit of the metric, or the unit of `units`, and a `unit` column.
 
 A metric is a KPI or total of `gm.evaluate.totals` or one of `lcoh`, `lcoc`, `lcts`,
 `annualised_cost`, `co2`; the economic ones read the assumptions of `case`, so they need a case with
@@ -303,5 +319,10 @@ run), `capacities`, `capex`, `opex`, `lcts`, `lcoh`, `lcoc`, `co2`, `constraints
 value `None` with a `reason` and many designs stay comparable. `report.to_dict()` is plain JSON.
 `gm.evaluate.compare(reports, by)` ranks reports by the metrics `by` (a name, a list, or a
 `{metric: "min" | "max"}` dict) and returns a `Comparison`, a list with one entry per report in the
-order given (`index`, `values`, `ranks`, `pareto`) and `to_frame()`. A report with no value of a
-metric ranks last for it and is never on the front.
+order given (`index`, `values`, `ranks`, `pareto`, `feasible`, and `reasons` when not feasible) and
+`to_frame(units=None)`. A report is feasible when no step failed, no constraint failed and every
+service in its `services` (`report["services"]`) is delivered; feasible reports rank first, only
+they can be on the front, and `reasons` are the failed items of `gm.evaluate.constraints` or
+`{name, reason}`. `values` stay floats in SI; `to_frame` shows the metrics in display units, columns
+`<metric> [<unit>]`. A report with no value of a metric ranks last for it and is never on the
+front.

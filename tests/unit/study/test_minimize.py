@@ -258,3 +258,16 @@ def test_a_role_the_plant_lacks_is_fixed(runs):
         {"name": "chp.capacity", "value": None, "reason": "the plant has no unit of the role 'chp'"}
     ]
     assert result["evaluations"] == 5
+
+
+def test_the_plant_as_given_is_one_of_the_trials(runs):
+    """The search starts from the plant, so its depth is tried and the best is never worse."""
+    plant = shallow_plant()
+    plant.depth = 1234.0
+    found = gm.study.minimize(plant, shallow_case(), "lcts", DEPTH, evaluations=5)
+    depths = [item.parts["parameters"]["depth"].value for item in found["history"]]
+    assert 1234.0 in depths
+    start = next(
+        item for item in found["history"] if item.parts["parameters"]["depth"].value == 1234.0
+    )
+    assert found["best"].value <= start.value

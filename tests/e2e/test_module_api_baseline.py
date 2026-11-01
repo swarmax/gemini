@@ -65,6 +65,7 @@ NEW_PARAMS = {
         )
     }
     | {"drainage_radius": 1000.0},
+    "injection_pump": {"nominal_flow": None, "nominal_head": None},
 }
 """Parameters added after phase 0, as ``None`` (unset), plus the two explicit values."""
 

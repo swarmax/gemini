@@ -1040,6 +1040,8 @@
         "params": {
           "efficiency": 0.8,
           "head_coefficients": null,
+          "nominal_flow": null,
+          "nominal_head": null,
           "power_coefficients": null,
           "pump_type": "DEFAULT-PUMP",
           "stage_count": 10

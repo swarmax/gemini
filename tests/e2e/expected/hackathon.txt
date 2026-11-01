@@ -1,61 +1,22 @@
-  not searched: invalid_design
-HackathonPlant: failed steps 0, failed constraints []
-  heat_delivered           111.67 GWh
-  cold_delivered            23.74 GWh
-  boiler_heat                0.00 GWh
-  co2                       13.82 kt
-  capex                     43.65 MEUR
-  opex                       4.63 MEUR/yr
-  lcts                      57.05 EUR/MWh
-HeatingAbsorptionCoolingPlant: failed steps 0, failed constraints []
-  heat_delivered           111.67 GWh
-  cold_delivered            23.74 GWh
-  boiler_heat               75.75 GWh
-  co2                       24.59 kt
-  capex                     23.61 MEUR
-  opex                       7.07 MEUR/yr
-  lcts                      64.51 EUR/MWh
-HeatingCoolingPlant: failed steps 0, failed constraints ['cooling_consumer.supply_in.temperature']
-  heat_delivered           111.67 GWh
-  cold_delivered            23.74 GWh
-  boiler_heat               15.99 GWh
-  co2                       16.88 kt
-  capex                     44.97 MEUR
-  opex                       5.89 MEUR/yr
-  lcts                      67.05 EUR/MWh
-HeatingFullCoolingPlant: failed steps 0, failed constraints ['cooling_consumer.supply_in.temperature']
-  heat_delivered           111.67 GWh
-  cold_delivered            23.74 GWh
-  boiler_heat               75.82 GWh
-  co2                       24.54 kt
-  capex                     26.61 MEUR
-  opex                       7.10 MEUR/yr
-  lcts                      66.30 EUR/MWh
-HeatingHeatPumpCoolingPlant: failed steps 0, failed constraints []
-  heat_delivered           111.67 GWh
-  cold_delivered            23.74 GWh
-  boiler_heat               13.68 GWh
-  co2                       14.15 kt
-  capex                     39.97 MEUR
-  opex                       5.05 MEUR/yr
-  lcts                      58.18 EUR/MWh
-HeatingPlant: failed steps 0, failed constraints ['cooling_supply.temperature']
-  heat_delivered           111.67 GWh
-  cold_delivered       the plant has no module at its edge that shows it
-  boiler_heat               66.82 GWh
-  co2                       20.16 kt
-  capex                     10.15 MEUR
-  opex                       5.81 MEUR/yr
-  lcts                      58.45 EUR/MWh
-               lcts           co2  rank_lcts  rank_co2  pareto
-index                                                         
-0      1.584725e-08  1.381756e+07          1         1    True
-1      1.791837e-08  2.459441e+07          4         6   False
-2      1.862423e-08  1.688274e+07          6         3   False
-3      1.841706e-08  2.454194e+07          5         5   False
-4      1.616099e-08  1.414852e+07          2         2   False
-5      1.623732e-08  2.016355e+07          3         4   False
-Pareto front: ['HackathonPlant']
-                                   parameter metric           low          high        at_low       at_high        effect        unit
-0  case.assumptions.finance.opex.electricity   lcts  1.944444e-08  4.444444e-08  1.419570e-08  1.915036e-08  4.954652e-09  currency/J
-1    case.environment.reservoir.permeability   lcts  1.480385e-13  2.467308e-13  1.614222e-08  1.566984e-08  4.723791e-10  currency/J
+HackathonPlant: 80 trials, feasible True, reasons []
+  fixed size.doublets = Quantity(value=2, unit=<Unit.DIMENSIONLESS: '-'>): Plant takes no structural size 'doublets'
+HeatingAbsorptionCoolingPlant: 135 trials, feasible True, reasons []
+  fixed heat_pump.capacity = None: the plant has no unit of the role 'heat_pump'
+HeatingCoolingPlant: 240 trials, feasible True, reasons []
+HeatingFullCoolingPlant: 135 trials, feasible True, reasons []
+  fixed heat_pump.capacity = None: the plant has no unit of the role 'heat_pump'
+HeatingHeatPumpCoolingPlant: 240 trials, feasible True, reasons []
+HeatingPlant: 120 trials, feasible False, reasons ['cold_delivered']
+  fixed heat_pump.capacity = None: the plant has no unit of the role 'heat_pump'
+  fixed chiller.capacity = None: the plant has no unit of the role 'chiller'
+                               lcts [EUR/MWh]  co2 [kt]  rank_lcts  rank_co2  pareto  feasible
+HackathonPlant                          44.25     13.05          3         3   False      True
+HeatingAbsorptionCoolingPlant            60.9     25.84          5         5   False      True
+HeatingCoolingPlant                     42.42     10.34          2         2   False      True
+HeatingFullCoolingPlant                 40.17     9.651          1         1    True      True
+HeatingHeatPumpCoolingPlant             48.01      15.5          4         4   False      True
+HeatingPlant                            29.83     7.903          6         6   False     False
+Pareto front of the feasible designs: ['HeatingFullCoolingPlant']
+                                   parameter metric       low      high  at_low  at_high  effect     unit
+0  case.assumptions.finance.opex.electricity   lcts 1.944e-08 4.444e-08   37.24    44.63   7.396  EUR/MWh
+1    case.environment.reservoir.permeability   lcts  1.48e-13 2.467e-13   45.36     39.1   6.267  EUR/MWh

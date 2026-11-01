@@ -7,5 +7,5 @@ heating_consumer.supply_in.temperature        ok
 cooling_consumer.supply_in.temperature        ok
 Heat delivered         691.69 MWh
 Cold delivered          54.85 MWh
-LCTS                    59.16 EUR/MWh
+LCTS                    59.29 EUR/MWh
 CO2                     56.81 t

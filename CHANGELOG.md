@@ -14,10 +14,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   plant.
 - One unit format: a `Quantity` or `{"value", "unit"}`; unit text is refused and `gm.units.parse`
   is removed.
+- `gm.study.minimize` respects the case: a trial is feasible when no step fails and every constraint
+  of the case passes; the result has `feasible` and `fixed`, a `history` item its `reason` and
+  `parts["violation"]`. `gm.study.size` gives a heat pump the part of the peak the reservoir cannot
+  reach. `compare` entries have `feasible` and `reasons`; `to_frame(units=None)` of `compare` and
+  `sensitivity` shows display units.
 - `gm.optim` is `gm.study`; `gm.types.Cost` is removed, equipment declares `capex(finance)` and
   `fixed_opex(finance)` for its kind; `examples/` holds five flat scripts.
 
 ### Added
+- Variables `<role>.<parameter>` for `minimize`; `report["services"]`; `InjectionPump.nominal_flow`
+  and `nominal_head`, priced as `injection_pump`; cited prices in the hackathon case.
 - `gm.evaluate.capacities`, `report` and `compare`; `gm.study.size` and `sensitivity`;
   `gm.plants.capabilities`; costs on every equipment kind; the hackathon example from case to
   compared designs.
