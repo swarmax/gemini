@@ -27,7 +27,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   `sensitivity(plant, case, metrics)` read the `uncertainty` the case declares; the `distributions`
   and `parameters` arguments are gone. `Comparison` values are `Quantity`; `report.to_dict` and
   `str(report)` show display units. A well's `pipe_path` is four `section_*` lists. An `ESP` row
-  outside its curve fails with `out_of_range`; an `InjectionPump` below its suction does not pump.
+  outside its curve or over its speed-scaled maximum flow fails with `out_of_range`; a failed step makes a study trial infeasible (metrics `None`), and `sample` counts `failed`; an `InjectionPump` below its suction does not pump.
 - Removed, with no alias: `gm.plants.example` (read a plant with `gm.Plant.from_json` or build the
   class), `gm.data.synthesize`, `gm.analysis.injectivity`, `calibrate_pump`, `calibrate_corrosion`,
   `erosion`. The old -> new table is in [api.md](.claude/docs/api.md).

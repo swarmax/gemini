@@ -106,7 +106,7 @@ def test_a_value_the_plant_needs_and_the_case_lacks_is_named_by_its_path():
 
 
 def test_a_copy_that_carries_the_case_is_not_copied_again():
-    """``applied_in_place`` sets the values on the plant, and ``apply_case`` of that case keeps it."""
+    """``applied_in_place`` sets the values on the plant; ``apply_case`` of that case keeps it."""
     case = sample_case()
     plant = gm.Plant.from_dict(template_dict("HeatingCoolingPlant"))
     applied = applied_in_place(plant, case)

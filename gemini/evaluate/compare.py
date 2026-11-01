@@ -57,7 +57,7 @@ class Comparison(list):
 
     @classmethod
     def from_dict(cls, data):
-        """Return the ``Comparison`` of what ``to_dict`` gave; a metric value is a ``Quantity`` again.
+        """Return the ``Comparison`` of what ``to_dict`` gave; a metric is a ``Quantity`` again.
 
         The ``reasons`` stay plain dicts, as ``to_dict`` wrote them.
         """
@@ -74,7 +74,7 @@ class Comparison(list):
 
 
 def _number(value):
-    """Return the SI number of a value of a comparison: a ``Quantity``, a plain number or ``None``."""
+    """Return the SI number of a comparison value: a ``Quantity``, a plain number or ``None``."""
     return value.si if isinstance(value, Quantity) else value
 
 
@@ -106,13 +106,15 @@ def compare(reports, by):
     -------
     Comparison
         One entry per report, in the order given: ``index`` (its position), ``values`` (the
-        metrics as ``gm.units.Quantity`` in SI; a plain number stays a float; ``None`` for no value), ``ranks`` (1 is best; equal values share a
-        rank), ``pareto`` (whether no other feasible report is at least as good in every metric and
-        better in one; an infeasible report is never on it), ``feasible`` and, when not feasible,
+        metrics as ``gm.units.Quantity`` in SI; a plain number stays a float; ``None`` for no
+        value), ``ranks`` (1 is best; equal values share a rank), ``pareto`` (whether no other
+        feasible report is at least as good in every metric and better in one; an infeasible
+        report is never on it), ``feasible`` and, when not feasible,
         ``reasons``: the failed constraints as ``gm.evaluate.constraints`` gives them, and
         ``{name, reason}`` for a missing service, a failed step or constraints none of which
         was checked.
-        With one metric the front is its best reports. ``to_frame()`` gives a table in display units and ``to_dict()`` plain JSON.
+        With one metric the front is its best reports. ``to_frame()`` gives a table in display
+        units and ``to_dict()`` plain JSON.
     """
     senses = _senses(by, reports)
     values = {name: [_value(report, name) for report in reports] for name in senses}

@@ -82,7 +82,7 @@ def print_candidate(name, report, found):
 
 
 def study():
-    """Search every candidate, print the table, the Pareto front and the spread, write the reports."""
+    """Search every candidate, print the table, the front and the spread, write the reports."""
     case = gm.Case.from_json(SAMPLE / "case.json")
     found = {}
     for path in sorted((SAMPLE / "plants").glob("*.json")):

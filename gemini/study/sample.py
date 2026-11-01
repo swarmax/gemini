@@ -112,8 +112,8 @@ def sample(plant, case, metrics, count, seed, *, plan=None):
     the plant and the case, sets the drawn values on the copy of the case, simulates the copy
     (``gm.simulate`` plans the demand on that design) and reads the metrics. The plant and the
     case themselves are not changed. With ``gm.runtime.settings(processes=n)`` the draws run in
-    ``n`` worker processes and give the same result. A draw that breaks the bounds of a value of the case, such as
-    a negative price, is a draw whose run failed.
+    ``n`` worker processes and give the same result. A draw that breaks the bounds of a value of
+    the case, such as a negative price, is a draw whose run failed.
 
     Parameters
     ----------

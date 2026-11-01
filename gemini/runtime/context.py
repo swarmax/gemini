@@ -80,7 +80,8 @@ def get_processes():
 def settings(backend=KEEP, **changes):
     """Apply settings inside a ``with`` block or a decorated function, then restore them.
 
-    The names are ``backend``, ``precision``, ``display_units``, ``default_fluid`` and ``processes``.
+    The names are ``backend``, ``precision``, ``display_units``, ``default_fluid`` and
+    ``processes``.
     ``backend`` selects the kernels of the ops by name, and ``None`` restores the automatic choice
     from the values; ``processes`` is the number of worker processes the trials of a study run
     in, 1 for a serial run; the others are merged into the settings current at entry. Unknown

@@ -48,7 +48,7 @@ def test_budget_boundary_is_one_second_of_cpu():
 
 
 def test_work_in_a_child_process_is_counted():
-    """CPU time of a child process the test waited for is counted, so a process pool hides nothing."""
+    """CPU time of a child process the test waited for is counted: a pool hides nothing."""
     child = multiprocessing.get_context("spawn").Process(target=burn, args=(0.25,))
     with measure_cpu() as cpu:
         child.start()

@@ -39,7 +39,8 @@ def build(stored):
     }
     plant.set_params("", designed)
     plant.set_inputs(stored["inputs"])
-    print(f"Filled: {len(plant.missing_parameters())} left: the reservoir and well the case gives, and the sizes")
+    left = len(plant.missing_parameters())
+    print(f"Filled: {left} left: the reservoir and well of the case, the sizes")
     return plant
 
 

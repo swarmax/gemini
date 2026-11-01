@@ -166,9 +166,9 @@ class InjectionPump(Equipment, Module):
         """Return the pressure rise [Pa] from the head curve, else from the pressure setpoint.
 
         A ``power_coefficients`` curve is used for power only together with a ``head_coefficients``
-        curve. A setpoint below the suction pressure needs no pumping: the rise is zero, so the power
-        is zero and the discharge pressure is the suction pressure (``is_pumping`` is false). A
-        head curve that falls below zero is still an error.
+        curve. A setpoint below the suction pressure needs no pumping: the rise is zero, so the
+        power is zero and the discharge pressure is the suction pressure (``is_pumping`` is
+        false). A head curve that falls below zero is still an error.
         """
         flow = suction.volumetric_flow()
         require_forward(self.path, "suction volume flow", flow, "m3/s")
