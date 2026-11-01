@@ -419,7 +419,7 @@ of the flow, with its signature and its return shape. `python examples/hackathon
 | Compare | `gm.evaluate.compare(reports, by=["lcts", "co2"])` | `Comparison`, below |
 | Table | `comparison.to_frame()` | a DataFrame, one row per report, columns `<metric> [<unit>]` in display units (MWh, MW, MEUR, MEUR/yr, EUR/MWh, kt; `to_frame(units={"lcts": "EUR/MWh"})` chooses another), `rank_<metric>`, `pareto` and `feasible` |
 | Sensitivity | `gm.study.sensitivity(plant, case, parameters, metrics)`, `parameters = {"case.assumptions.finance.opex.electricity": {"low": Quantity, "high": Quantity}}`, `metrics = ["lcts"]` | a list of `{parameter, metric, low, high, at_low, at_high, effect}`; `.to_frame(units=None)` a DataFrame of columns `parameter, metric, low, high, at_low, at_high, effect, unit`, the metric in its display unit or the one in `units` |
-| Save | `report.to_dict()` | plain JSON (`json.dumps` works) |
+| Save | `report.to_dict(units=None)`, `comparison.to_dict()`, `Comparison.from_dict(data)` | plain JSON (`json.dumps` works); the report in display units (MWh, MW, MEUR, EUR/MWh, kt, m3/h, degC) or `{metric: unit}`; `str(report)` is that JSON; values inside stay SI |
 
 `Report` is a `dict` subclass with these keys, each a `Value` in SI unless said: `heat_delivered`,
 `cold_delivered`, `boiler_heat`, `electricity_bought`, `gas_bought` (J over the run),
@@ -429,11 +429,11 @@ worst_step}`; `value` and `limit` are `Value`s), `passed` (`False` if any constr
 `True` if none failed and one passed, else `None`) and `failed_steps` (an `int`). Its costs are
 read with `on_error="record"`: a cost the case or the plant cannot give has `value` `None` and a
 `reason`, and a plant that does not show a quantity (a cold delivered with no cooling grid) says so
-in `reason`. `report.to_dict()` gives plain JSON with `{value, unit}` for every `Value`.
+in `reason`. `report.to_dict(units=None)` gives plain JSON with `{value, unit}` for every `Value`, in display units.
 
 `Comparison` is a `list`, one entry per report in the order given: `{index, values, ranks,
-pareto, feasible}` and, for an infeasible report, `reasons`. `values` are the metrics as plain
-floats in SI (`None` for no value; only `to_frame` converts to display units), `ranks` start at 1
+pareto, feasible}` and, for an infeasible report, `reasons`. `values` are the metrics as `gm.units.Quantity` in SI
+(a plain number stays a float, `None` for no value; only `to_frame` converts to display units), `ranks` start at 1
 (equal values share a rank, the feasible come before the infeasible), `pareto` is `True` when no
 other feasible report is at least as good in every metric and better in one. A report is
 feasible when no step failed, no constraint failed and every service in `services` is delivered;
