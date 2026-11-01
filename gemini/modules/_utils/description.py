@@ -74,6 +74,35 @@ def _entry(declaration):
     }
 
 
+def _accepted_units(declaration):
+    """Return the units a value of the declaration may be given in, as text; none without one."""
+    if declaration.quantity is None:
+        return []
+    return [str(unit) for unit in units.names(declaration.quantity)]
+
+
+def missing_entry(path, declaration):
+    """Return what an agent needs to fill a parameter: path, quantity, units, bounds, meaning."""
+    return {
+        "path": path,
+        "type": declaration.value_type(),
+        "quantity": declaration.quantity,
+        "unit": declaration.unit,
+        "units": _accepted_units(declaration),
+        "minimum": _closest_limit(declaration, _MINIMUM_KEYS),
+        "maximum": _closest_limit(declaration, _MAXIMUM_KEYS),
+        "enum": _enum(declaration),
+        "description": declaration.description,
+    }
+
+
+def missing_item(item):
+    """Return the ``missing_value`` item of one entry of ``missing_entry``."""
+    unit = f" [{item['unit']}]" if item["unit"] else ""
+    meaning = f": {item['description']}" if item["description"] else ""
+    return problem(item["path"], "missing_value", f"no value{unit}{meaning}")
+
+
 def _entries(declarations):
     return {name: _entry(declaration) for name, declaration in declarations.items()}
 

@@ -1,6 +1,7 @@
 """Every public return of ``api.md`` fits the three shapes, on the doublet example."""
 
 import copy
+import functools
 import json
 import re
 
@@ -192,6 +193,7 @@ def entries(plant, results):
     )
 
 
+@functools.cache
 def _schema(name):
     return json.loads((SCHEMAS / f"{name}.schema.json").read_text())
 
@@ -236,23 +238,21 @@ def _walk_mapping(tree, where):
         yield from _walk(item, f"{where}.{key}")
 
 
-def _walked(entries):
+@pytest.fixture(scope="module")
+def walked(entries):
+    """Give ``[(name, plain return)]`` of every entry, each called once for the whole module."""
     return [(name, to_plain(call())) for name, call in entries.items()]
 
 
-def test_every_public_return_fits_its_shapes(entries):
+def test_every_public_return_fits_its_shapes(walked):
     """Each dict that has a shape validates against its schema; no number travels alone."""
-    found = [
-        (name, where, problem)
-        for name, result in _walked(entries)
-        for where, problem in _walk(result)
-    ]
+    found = [(name, where, problem) for name, result in walked for where, problem in _walk(result)]
     assert found == []
 
 
-def test_the_walk_meets_every_shape(entries):
+def test_the_walk_meets_every_shape(walked):
     """A walk that meets no shape proves nothing: a null value, a problem and a check are seen."""
-    results = dict(_walked(entries))
+    results = dict(walked)
     assert results["economics.record"]["reason"]
     assert results["nodal"]["cases"][1]["error"]["code"] == "out_of_range"
     assert to_plain(results["bounds"]["limit"]) == {"value": 0, "unit": "-"}

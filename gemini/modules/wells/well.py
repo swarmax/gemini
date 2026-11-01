@@ -44,21 +44,46 @@ class _Well(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.section_length = Parameter(list[Length])
-        self.section_inclination = Parameter(list[Angle])
-        self.section_diameter = Parameter(list[Length])
-        self.section_roughness = Parameter(list[Length])
-        self.friction_correlation = Parameter(Literal["darcy_weisbach"], default="darcy_weisbach")
-        self.two_phase_friction_correlation = Parameter(Literal["BeggsBrill"], default="BeggsBrill")
-        self.correction_factors = Parameter(
-            tuple[Dimensionless, PressureDifference], default=(1, 0), calibratable=True
+        self.section_length = Parameter(
+            list[Length], description="Length of each section of the well path, from the surface down"
         )
-        self.soil_temperature = Parameter(Temperature)
+        self.section_inclination = Parameter(
+            list[Angle], description="Inclination of each section of the well path from the horizontal"
+        )
+        self.section_diameter = Parameter(
+            list[Length], description="Inner diameter of each section of the well path"
+        )
+        self.section_roughness = Parameter(
+            list[Length], description="Absolute roughness of each section of the well path"
+        )
+        self.friction_correlation = Parameter(
+            Literal["darcy_weisbach"],
+            default="darcy_weisbach",
+            description="Correlation of the single-phase friction",
+        )
+        self.two_phase_friction_correlation = Parameter(
+            Literal["BeggsBrill"],
+            default="BeggsBrill",
+            description="Correlation of the two-phase friction",
+        )
+        self.correction_factors = Parameter(
+            tuple[Dimensionless, PressureDifference],
+            default=(1, 0),
+            calibratable=True,
+            description=(
+                "Calibration factors of the pressure change: a multiplier and an added pressure "
+                "difference"
+            ),
+        )
+        self.soil_temperature = Parameter(
+            Temperature, description="Temperature of the soil around the well"
+        )
         self.heat_transfer_coefficient = Parameter(
             HeatTransferCoefficient,
             default=hydraulics.DEFAULT_WELL_U_VALUE,
             ge=0,
             calibratable=True,
+            description="Overall heat transfer coefficient from the fluid to the soil",
         )
 
     @property

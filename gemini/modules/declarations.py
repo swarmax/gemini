@@ -457,29 +457,29 @@ class Output(Declaration):
         self.formula = None
 
     @classmethod
-    def _combination(cls, *formula):
-        output = cls(Any)
+    def _combination(cls, formula, description):
+        output = cls(Any, description=description)
         output.formula = formula
         return output
 
     @classmethod
-    def difference(cls, first, second):
+    def difference(cls, first, second, *, description=None):
         """Declare ``first - second`` of two paths of a plant, such as ``"riser.wellhead_out.T"``.
 
         A path is an output or a port field of a child, or a bare name for an earlier output of the
         plant. The plant gives the output the kind of its paths.
         """
-        return cls._combination("difference", first, second)
+        return cls._combination(("difference", first, second), description)
 
     @classmethod
-    def ratio(cls, numerator, denominator):
+    def ratio(cls, numerator, denominator, *, description=None):
         """Declare ``numerator / denominator`` of two paths of a plant; zero gives ``None``."""
-        return cls._combination("ratio", numerator, denominator)
+        return cls._combination(("ratio", numerator, denominator), description)
 
     @classmethod
-    def sum(cls, first, second, *others):
+    def sum(cls, first, second, *others, description=None):
         """Declare the sum of two or more paths of a plant."""
-        return cls._combination("sum", first, second, *others)
+        return cls._combination(("sum", first, second, *others), description)
 
 
 class Outlet(_Port):

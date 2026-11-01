@@ -206,8 +206,11 @@ def test_a_dated_design_derives_at_its_date():
 def test_a_waiting_depth_is_a_missing_parameter():
     """``missing_parameters`` names the geotherm, and a doublet without a depth needs none."""
     doublet = gm.plants.Doublet().set_params("", {"depth": {"value": 2500, "unit": "m"}})
-    assert doublet.missing_parameters()[:2] == ["gradient", "surface_temperature"]
-    assert "gradient" not in gm.plants.Doublet().missing_parameters()
+    assert [item["path"] for item in doublet.missing_parameters()[:2]] == [
+        "gradient",
+        "surface_temperature",
+    ]
+    assert "gradient" not in [item["path"] for item in gm.plants.Doublet().missing_parameters()]
 
 
 def test_a_depth_waits_for_its_geotherm():

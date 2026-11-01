@@ -104,20 +104,6 @@ def _assert_close(left, right, rtol):
     np.testing.assert_allclose(left, right, rtol=rtol, atol=1e-12, equal_nan=True)
 
 
-def _assert_sections_inside(actual, expected, rtol):
-    """Compare per-section rows when the segment of a well lists every section of its path.
-
-    The ESP depth is a number of the graph, so ``section_pressure`` and ``section_temperature``
-    of a well cut at the ESP have one item for every section of the path, and a section outside the
-    segment repeats the value it is entered at. The captured row holds the sections inside the
-    segment only: its items must be those of the new row, in order.
-    """
-    for new, old in zip(actual, expected):
-        found = iter(new)
-        for value in old:
-            assert any(np.isclose(value, other, rtol=rtol, atol=1e-12) for other in found)
-
-
 def _assert_values_identical(actual, expected, rtol=REPLAY_RTOL):
     """Compare frames: floats and float-list cells within ``rtol``, everything else exactly."""
     actual = actual.reindex(columns=expected.columns)
@@ -130,10 +116,7 @@ def _assert_values_identical(actual, expected, rtol=REPLAY_RTOL):
             continue
         left_rows, right_rows = _float_rows(left), _float_rows(right)
         if left_rows is not None and right_rows is not None:
-            if left_rows.shape == right_rows.shape:
-                _assert_close(left_rows, right_rows, rtol)
-            else:
-                _assert_sections_inside(left_rows, right_rows, rtol)
+            _assert_close(left_rows, right_rows, rtol)
             continue
         pd.testing.assert_series_equal(
             left.astype(object).fillna("<missing>").map(str),

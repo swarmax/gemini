@@ -268,13 +268,15 @@ def test_functions_nest_at_most_three_blocks(path):
 def test_functions_are_short_or_documented_exceptions(path):
     """Functions stay within about 40 lines; each longer one is listed with its reason.
 
-    The ``__init__`` of a plant class is exempt: it is one list of declarations and connections.
+    The ``__init__`` of a module or plant class is exempt: it is one list of declarations.
     """
     long = {
         f"{path}::{function.name}"
         for function in functions(path)
         if body_lines(function) > MAX_LINES
-        and not (path.startswith("gemini/plants/") and function.name == "__init__")
+        and not (
+            path.startswith(("gemini/plants/", "gemini/modules/")) and function.name == "__init__"
+        )
     }
     assert long == {name for name in LONG_FUNCTIONS if name.startswith(f"{path}::")}
 
@@ -830,7 +832,7 @@ def test_no_problem_name_is_left_in_the_package():
         text = (ROOT / path).read_text()
         if "roblem" not in text:
             continue
-        names = _identifiers(ast.parse(text)) - SHAPE_NAMES
+        names = _identifiers(tree(path)) - SHAPE_NAMES
         found += [f"{path}: {name}" for name in names if "problem" in name.lower()]
         if path != "gemini/types/shapes.py":
             found += [f"{path}: {m.group()}" for m in OLD_INPUT_WORDS.finditer(text)]
@@ -924,6 +926,12 @@ def old_names(syntax):
     return sorted({name for _, name in identifiers(syntax) if OLD_NAME.search(name)})
 
 
+@functools.cache
+def file_old_names(path):
+    """Return the old names of one file of the repository, found once per process."""
+    return old_names(tree(path))
+
+
 def callee(node, known):
     """Return the name of the gemini function a call reaches, or ``None``."""
     target = node.func
@@ -954,10 +962,10 @@ def own_parameters(function):
     return sorted(name for name in names if name not in ("self", "cls"))
 
 
-def gemini_names(syntax):
+def gemini_names(syntax, nodes):
     """Return the names a file imports from gemini and the functions it defines at its top."""
     known = {node.name for node in syntax.body if isinstance(node, ast.FunctionDef)}
-    for node in ast.walk(syntax):
+    for node in nodes:
         if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("gemini"):
             known |= {item.asname or item.name for item in node.names}
         elif isinstance(node, ast.Import):
@@ -971,9 +979,10 @@ def gemini_names(syntax):
 
 def wrappers(syntax, path):
     """Return ``path::name`` of every public function that only forwards its arguments."""
-    known = gemini_names(syntax)
+    nodes = list(ast.walk(syntax))
+    known = gemini_names(syntax, nodes)
     found = []
-    for function in ast.walk(syntax):
+    for function in nodes:
         if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
         body = function.body[1:] if ast.get_docstring(function) else function.body
@@ -986,28 +995,37 @@ def wrappers(syntax, path):
     return found
 
 
+@functools.cache
+def file_wrappers(path):
+    """Return the forwarding functions of one file of the repository, found once per process."""
+    return wrappers(tree(path), path)
+
+
 def private_functions_unused(trees):
     """Return ``path::name`` of every private function that nothing in the package names."""
     references = Counter()
-    for syntax in trees.values():
+    private = []
+    for path, syntax in trees.items():
         for node in ast.walk(syntax):
-            if isinstance(node, ast.Name):
+            kind = type(node)
+            if kind is ast.Name:
                 references[node.id] += 1
-            elif isinstance(node, ast.Attribute):
+            elif kind is ast.Attribute:
                 references[node.attr] += 1
-            elif isinstance(node, ast.alias):
-                references[node.name.split(".")[-1]] += 1
-            elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            elif kind is ast.Constant and type(node.value) is str:
                 references[node.value] += 1
+            elif kind is ast.alias:
+                references[node.name.split(".")[-1]] += 1
+            elif (
+                (kind is ast.FunctionDef or kind is ast.AsyncFunctionDef)
+                and node.name.startswith("_")
+                and not node.name.startswith("__")
+            ):
+                private.append((path, node))
     return sorted(
         f"{path}::{node.name}"
-        for path, syntax in trees.items()
-        for node in ast.walk(syntax)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and node.name.startswith("_")
-        and not node.name.startswith("__")
-        and not references[node.name]
-        and not hooked(node)
+        for path, node in private
+        if not references[node.name] and not hooked(node)
     )
 
 
@@ -1046,14 +1064,14 @@ def package_only(trees):
 def test_no_public_function_only_calls_another_with_its_arguments(package_trees):
     """A function that forwards its arguments is replaced by the one it calls, or is a hook."""
     trees = package_only(package_trees)
-    found = [name for path, syntax in trees.items() for name in wrappers(syntax, path)]
+    found = [name for path in trees for name in file_wrappers(path)]
     assert sorted(set(found) - set(WRAPPER_ALLOWANCE)) == []
 
 
 def test_every_wrapper_allowance_is_still_a_wrapper(package_trees):
     """An allowance that no longer matches a wrapper is removed."""
     trees = package_only(package_trees)
-    found = {name for path, syntax in trees.items() for name in wrappers(syntax, path)}
+    found = {name for path in trees for name in file_wrappers(path)}
     assert set(WRAPPER_ALLOWANCE) <= found
 
 
@@ -1075,9 +1093,9 @@ def test_no_name_keeps_something_old_outside_the_legacy_folders(package_trees):
     """No ``legacy``, ``compat``, ``deprecated``, ``old_``, ``_old``, ``_v1``, ``_v2`` in a name."""
     found = [
         f"{path}: {name}"
-        for path, syntax in package_only(package_trees).items()
+        for path in package_only(package_trees)
         if not path.startswith(LEGACY_FOLDERS)
-        for name in old_names(syntax)
+        for name in file_old_names(path)
         if name not in NAME_ALLOWANCE
     ]
     found += [
@@ -1091,7 +1109,7 @@ def test_no_name_keeps_something_old_outside_the_legacy_folders(package_trees):
 
 def test_every_name_allowance_is_still_used(package_trees):
     """An allowed name that no file defines is removed from the allowance."""
-    used = {name for syntax in package_only(package_trees).values() for name in old_names(syntax)}
+    used = {name for path in package_only(package_trees) for name in file_old_names(path)}
     assert set(NAME_ALLOWANCE) <= used
 
 
@@ -1119,3 +1137,37 @@ def test_the_unused_guard_finds_a_dead_function_and_not_a_used_or_hooked_one():
         "_called()\nrun(_passed)\ngetattr(x, '_named')\n"
     )
     assert private_functions_unused({"x.py": ast.parse(source)}) == ["x.py::_dead"]
+
+
+DECLARATIONS = ("Parameter", "Control", "Boundary", "Output")
+
+
+def declaration_calls(path):
+    """Return the lines of the declarations in a file that give no ``description``."""
+    tests = ast.walk(tree(path))
+    named = {id(node.value) for node in tests if isinstance(node, ast.Attribute)}
+    lines = []
+    for node in ast.walk(tree(path)):
+        if not isinstance(node, ast.Call) or id(node) in named:
+            continue
+        function = node.func
+        name = function.id if isinstance(function, ast.Name) else None
+        if isinstance(function, ast.Attribute) and isinstance(function.value, ast.Name):
+            name = function.value.id
+        if name in DECLARATIONS and not any(key.arg == "description" for key in node.keywords):
+            lines.append(node.lineno)
+    return lines
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        path
+        for path in python_files()
+        if path.startswith(("gemini/modules/", "gemini/plants/"))
+        and path != "gemini/modules/declarations.py"
+    ],
+)
+def test_every_public_declaration_has_a_description(path):
+    """A parameter, control, boundary or output says what it means, so an agent can fill it."""
+    assert declaration_calls(path) == [], f"{path}: declaration without description="

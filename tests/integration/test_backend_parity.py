@@ -418,6 +418,7 @@ def test_column_dtypes_are_the_same_on_every_backend(clean, faulty, simulated, s
             assert outcome.summary.dtypes.tolist() == runs[REFERENCE].summary.dtypes.tolist()
 
 
+@pytest.mark.slow
 def test_the_example_runner_sets_the_backend_of_the_engine_and_the_functions(tmp_path):
     """An example under ``run_example.py`` runs on the named backend at either level."""
     script = tmp_path / "probe.py"

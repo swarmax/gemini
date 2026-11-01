@@ -4,6 +4,8 @@ import ast
 import subprocess
 import sys
 
+import pytest
+
 from tests.fixtures import ROOT
 
 PACKAGES = (
@@ -24,6 +26,8 @@ PACKAGES = (
 SCRIPT = """
 import importlib.abc
 import sys
+
+import pytest
 import types
 
 import numpy as np
@@ -124,8 +128,13 @@ def test_the_scan_finds_a_compiler_import(tmp_path):
     ]
 
 
+@pytest.mark.slow
 def test_a_plant_runs_with_the_compiler_blocked():
-    """The run packages simulate a plant eagerly while ``gemini.compiler`` cannot load."""
+    """The run packages simulate a plant eagerly while ``gemini.compiler`` cannot load.
+
+    Slow: the property needs a fresh interpreter that imports gemini (about 1.5 s of child CPU,
+    which the budget counts), so it runs in the release profile.
+    """
     done = subprocess.run(
         [sys.executable, "-c", SCRIPT, str(ROOT / "gemini")],
         capture_output=True,
