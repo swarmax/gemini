@@ -163,6 +163,12 @@ that code reads: `examples/` (sample cases), `plants/` (example values: a `size`
 with code `inputs_missing` when it is absent, as in an installed wheel, and the message names the
 file. Nothing fails at import time, and `gm.plants.get` works without it.
 
+`docs/cost-sources/` is a cost catalogue, not a second data folder: reference data with sources
+(`sources.csv`, `README.md`), plus `data/` with the HICP and Ember files that its conversions and
+grid factors are recomputed from. No code in `gemini/` reads it and no value in it is a default: a
+project copies what it uses into its own `case.json` and cites the row's `id`. `inputs/` stays the
+only folder the code reads.
+
 `inputs/examples/<sample>/` holds one folder per sample case, a whole case in the shapes of gemini.
 Each has:
 
