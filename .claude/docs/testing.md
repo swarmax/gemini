@@ -300,9 +300,9 @@ terms, so a sample case is never the only proof that gemini can do it:
   the volume balance, the supply temperatures;
 - a levelised cost of heat and cold together (LCTS).
 
-`inputs/examples/hackathon_2027/` and `inputs/examples/shallow_district/` run through these same
+`inputs/examples/hackathon_2026/` and `inputs/examples/shallow_district/` run through these same
 general functions in `examples/`. Tests read a sample case only through
-`tests/fixtures/sample_cases.py`: it holds the folders (`HACKATHON_2027`, `SHALLOW_DISTRICT`) and
+`tests/fixtures/sample_cases.py`: it holds the folders (`HACKATHON_2026`, `SHALLOW_DISTRICT`) and
 builds the case and the plants of a sample (`sample_case()`, `shallow_case()`,
 `template_plant(name)`, `treatment_plant()`, `filled_plant(name)`) with `gm.Case.from_json` and
 `gm.Plant.from_dict`, so no test builds a path into `inputs/examples/` by hand.

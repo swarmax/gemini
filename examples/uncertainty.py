@@ -13,7 +13,7 @@ from pathlib import Path
 
 import gemini as gm
 
-SAMPLE = Path(__file__).resolve().parents[1] / "inputs/examples/hackathon_2027"
+SAMPLE = Path(__file__).resolve().parents[1] / "inputs/examples/hackathon_2026"
 DRAWS = 20
 """Simulations: enough for stable percentiles of a smooth response."""
 Q = gm.units.Quantity

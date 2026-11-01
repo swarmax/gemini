@@ -106,7 +106,7 @@ checks = gm.evaluate.constraints(sized, case, results)
 print([check["name"] for check in checks if check["passed"] is False])
 ```
 
-`examples/hackathon.py` runs that path on the sample case of `inputs/examples/hackathon_2027/`, and
+`examples/hackathon.py` runs that path on the sample case of `inputs/examples/hackathon_2026/`, and
 `examples/quickstart.py` on `inputs/examples/shallow_district/`, an hourly demand on one shallow
 doublet, each with its own constraints. A stored design keeps its setpoints:
 `plant.set_inputs({"peak_boiler.temperature_setpoint": {"value": 100, "unit": "degC"}})` is part of `plant.to_dict()`, and

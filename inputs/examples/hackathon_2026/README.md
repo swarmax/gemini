@@ -1,4 +1,6 @@
-# Hackathon 2027 sample case
+# Hackathon 2026 sample case
+
+Sample of the SPE Europe Energy GeoHackathon 2026; the demand profiles are for the year 2027.
 
 One sample case of gemini: only `examples/` and `tests/` read this folder, and nothing under
 `gemini/` knows it. The inputs of the GEMINI agentic geothermal design hackathon, as the organisers released them on

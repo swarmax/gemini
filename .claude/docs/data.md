@@ -127,7 +127,7 @@ Sections of `case.json`, in order:
 
 The kinds of `capex` and `opex.fixed` are the 19 of `gm.case.Capex` (the list is in
 [economics.md](economics.md#costs)); a plant needs a factor and a share for each kind it contains.
-`inputs/examples/hackathon_2027/case.json` is the complete example, with the sources of the cited
+`inputs/examples/hackathon_2026/case.json` is the complete example, with the sources of the cited
 values in [economics.md](economics.md#the-values-of-the-assumptions).
 
 **CSV profiles.** The demand is one CSV (`demand.file`) with a time column and a column for each
@@ -158,10 +158,10 @@ Each has:
 - `case.json`: a `gm.Case` (`gm.Case.from_json`), see [the case](#the-case). It names the demand CSV;
 - the demand CSV, read through `case.json` (`demand.file`);
 - the plant dicts (`gm.Plant.from_json`): `plant.json` for `shallow_district/`, and one file for
-  each candidate in `plants/` for `hackathon_2027/`; a design without the world;
+  each candidate in `plants/` for `hackathon_2026/`; a design without the world;
 - `README.md`: the source of the files and what the case asks.
 
-`hackathon_2027/` also keeps its organiser files (the requirements PDF and the two daily demand
+`hackathon_2026/` also keeps its organiser files (the requirements PDF and the two daily demand
 CSVs). A whole run is:
 
 ```python

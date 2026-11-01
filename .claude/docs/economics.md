@@ -110,7 +110,7 @@ for grid electricity drawn. A price is asked for only when its energy is non-zer
 
 gemini gives no value to any of these: each is a field of `case.assumptions` (see
 [data.md](data.md#the-case)) that the user states, and a call that needs an absent one raises
-`missing_assumption`. The sample case `inputs/examples/hackathon_2027/case.json` states them, in
+`missing_assumption`. The sample case `inputs/examples/hackathon_2026/case.json` states them, in
 price year 2015 and with the currency label EUR. Where a value is cited, the source is:
 
 | Field | Value in the sample | Source |
@@ -170,8 +170,8 @@ The limits of a run are the `constraints` of its `gm.Case`: each names a **role*
 ```python
 import gemini as gm
 
-case = gm.Case.from_json("inputs/examples/hackathon_2027/case.json")
-plant = gm.Plant.from_json("inputs/examples/hackathon_2027/plants/HeatingPlant.json")
+case = gm.Case.from_json("inputs/examples/hackathon_2026/case.json")
+plant = gm.Plant.from_json("inputs/examples/hackathon_2026/plants/HeatingPlant.json")
 results = gm.simulate(plant, case)
 checks = gm.evaluate.constraints(plant, case, results)
 print(case.constraints[0].on, case.constraints[0].quantity, checks[0]["name"])

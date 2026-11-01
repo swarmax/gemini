@@ -12,7 +12,7 @@ from pathlib import Path
 
 import gemini as gm
 
-SAMPLE = Path(__file__).resolve().parents[1] / "inputs/examples/hackathon_2027"
+SAMPLE = Path(__file__).resolve().parents[1] / "inputs/examples/hackathon_2026"
 MISSING = "heat_pump"
 
 

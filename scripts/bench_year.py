@@ -2,7 +2,7 @@
 
 Run ``PYTHONPATH=. python scripts/bench_year.py`` from the repository root. The cases are the two
 doublet heating and cooling plant of the hackathon (``hackathon``) and every other plant of
-``inputs/examples/hackathon_2027/plants`` that has a loop, each with the ``case.json`` of its
+``inputs/examples/hackathon_2026/plants`` that has a loop, each with the ``case.json`` of its
 folder, the shallow district plant with its own ``case.json``, plus the doublet heat plant, which
 has no loop or constraint, on a constant plan. Each case runs a daily year and an hourly month,
 with ``compile=False`` and ``compile=True``.
@@ -47,12 +47,12 @@ EXAMPLES = paths.INPUTS / "examples"
 DELTAS = {"1d": pd.Timedelta(days=1), "1h": pd.Timedelta(hours=1)}
 CADENCES = {"daily-year": ("1d", 365), "hourly-month": ("1h", 744)}
 MODES = {"eager": False, "compiled": True}
-PLANTS = EXAMPLES / "hackathon_2027" / "plants"
+PLANTS = EXAMPLES / "hackathon_2026" / "plants"
 SAMPLES = (
-    ("hackathon", "hackathon_2027", PLANTS / "HeatingCoolingPlant.json"),
-    ("hackathon-structure", "hackathon_2027", PLANTS / "HackathonPlant.json"),
-    ("hackathon-absorption", "hackathon_2027", PLANTS / "HeatingAbsorptionCoolingPlant.json"),
-    ("hackathon-full-cooling", "hackathon_2027", PLANTS / "HeatingFullCoolingPlant.json"),
+    ("hackathon", "hackathon_2026", PLANTS / "HeatingCoolingPlant.json"),
+    ("hackathon-structure", "hackathon_2026", PLANTS / "HackathonPlant.json"),
+    ("hackathon-absorption", "hackathon_2026", PLANTS / "HeatingAbsorptionCoolingPlant.json"),
+    ("hackathon-full-cooling", "hackathon_2026", PLANTS / "HeatingFullCoolingPlant.json"),
     ("shallow-district", "shallow_district", EXAMPLES / "shallow_district" / "plant.json"),
 )
 COUNTED = {

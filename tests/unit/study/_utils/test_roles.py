@@ -2,13 +2,13 @@
 
 import gemini as gm
 from gemini.study._utils.roles import concrete, expanded, quantities
-from tests.fixtures.sample_cases import HACKATHON_2027
+from tests.fixtures.sample_cases import HACKATHON_2026
 from tests.unit.study.conftest import shallow_case, shallow_plant
 
 
 def hackathon_plant():
     """Return the stored plant whose doublets each have a depth and which has none of its own."""
-    return gm.Plant.from_json(HACKATHON_2027 / "plants/HackathonPlant.json")
+    return gm.Plant.from_json(HACKATHON_2026 / "plants/HackathonPlant.json")
 
 
 def test_a_role_variable_stands_for_the_parameter_of_each_unit_of_the_role():

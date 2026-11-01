@@ -16,7 +16,7 @@ from pathlib import Path
 import gemini as gm
 
 ROOT = Path(__file__).resolve().parents[1]
-SAMPLE = ROOT / "inputs/examples/hackathon_2027"
+SAMPLE = ROOT / "inputs/examples/hackathon_2026"
 EVALUATIONS = 20
 """Simulations of the search for each doublet count: five for each of four variables, the least."""
 SHARE = (0.1, 1.0)

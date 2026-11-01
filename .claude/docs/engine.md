@@ -128,8 +128,8 @@ parameter of the plant, because the case has no field for it.
 ```python
 import gemini as gm
 
-case = gm.Case.from_json("inputs/examples/hackathon_2027/case.json")
-plant = gm.Plant.from_json("inputs/examples/hackathon_2027/plants/HeatingPlant.json")
+case = gm.Case.from_json("inputs/examples/hackathon_2026/case.json")
+plant = gm.Plant.from_json("inputs/examples/hackathon_2026/plants/HeatingPlant.json")
 plan = gm.schedule(plant, case)
 results = gm.simulate(plant, case, plan)
 ```

@@ -6,7 +6,7 @@ import gemini as gm
 from gemini._utils import paths
 from gemini.run._utils.apply import apply_case
 
-HACKATHON_2027 = paths.INPUTS / "examples/hackathon_2027"
+HACKATHON_2026 = paths.INPUTS / "examples/hackathon_2026"
 SHALLOW_DISTRICT = paths.INPUTS / "examples/shallow_district"
 SAMPLE_PLANT = "HeatingCoolingPlant"
 """The class of the main candidate; every candidate is in ``plants/``."""
@@ -20,12 +20,12 @@ TEMPLATES = (
 
 def sample_json(name):
     """Return the JSON file ``name`` of the sample problem as data."""
-    return json.loads((HACKATHON_2027 / name).read_text())
+    return json.loads((HACKATHON_2026 / name).read_text())
 
 
 def sample_case(name="case.json"):
     """Return case ``name`` of the hackathon sample: environment, demand, constraints, prices."""
-    return gm.Case.from_json(HACKATHON_2027 / name)
+    return gm.Case.from_json(HACKATHON_2026 / name)
 
 
 def shallow_case():
