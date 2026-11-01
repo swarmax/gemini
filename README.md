@@ -100,7 +100,7 @@ sizes a design and searches the choices of the case:
 ```python
 case = gm.Case.from_json("inputs/examples/shallow_district/case.json")
 plant = gm.Plant.from_json("inputs/examples/shallow_district/plant.json")
-sized = gm.study.size(plant, case)
+sized = gm.study.size(plant, case, backup="peak")
 results = gm.simulate(sized, case)
 checks = gm.evaluate.constraints(sized, case, results)
 print([check["name"] for check in checks if check["passed"] is False])
