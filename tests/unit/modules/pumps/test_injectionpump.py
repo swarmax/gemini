@@ -13,6 +13,7 @@ from tests.fixtures.errors import raises
 
 CURVES = {
     "stage_count": 10,
+    "pump_type": "unspecified",
     "head_coefficients": [100, -0.01, 0, 0, 0, 0],
     "power_coefficients": [1, 0.001, 0, 0, 0, 0],
 }
@@ -36,7 +37,7 @@ def _rows():
 
 def test_setpoint_matches_traced():
     """The setpoint branch traces and equals one call per row."""
-    module = InjectionPump().set_params("", {"efficiency": 0.65})
+    module = InjectionPump().set_params("", {"pump_type": "unspecified", "efficiency": 0.65})
     assert_module_matches(module, _rows())
 
 
@@ -49,7 +50,7 @@ def test_curves_match_traced():
 
 def test_a_setpoint_below_the_suction_needs_no_pumping():
     """A negative required head is no pumping: zero power, the outlet pressure is the inlet's."""
-    pump = InjectionPump().set_params("", {"efficiency": 0.65})
+    pump = InjectionPump().set_params("", {"pump_type": "unspecified", "efficiency": 0.65})
     result = pump(fluid_in=Stream(m_dot=1, T=300, p=2e6), pressure_setpoint=1e6)
     assert result.outputs.power == 0
     assert result.outputs.head == 0
@@ -59,7 +60,7 @@ def test_a_setpoint_below_the_suction_needs_no_pumping():
 
 def test_a_positive_head_is_pumping():
     """A setpoint above the suction pumps and says so."""
-    pump = InjectionPump().set_params("", {"efficiency": 0.65})
+    pump = InjectionPump().set_params("", {"pump_type": "unspecified", "efficiency": 0.65})
     result = pump(fluid_in=Stream(m_dot=1, T=300, p=1e6), pressure_setpoint=2e6)
     assert result.outputs.is_pumping is True
     assert result.outputs.power > 0
@@ -74,7 +75,7 @@ def test_a_curve_with_a_negative_head_is_still_an_error():
 
 def test_a_stopped_pump_lets_the_pressure_through():
     """Without flow a setpoint below the suction is no error: the pump adds no pressure."""
-    pump = InjectionPump().set_params("", {"efficiency": 0.65})
+    pump = InjectionPump().set_params("", {"pump_type": "unspecified", "efficiency": 0.65})
     result = pump(fluid_in=Stream(m_dot=0.0, T=320.0, p=100e5), pressure_setpoint=30e5)
     assert result.outlets["fluid_out"].p == 100e5
     assert result.outputs["head"] == 0.0
@@ -137,7 +138,7 @@ def test_a_pump_without_a_price_raises_naming_the_path():
 
 def test_a_pump_without_a_nominal_flow_raises_naming_it():
     """The design flow has no default."""
-    pump = InjectionPump().set_params("", {"efficiency": 0.5})
+    pump = InjectionPump().set_params("", {"pump_type": "unspecified", "efficiency": 0.5})
     with raises(ValidationError, "missing_value", "nominal_flow"):
         pump.capex(_finance(injection_pump=Quantity(0.5, "currency/W")))
 

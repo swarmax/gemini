@@ -38,6 +38,8 @@ into the vocabulary in the commit that first uses it, only if it is a full word 
 | bulk material around a well | `ground_conductivity`, `ground_diffusivity`, `ground_...` | |
 | solid matrix of a porous layer | `rock_volumetric_heat_capacity` | |
 | depth of a borehole | `borehole_depth` | a bare `depth` |
+| pressure of the stream where it enters a pump | `intake_pressure` | `suction_pressure`, `pip` |
+| free-gas share of the volume of the stream at a pump intake | `gas_volume_fraction`; on a role, `intake_gas_fraction` | `gvf`, `void_fraction` |
 | design of a doublet from its depth | `depth`, `thickness`, `gradient`, on `Doublet` and, `depth` alone, on the plants of `DoubletsPlant` | |
 
 Four short forms stay because the full word would be longer and no clearer in this field: `T` (see
@@ -117,7 +119,7 @@ emission empty energy error esp evaporation evaporator excess exhaust export ext
 fan feed first flow flue fluid fouling fraction freezing frequency friction fuel full gain gas
 generated generation generator geothermal gradient gravity grid gross ground groundwater head heat
 heating hot humidity hydraulic hydrostatic ice imbalance import in index indoor injected
-injection injectivity inclination inlet inner input integral is isentropic latent length lift limit limited
+injection injectivity inclination inlet inner input intake integral is isentropic latent length lift limit limited
 liquid load log loop lorenz loss margin mass maximum mean measurement methane minimum mixed mode
 model motor net network no nominal opening operating or out outlet output overpressure parasitic
 part path period permeability phase pinch pipe point porosity power pressure previous price

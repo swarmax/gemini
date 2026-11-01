@@ -18,6 +18,7 @@ from gemini.physics import chemistry, corrosion, erosion, geometry, heat_transfe
 from gemini.types.flows import Stream
 from gemini.types.fluid import Fluid
 from tests.fixtures import FIXTURES
+from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.old_names import RENAMED_NAMES
 
 GOLDEN_VALUES = FIXTURES / "golden_values.json"
@@ -85,7 +86,7 @@ def evaluate_case(name, case):
 
 def _esp(parameters, inputs):
     """Evaluate the ESP polynomial at one frequency; efficiency in percent as captured."""
-    outputs = configured(ESP, parameters)(
+    outputs = configured(ESP, ESP_MODULE | parameters)(
         frequency=inputs["pump_freq"],
         fluid_in=Stream(m_dot=inputs["pump_flow"] * 1000, T=300, p=1e5),
     ).outputs

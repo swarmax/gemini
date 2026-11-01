@@ -632,6 +632,20 @@
         "value": 0.039663055555555556
       }
     },
+    "gas_volume_fraction": {
+      "max": {
+        "unit": "-",
+        "value": 0.0
+      },
+      "mean": {
+        "unit": "-",
+        "value": 0.0
+      },
+      "min": {
+        "unit": "-",
+        "value": 0.0
+      }
+    },
     "head": {
       "max": {
         "unit": "Pa",
@@ -700,6 +714,20 @@
       "min": {
         "unit": "-",
         "value": 0.0
+      }
+    },
+    "intake_pressure": {
+      "max": {
+        "unit": "Pa",
+        "value": 6202500.0
+      },
+      "mean": {
+        "unit": "Pa",
+        "value": 6202500.0
+      },
+      "min": {
+        "unit": "Pa",
+        "value": 6202500.0
       }
     },
     "power": {

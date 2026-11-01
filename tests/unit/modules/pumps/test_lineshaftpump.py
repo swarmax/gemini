@@ -8,6 +8,7 @@ from gemini.modules._utils.balance import energy_balance, mass_balance
 from gemini.modules.pumps import ESP, LineShaftPump
 from gemini.types.flows import Stream
 from tests.fixtures.equivalence import assert_module_matches
+from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.reading import reading
 
 CURVES = {
@@ -26,7 +27,7 @@ def pump(**changes):
 def test_pump_stages_match_the_esp_basis_and_friction_scales_with_speed():
     """Head and pump power equal the ESP curves; friction is loss * depth * f / 60 Hz."""
     suction = Stream(m_dot=units.m3h_to_m3s(200) * 1000, T=340, p=1e6)
-    esp = reading(ESP().set_params("", CURVES)(fluid_in=suction, frequency=50))
+    esp = reading(ESP().set_params("", ESP_MODULE | CURVES)(fluid_in=suction, frequency=50))
     result = pump()(fluid_in=suction, frequency=50)
     out = reading(result)
     assert out.head == pytest.approx(esp.head)

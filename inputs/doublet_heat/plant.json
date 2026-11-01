@@ -125,6 +125,8 @@
       0.0
     ],
     "doublet.esp.pump_type": "DEFAULT-PUMP",
+    "doublet.esp.motor_efficiency": 1.0,
+    "doublet.esp.drift_threshold": 0.1,
     "doublet.esp.setting_depth": {
       "value": 600.0,
       "unit": "m"

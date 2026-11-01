@@ -21,7 +21,22 @@
         "nominal_wellhead_pressure": {
           "value": 1000000.0,
           "unit": "Pa"
-        }
+        },
+        "esp.pump_type": "unspecified",
+        "esp.motor_efficiency": 1.0,
+        "esp.minimum_flow": {
+          "value": 0,
+          "unit": "m3/s"
+        },
+        "esp.maximum_flow": {
+          "value": 1,
+          "unit": "m3/s"
+        },
+        "esp.best_efficiency_flow": {
+          "value": 0.04,
+          "unit": "m3/s"
+        },
+        "esp.drift_threshold": 0.1
       }
     },
     "d1": {
@@ -43,7 +58,22 @@
         "nominal_wellhead_pressure": {
           "value": 1000000.0,
           "unit": "Pa"
-        }
+        },
+        "esp.pump_type": "unspecified",
+        "esp.motor_efficiency": 1.0,
+        "esp.minimum_flow": {
+          "value": 0,
+          "unit": "m3/s"
+        },
+        "esp.maximum_flow": {
+          "value": 1,
+          "unit": "m3/s"
+        },
+        "esp.best_efficiency_flow": {
+          "value": 0.04,
+          "unit": "m3/s"
+        },
+        "esp.drift_threshold": 0.1
       }
     },
     "production": {

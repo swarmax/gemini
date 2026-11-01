@@ -51,7 +51,7 @@
       1.71e-17,
       1.38e-23
     ],
-    "doublet.esp.pump_type": null,
+    "doublet.esp.pump_type": "unspecified",
     "doublet.esp.setting_depth": {"value": 0, "unit": "m"},
     "doublet.esp.motor_efficiency": 1.0,
     "doublet.esp.minimum_flow": {"value": 0, "unit": "m3/h"},

@@ -5,6 +5,7 @@ import pytest
 import gemini as gm
 from gemini.errors import ValidationError
 from tests.fixtures.errors import raises
+from tests.fixtures.esp_design import ESP_DESIGN
 from tests.fixtures.heating_cooling import days_case
 
 BRINE = gm.Fluid(
@@ -25,10 +26,11 @@ WELL_DESIGN = {
     "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
     "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
-}
+} | ESP_DESIGN
 SIZES = {
     "degasser.separation_efficiency": 1.0,
     "injection_pump.efficiency": 0.7,
+    "injection_pump.pump_type": "unspecified",
     "heat_exchanger.thermal_conductance": {"value": 1500000, "unit": "W/K"},
     "heat_exchanger.hot_nominal_pressure_drop": {"value": 0, "unit": "bar"},
     "heat_exchanger.cold_nominal_pressure_drop": {"value": 0, "unit": "bar"},

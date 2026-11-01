@@ -20,16 +20,16 @@ TEMPLATE_PLANTS = (
 """The plants whose values are the sample problem's, in ``inputs/examples/``, not an example."""
 FORMER_EXAMPLES = {
     "ATESPlant": "6a0269fce3fa75cb6309b11779cad3ac605aa65d5089020cb76ff8aa7e8b8170",
-    "BoilerChpPlant": "a53a8beb1708973d3ec2341809dd846ae38c71feda6487585c36f13152da2bb6",
+    "BoilerChpPlant": "3a2d6449baf8119f953d91dc071b95717273a69d00c4169657e8133f863d59e2",
     "CoolingSubstation": "64e2a52f01d79151750d6c90bd03b77ee1fef3e0f18111931cb8dd0cc025e24b",
     "DistrictEnergyPlant": "ebce116425f8cb0bbbb10439e56a05def20c6bb3a9130daf005045042af64095",
     "DistrictNetwork": "d9c9f286535f517fc5b575bd33d2861a5dcf45f65e1d2181c186d412b0c5ed94",
-    "Doublet": "5d90cbb7243c9aabe4658a70b11564202a55ae851525265f2669e413467a3038",
-    "DoubletHeatPlant": "eeaad3542d83772882955703e94ed0c16b8c2bfbdd22e968bee88b2226c324b4",
+    "Doublet": "316603c950435434ab9e4e7e5788e399fb769b71d5ba60aa3ca208d1c0412590",
+    "DoubletHeatPlant": "7ac9c1ec92f92b9a99496998e601c56ecf6d270e255d67500715063f3246e714",
     "HeatingSubstation": "4f28ac09ac50639d8f0d3be2dfaf53650cb414105622b4401c27ccbe143eb73c",
-    "MultiWellPlant": "46c5098567d2359ab81345d3d9112966977bafea19f93892c0e772dde61da0f7",
-    "NodalDoublet": "2b46f6fa46e86e6e0d3053a671768f8f561a21cde20a378310e88af36fee512c",
-    "ParallelExchangerPlant": "eeac3836a6bae051c4321d7f09072519cece13fbeaead14146d0ebbb988530c5",
+    "MultiWellPlant": "5fa362a1da016060c04b0903358f1390838d23b6b21b9de2b60366be312963b0",
+    "NodalDoublet": "8131c8c82e1375bee2cf480b3b9c874832d531f2ee3abb4262dd7da5331fa46c",
+    "ParallelExchangerPlant": "0095dfd55c794fbe0f25544a76a53660d40a5e1397b385751aa6fc6fb8494858",
 }
 """Hash of ``to_dict()`` of the plant built from each whole example file these values replaced.
 

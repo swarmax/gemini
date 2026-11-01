@@ -34,6 +34,8 @@
       0.0
     ],
     "producers.0.esp.pump_type": "DEFAULT-PUMP",
+    "producers.0.esp.motor_efficiency": 1.0,
+    "producers.0.esp.drift_threshold": 0.1,
     "producers.0.esp.setting_depth": {"value": 600, "unit": "m"},
     "producers.0.esp.minimum_flow": {"value": 82, "unit": "m3/h"},
     "producers.0.esp.maximum_flow": {"value": 178, "unit": "m3/h"},
@@ -79,6 +81,8 @@
       0.0
     ],
     "producers.1.esp.pump_type": "DEFAULT-PUMP",
+    "producers.1.esp.motor_efficiency": 1.0,
+    "producers.1.esp.drift_threshold": 0.1,
     "producers.1.esp.setting_depth": {"value": 600, "unit": "m"},
     "producers.1.esp.minimum_flow": {"value": 82, "unit": "m3/h"},
     "producers.1.esp.maximum_flow": {"value": 178, "unit": "m3/h"},

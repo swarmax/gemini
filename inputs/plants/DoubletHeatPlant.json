@@ -34,6 +34,8 @@
       0.0
     ],
     "doublet.esp.pump_type": "DEFAULT-PUMP",
+    "doublet.esp.motor_efficiency": 1.0,
+    "doublet.esp.drift_threshold": 0.1,
     "doublet.esp.setting_depth": {"value": 600, "unit": "m"},
     "doublet.esp.minimum_flow": {"value": 82, "unit": "m3/h"},
     "doublet.esp.maximum_flow": {"value": 178, "unit": "m3/h"},

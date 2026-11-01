@@ -15,6 +15,7 @@ from gemini.modules.wells import InjectionWell, ProductionWell
 from gemini.physics.geometry import build_path, section_values
 from gemini.types.flows import Stream
 from tests.fixtures.errors import raises
+from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.reading import reading
 
 DENSITY = 1000.0
@@ -66,7 +67,8 @@ def producer():
     riser = ProductionWell().set_params("", segment_of(path, "above_esp"))
     esp = ESP().set_params(
         "",
-        {
+        ESP_MODULE
+        | {
             "stage_count": 10,
             "head_coefficients": [
                 83.08389282,
@@ -180,7 +182,7 @@ def test_deep_injector_needs_no_pump_and_draws_no_power(injector):
     well, sink = injector
     wellhead = Stream(flow={"value": 129.02, "unit": "m3/h"}, T=293.15, p=1e3)
     assert nodal.solve_injection_pressure(well, sink, wellhead, (1e3, 1e8)) is None
-    pump = InjectionPump().set_params("", {"efficiency": 0.8})
+    pump = InjectionPump().set_params("", {"pump_type": "unspecified", "efficiency": 0.8})
     result = pump(fluid_in=wellhead, pressure_setpoint=wellhead.p)
     assert result.outputs.head == 0 and reading(result).electricity == 0
 

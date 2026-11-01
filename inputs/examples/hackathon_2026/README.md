@@ -52,6 +52,8 @@ standard conditions.
 | Minimum stable flow while active | 50 m³/h per doublet | Hard cap |
 | Maximum brine cooling | 40 °C, producer to injector | Hard cap |
 | Pump hydraulic efficiency | 70% | Simplified |
+| Free gas at the pump intake | At most 18.75 % of the volume while running | Sourced below, not an organiser limit |
+| Pump intake pressure | At least 5 bar while running | Assumption, no verified source; not an organiser limit |
 | Production and injection volume | Equal liquid volumes, same reservoir | Required |
 | Annual operation of a doublet | 330 daily steps | Daily power and energy balance |
 | Heating supply temperature | 100 °C | Fixed |
@@ -165,3 +167,19 @@ of the production wellhead as best suction, floored at zero) applied to the stor
 rounded to four digits. They are data of the plants, not a default of the package; the size of a plant with
 other doublets rates its pump again. On `HeatingHeatPumpCoolingPlant` the pump is 0.187 MEUR of the
 33.0 MEUR capex (0.57 %).
+
+## Pump intake limits
+
+`case.json` adds two constraints on the ESP intake of a running doublet, which the organisers did not state.
+
+- Maximum free gas, 0.1875 of the volume at the intake. Source: Baker Hughes, Ace Plus gas handler pumps,
+  <https://www.bakerhughes.com/production/artificial-lift/electrical-submersible-pump-systems/pumps/ace-plus-gas-handler-pumps>:
+  "Performance tests indicate that Ace Plus gas handler pumps can process up to 75% free gas without locking"
+  and "Standard pump stages can handle only one-fourth of this amount of free gas before locking." The limit is
+  75 % / 4 = 18.75 %, the manufacturer's figure for standard stages; the page was opened on 2026-11-01. A stricter
+  rule of thumb of 10 % for a standard pump (Takacs, Electrical Submersible Pumps Manual, 2009, as quoted by a design
+  manual site, not opened at the book) is not used.
+- Minimum intake pressure, 5 bar: assumption, no verified source. The published rule found (intake pressure above the
+  bubble point of the produced fluid) needs the PVT of the fluid, which the case does not give.
+- Intake values of the stored plants over the first 32 days of the case (one run, 300 m3/h per doublet): lowest pressure
+  7.7 bar, largest gas share 12.1 %, so neither limit rejects a stored design. The 10 % rule of thumb would.

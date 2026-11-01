@@ -23,6 +23,7 @@ from gemini.run.schedule import _doublets_above
 from gemini.runtime import settings
 from gemini.units import Quantity
 from tests.fixtures.errors import raises
+from tests.fixtures.esp_design import ESP_DESIGN
 from tests.fixtures.parity import BACKENDS
 from tests.fixtures.sample_cases import example_plant, template_dict
 
@@ -32,7 +33,7 @@ DESIGN = {
     "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
     "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
-}
+} | ESP_DESIGN
 PRICES = {"electricity": Quantity(100, "EUR/MWh"), "gas": Quantity(40, "EUR/MWh")}
 BRINE = gm.Fluid(density=1030.0, viscosity=4e-4).properties(0, 0)
 HEAT_PER_FLOW = BRINE.rho_l * BRINE.cp_l * 40.0

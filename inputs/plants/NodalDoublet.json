@@ -51,7 +51,7 @@
       1.71e-17,
       1.38e-23
     ],
-    "esp.pump_type": null,
+    "esp.pump_type": "unspecified",
     "esp.setting_depth": {"value": 0, "unit": "m"},
     "esp.motor_efficiency": 1.0,
     "esp.minimum_flow": {"value": 0, "unit": "m3/h"},

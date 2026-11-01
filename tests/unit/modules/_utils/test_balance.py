@@ -13,6 +13,7 @@ from gemini.types import Power, Stream
 from gemini.types.ports import Ports
 from gemini.types.results import ModuleResult, Values
 from tests.fixtures.equivalence import STREAM_FIELDS, assert_close
+from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.reading import reading
 
 GRID_GAS = GasGrid()._offered()["gas_out"]
@@ -63,7 +64,7 @@ def test_boiler_balance(fuel):
 
 def test_unresolved_pump_work():
     """Isothermal pump electricity remains explicit unresolved work."""
-    pump = InjectionPump().set_params("", {"efficiency": 0.8})
+    pump = InjectionPump().set_params("", {"pump_type": "unspecified", "efficiency": 0.8})
     result = pump(fluid_in=Stream(m_dot=10, T=300, p=1e6), pressure_setpoint=2e6)
     balance = energy_balance(pump, result)
     assert balance["unresolved_power"] == pytest.approx(result.outputs.power)
@@ -74,7 +75,8 @@ def test_esp_motor_efficiency_does_not_change_shaft_power():
     """Motor efficiency changes grid draw while shaft prediction stays fixed."""
     pump = ESP().set_params(
         "",
-        {
+        ESP_MODULE
+        | {
             "stage_count": 10,
             "head_coefficients": [10, 0, 0, 0, 0, 0],
             "power_coefficients": [1, 0, 0, 0, 0, 0],
@@ -122,7 +124,7 @@ class GasHeatedInjection(Module):
             },
         )
         self.boiler = Boiler().set_params("", {"capacity": 1e6, "efficiency": 0.9})
-        self.pump = InjectionPump().set_params("", {"efficiency": 0.8})
+        self.pump = InjectionPump().set_params("", {"pump_type": "unspecified", "efficiency": 0.8})
 
         # Inlets
         self.return_in = Inlet(Stream)

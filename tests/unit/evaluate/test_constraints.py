@@ -298,3 +298,29 @@ def test_the_cooling_requirement_is_a_maximum_and_a_service_without_one_adds_not
     (found,) = gm.evaluate.constraints(plant, case, results)
     assert found["unit_path"] == "cool" and found["passed"] is False
     assert found["value"].value == 295.0 and found["limit"].value == pytest.approx(293.15)
+
+
+def test_a_minimum_intake_pressure_rejects_a_design_whose_suction_drops_below_it():
+    """The lowest intake pressure of a doublet is judged against the minimum of the case."""
+    plant = gm.Plant("One")
+    plant.add("Doublet", name="d0")
+    results = make_results(
+        {"d0.esp": {"intake_pressure": [30e5, 8e5, 25e5], "operating": [1.0, 1.0, 1.0]}}
+    )
+    low = gm.case.Constraint(on="doublet", quantity="intake_pressure", min=Quantity(10, "bar"))
+    (found,) = checked(low, plant=plant, results=results)
+    assert found["passed"] is False and found["name"] == "d0.esp.intake_pressure"
+    assert found["value"].value == pytest.approx(8e5)
+    held = gm.case.Constraint(on="doublet", quantity="intake_pressure", min=Quantity(5, "bar"))
+    assert only(held, plant=plant, results=results)["passed"] is True
+
+
+def test_a_maximum_gas_fraction_at_the_intake_is_judged_per_step():
+    """The role reads the fraction of the gas volume at the pump intake."""
+    plant = gm.Plant("One")
+    plant.add("Doublet", name="d0")
+    results = make_results(
+        {"d0.esp": {"gas_volume_fraction": [0.02, 0.2], "operating": [1.0, 1.0]}}
+    )
+    limit = gm.case.Constraint(on="doublet", quantity="intake_gas_fraction", max=0.1)
+    assert only(limit, plant=plant, results=results)["passed"] is False

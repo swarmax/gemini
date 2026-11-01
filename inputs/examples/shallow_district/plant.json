@@ -18,6 +18,21 @@
       "unit": "m3/h"
     },
     "d0.pump_efficiency": 0.65,
+    "d0.esp.pump_type": "unspecified",
+    "d0.esp.motor_efficiency": 1.0,
+    "d0.esp.minimum_flow": {
+      "value": 0,
+      "unit": "m3/s"
+    },
+    "d0.esp.maximum_flow": {
+      "value": 1,
+      "unit": "m3/s"
+    },
+    "d0.esp.best_efficiency_flow": {
+      "value": 0.04,
+      "unit": "m3/s"
+    },
+    "d0.esp.drift_threshold": 0.1,
     "d0.nominal_wellhead_pressure": {
       "value": 8,
       "unit": "bar"
@@ -44,6 +59,7 @@
       "unit": "kg/s"
     },
     "injection_pump.efficiency": 0.65,
+    "injection_pump.pump_type": "unspecified",
     "injection_pump.nominal_flow": {
       "value": 130,
       "unit": "m3/h"

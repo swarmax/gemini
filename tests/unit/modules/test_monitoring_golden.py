@@ -21,6 +21,7 @@ from gemini.physics import geometry
 from gemini.types.flows import Stream
 from scripts.legacy import tables
 from tests.fixtures import FIXTURES, OLD_PROJECT
+from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.evaluate import assert_values, configured
 from tests.fixtures.reading import reading
 
@@ -32,7 +33,7 @@ def _old_property(name):
 
 def _esp_theoretical_values(row, esp_property):
     """Evaluate the ESP curve in float32, as the old runtime did, and report bar."""
-    pump = configured(ESP, tables.esp_params_from_gemini(esp_property))
+    pump = configured(ESP, ESP_MODULE | tables.esp_params_from_gemini(esp_property))
     with gm.runtime.settings(precision="float32"):
         outputs = reading(
             pump(

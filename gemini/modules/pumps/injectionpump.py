@@ -7,7 +7,7 @@ from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.modules.pumps import _physics
-from gemini.physics import energy, pumps
+from gemini.physics import constants, energy, pumps
 from gemini.types import (
     Count,
     Efficiency,
@@ -45,9 +45,7 @@ class InjectionPump(Equipment, Module):
             default=None,
             description="Number of stages of the pump; empty when it has no curves",
         )
-        self.pump_type = Parameter(
-            str, default="unspecified", description="Catalogue name or label of the pump model"
-        )
+        self.pump_type = Parameter(str, description="Catalogue name or label of the pump model")
         self.efficiency = Parameter(
             Efficiency | None,
             default=None,
@@ -101,8 +99,11 @@ class InjectionPump(Equipment, Module):
         )
         self.frequency = Control(
             Frequency,
-            default=pumps.DEFAULT_INJECTION_PUMP_FREQUENCY,
-            description="Operating frequency of the pump motor",
+            default=float(constants.ESP_REFERENCE_FREQUENCY),
+            description=(
+                "Operating frequency of the pump motor; the catalogue frequency of the ESP "
+                "curves unless a run sets it"
+            ),
         )
 
         # Outputs
@@ -191,16 +192,17 @@ class InjectionPump(Equipment, Module):
     def capex(self, finance):
         """Return the cost of the pump from its shaft power at the nominal flow.
 
-        The power is the power curve at ``nominal_flow`` and the default frequency for a pump with
-        both curves, else the hydraulic power of ``nominal_flow`` and ``nominal_head`` over the
-        efficiency. A missing design value raises ``missing_value`` naming it.
+        The power is the power curve at ``nominal_flow`` and the catalogue frequency of the curves
+        for a pump with both curves, else the hydraulic power of ``nominal_flow`` and
+        ``nominal_head`` over the efficiency. A missing design value raises ``missing_value``
+        naming it.
         """
         if self.nominal_flow is None:
             raise _missing_design(self.path, "nominal_flow")
         if self.head_coefficients is not None and self.power_coefficients is not None:
             power = pumps.power(
                 self.nominal_flow,
-                float(pumps.DEFAULT_INJECTION_PUMP_FREQUENCY),
+                float(constants.ESP_REFERENCE_FREQUENCY),
                 self.stage_count,
                 self.power_coefficients,
             )

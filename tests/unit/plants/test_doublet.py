@@ -11,6 +11,7 @@ from gemini.physics import constants, hydraulics
 from gemini.run._utils.apply import apply_case
 from gemini.types import Stream
 from tests.fixtures.balance import assert_plant_closes
+from tests.fixtures.esp_design import ESP_DESIGN
 from tests.fixtures.reading import reading
 
 
@@ -52,7 +53,7 @@ PUMP = {
     "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
     "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
-}
+} | ESP_DESIGN
 BRINE = gm.Fluid(
     density={"value": 1030, "unit": "kg/m3"}, viscosity={"value": 0.4, "unit": "mPa*s"}
 )

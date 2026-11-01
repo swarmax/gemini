@@ -367,6 +367,7 @@
           "unit": "m3/s",
           "value": 0.03610555555555555
         },
+        "esp.drift_threshold": 0.1,
         "esp.head_coefficients": [
           125.518426,
           -0.0020852856,
@@ -383,6 +384,7 @@
           "unit": "m3/s",
           "value": 0.02277777777777778
         },
+        "esp.motor_efficiency": 1.0,
         "esp.power_coefficients": [
           0.0,
           0.0,

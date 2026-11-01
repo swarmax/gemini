@@ -6,12 +6,13 @@ import pytest
 
 import gemini as gm
 from tests.fixtures.errors import raises
+from tests.fixtures.esp_design import ESP_MODULE
 
 ESP_PARAMETERS = {
     "stage_count": 12,
     "head_coefficients": [1.2e-10, -2.5e-6, 4e-3, 0.2, 5.0, 100.0],
     "power_coefficients": [1.0e-10, -1.0e-6, 3.0e-3, 0.3, 4.0, 200.0],
-}
+} | ESP_MODULE
 SUCTION = {
     "fluid_in": {
         "flow": {"value": 150, "unit": "m3/h"},

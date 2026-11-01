@@ -12,9 +12,10 @@ from gemini.ops import kernels
 from gemini.types.flows import Stream
 from tests.fixtures.equivalence import assert_health_matches, assert_module_matches
 from tests.fixtures.errors import raises
+from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.sample_cases import example_plant
 
-ESP_PARAMS = {
+ESP_PARAMS = ESP_MODULE | {
     "pump_type": "HC27000",
     "stage_count": 12,
     "head_coefficients": [
@@ -185,3 +186,52 @@ def test_a_flow_above_the_speed_scaled_maximum_flow_is_a_failed_row_with_the_ran
         pump(frequency=60, fluid_in=Stream(m_dot=60.0, T=300, p=1e5))
     with raises(PhysicsError, "out_of_range"):
         pump(frequency=30, fluid_in=Stream(m_dot=30.0, T=300, p=1e5))
+
+
+GASSY = gm.Fluid(
+    density=1030.0, gas_liquid_ratio={"value": 0.8, "unit": "Nm3/m3"}, gas_composition={"CH4": 1.0}
+)
+
+
+def test_intake_pressure_and_gas_volume_fraction_follow_the_suction_stream():
+    """The intake pressure is the suction pressure; the gas share falls as it rises."""
+    pump = ESP().set_params("", ESP_PARAMS)
+    low = pump(frequency=60, fluid_in=Stream(m_dot=40.0, T=330, p=2e5, fluid=GASSY)).outputs
+    high = pump(frequency=60, fluid_in=Stream(m_dot=40.0, T=330, p=40e5, fluid=GASSY)).outputs
+    assert low.intake_pressure == 2e5 and high.intake_pressure == 40e5
+    assert 0 < high.gas_volume_fraction < low.gas_volume_fraction < 1
+    rho = GASSY.gas_density_at(2e5, 330)
+    mass = GASSY.gas_mass_fraction
+    assert low.gas_volume_fraction == pytest.approx(
+        mass / rho / (mass / rho + (1 - mass) / 1030.0), rel=1e-9
+    )
+
+
+def test_a_liquid_without_gas_has_no_gas_at_the_intake():
+    """The constant-property brine has a zero fraction."""
+    pump = ESP().set_params("", ESP_PARAMS)
+    outputs = pump(frequency=60, fluid_in=Stream(m_dot=40.0, T=300, p=1e5)).outputs
+    assert outputs.gas_volume_fraction == 0 and outputs.intake_pressure == 1e5
+
+
+def test_a_stopped_pump_has_defined_intake_values():
+    """No flow still has a pressure and a gas share at the intake."""
+    pump = ESP().set_params("", ESP_PARAMS)
+    outputs = pump(frequency=60, fluid_in=Stream(m_dot=0.0, T=330, p=3e5, fluid=GASSY)).outputs
+    assert outputs.intake_pressure == 3e5 and 0 < outputs.gas_volume_fraction < 1
+
+
+def test_intake_values_match_one_call_per_row_on_every_backend():
+    """Gas and pressure over a range from near vacuum to deep, on every backend."""
+    rows = [
+        dict(fluid_in=Stream(m_dot=m_dot, T=330, p=p, fluid=GASSY), frequency=60)
+        for m_dot, p in ((0.0, 1e3), (40, 2e5), (40, 40e5), (0.0, 5e5))
+    ]
+    assert_module_matches(ESP().set_params("", ESP_PARAMS), rows)
+
+
+def test_an_out_of_range_row_names_the_intake_that_inflated_its_flow():
+    """The failure carries the intake pressure and the gas share, so a low suction is seen."""
+    pump = ESP().set_params("", {**ESP_PARAMS, "maximum_flow": 0.05})
+    with raises(PhysicsError, "out_of_range", match=r"intake pressure = 20000\.0 Pa and gas.*"):
+        pump(frequency=60, fluid_in=Stream(m_dot=90.0, T=330, p=2e4, fluid=GASSY))
