@@ -10,8 +10,8 @@ import numpy as np
 
 from gemini import units
 from gemini._utils.strings import join_path
+from gemini.case._utils import demand as demand_frame
 from gemini.errors import ValidationError
-from gemini.run._utils import demand as demand_frame
 from gemini.run.assumptions import CARRIERS, Assumptions
 from gemini.run.constraint import Constraint
 

@@ -1,6 +1,6 @@
 # Economics, KPIs, checks and well analysis
 
-The packages `gemini.evaluate`, `gemini.analysis` and `gemini.optim` sit above the run folders
+The packages `gemini.evaluate`, `gemini.analysis` and `gemini.study` sit above the run folders
 (`engine`, `run`, `modules`, `plants`, ...), which import none of them. They read a plant, a
 `gm.Problem` and a finished run through the public API only, every `gm.evaluate` function takes
 `(plant, problem, results, ...)`, and and every return is plain JSON (`to_plain`: no NumPy types, `NaN` and infinity are `null`) in the
@@ -220,11 +220,11 @@ the pressure. A rate the column of brine injects alone has no pressure to give: 
 `pump_curve` head is a pressure difference in Pa; the head of a fluid column in metres is
 `head / (density g)`. The correction is `theoretical = slope * measured + offset` (offset in Pa).
 
-## `gm.optim`
+## `gm.study`
 
 `gm.modules.check` is described in [modules.md](modules.md#registry-categories-and-streams).
 
-`gm.optim.minimize(plant, problem, variables, objective, constraints=None, evaluations=100, *,
+`gm.study.minimize(plant, problem, variables, objective, constraints=None, evaluations=100, *,
 plan=None)` searches design values. Each trial copies the plant, sets the variables with
 `set_params`, plans the demand of the problem on that design with `gm.schedule`, simulates and reads
 the metric, so the plant is not changed. A `plan` stays fixed over the trials and lets `problem` be
@@ -235,11 +235,11 @@ on one with the drive-water loop of a heat-driven chiller, which runs row by row
 with five candidates per variable: the population times the generations is the number of
 simulations, so `evaluations` is a hard limit and a smaller budget than one population raises
 `ValidationError`. A trial that fails, has no value or breaks a constraint is in `history` with its
-`reason` and is never `best`. `gm.optim.sample(plant, problem, distributions, metrics, count, seed=0,
+`reason` and is never `best`. `gm.study.sample(plant, problem, distributions, metrics, count, seed=0,
 *, plan=None)` draws `normal`, `uniform` and `triangular` parameters with
 `numpy.random.default_rng(seed)`, one simulation each, and summarises each metric as `mean`, `p5`,
 `p50`, `p95`; a draw whose run failed has its `reason` and stays out of the summary.
-`gm.optim.size` and `gm.optim.sensitivity` have their final signature and raise `NotImplementedYet`.
+`gm.study.size` and `gm.study.sensitivity` have their final signature and raise `NotImplementedYet`.
 
 A metric is a KPI or total of `gm.evaluate.totals` or one of `lcoh`, `lcoc`, `lcts`,
 `annualised_cost`, `co2`; the economic ones read the assumptions of `problem`, so they need a

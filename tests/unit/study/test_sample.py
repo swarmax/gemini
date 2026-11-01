@@ -1,4 +1,4 @@
-"""``gm.optim.sample`` on a boiler and a heat user."""
+"""``gm.study.sample`` on a boiler and a heat user."""
 
 import json
 
@@ -7,10 +7,10 @@ import pytest
 
 import gemini as gm
 from gemini._utils.jsonable import to_plain
-from gemini.optim._utils import trial
+from gemini.study._utils import trial
 from tests.fixtures.errors import raises
 from tests.fixtures.result_tables import make_results
-from tests.unit.optim.test_minimize import boiler_plant, problem, profile, watts
+from tests.unit.study.test_minimize import boiler_plant, problem, profile, watts
 
 UNCERTAIN = {
     "boiler.capacity": {"kind": "uniform", "lower": watts(2e5), "upper": watts(2e6)},
@@ -28,7 +28,7 @@ def sampled():
     """Return two samples of one seed."""
     plant = boiler_plant()
     return [
-        gm.optim.sample(plant, None, UNCERTAIN, ["peak_heat"], 6, seed=3, plan=profile())
+        gm.study.sample(plant, None, UNCERTAIN, ["peak_heat"], 6, seed=3, plan=profile())
         for _ in "ab"
     ]
 
@@ -49,7 +49,7 @@ def test_sample_gives_the_same_summary_with_the_same_seed(sampled):
 
 def test_another_seed_gives_other_draws(sampled):
     """Each draw lies inside its uniform limits."""
-    other = gm.optim.sample(
+    other = gm.study.sample(
         boiler_plant(), None, UNCERTAIN, ["peak_heat"], 3, seed=4, plan=profile()
     )
     assert other["samples"][0]["parameters"] != sampled[0]["samples"][0]["parameters"]
@@ -60,7 +60,7 @@ def test_another_seed_gives_other_draws(sampled):
 def test_a_draw_that_fails_is_recorded_and_left_out_of_the_summary():
     """An efficiency above one is refused; the other draws count."""
     wide = {"boiler.efficiency": {"kind": "uniform", "lower": 0.6, "upper": 1.4}}
-    result = gm.optim.sample(boiler_plant(), None, wide, ["peak_heat"], 6, seed=0, plan=profile())
+    result = gm.study.sample(boiler_plant(), None, wide, ["peak_heat"], 6, seed=0, plan=profile())
     failed = [item for item in result["samples"] if "reason" in item]
     assert failed and len(failed) < 6
     assert result["summary"]["peak_heat"]["mean"].value is not None
@@ -68,7 +68,7 @@ def test_a_draw_that_fails_is_recorded_and_left_out_of_the_summary():
 
 def test_a_metric_no_draw_gives_says_so():
     """Nothing to spread: ``None`` with the reason, and the unit of the metric."""
-    result = gm.optim.sample(boiler_plant(), None, UNCERTAIN, ["peak_cold"], 2, plan=profile())
+    result = gm.study.sample(boiler_plant(), None, UNCERTAIN, ["peak_cold"], 2, plan=profile())
     spread = result["summary"]["peak_cold"]
     assert spread["mean"].value is None and spread["p95"].value is None
     assert spread["mean"].reason and spread["mean"].unit == "W"
@@ -99,7 +99,7 @@ def test_a_sample_that_does_not_fit_is_refused(arguments, code):
     """Wrong names, kinds and fields."""
     call = dict(distributions=UNCERTAIN, metrics=["peak_heat"], count=2) | arguments
     with raises(gm.errors.ValidationError, code):
-        gm.optim.sample(boiler_plant(), None, plan=profile(), **call)
+        gm.study.sample(boiler_plant(), None, plan=profile(), **call)
 
 
 def test_each_draw_runs_a_copy_on_the_problem_and_the_plan(monkeypatch):
@@ -112,7 +112,7 @@ def test_each_draw_runs_a_copy_on_the_problem_and_the_plan(monkeypatch):
 
     monkeypatch.setattr(trial, "simulate", fake)
     plant, demanded, plan = boiler_plant(), problem(), profile()
-    found = gm.optim.sample(plant, demanded, UNCERTAIN, ["peak_heat"], 3, plan=plan)
+    found = gm.study.sample(plant, demanded, UNCERTAIN, ["peak_heat"], 3, plan=plan)
     assert len(found["samples"]) == len(calls) == 3
     assert all(copy is not plant and given is demanded for copy, given, _ in calls)
     assert all(given_plan is plan for _, _, given_plan in calls)
@@ -121,5 +121,5 @@ def test_each_draw_runs_a_copy_on_the_problem_and_the_plan(monkeypatch):
 def test_no_problem_and_no_plan_are_refused():
     """Nothing is assumed: not a demand, not a plan."""
     with raises(gm.errors.ValidationError, "missing_value") as refused:
-        gm.optim.sample(boiler_plant(), None, UNCERTAIN, ["peak_heat"], count=2)
+        gm.study.sample(boiler_plant(), None, UNCERTAIN, ["peak_heat"], count=2)
     assert refused.value.path == "problem"

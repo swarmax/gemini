@@ -79,7 +79,7 @@ def _minimize(bound):
         variables = [{"path": "boiler", "parameter": "capacity", "lower": bound, "upper": 3e6}]
         plant = gm.Plant("Boiler")
         plant.add("Boiler", name="boiler")
-        return gm.optim.minimize(plant, None, variables, "peak_heat", plan=None)
+        return gm.study.minimize(plant, None, variables, "peak_heat", plan=None)
 
     return call
 

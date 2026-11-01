@@ -28,14 +28,14 @@ Every public return that carries data uses only three shapes, defined once in `g
 and built by one helper each, so no module assembles them by hand. The JSON form of a return is
 plain: no NumPy types, NaN and infinity are `null` (`gemini._utils.jsonable.to_plain`), and
 `json.dumps(to_plain(result), allow_nan=False)` works. `gm.call`, `Results` and `gm.analysis` return
-that plain JSON. A result of `gm.evaluate` and `gm.optim` is a `gm.units.Quantity` in SI (a
+that plain JSON. A result of `gm.evaluate` and `gm.study` is a `gm.units.Quantity` in SI (a
 `Value`, below), and `to_plain` turns it into the dict `{value, unit}`.
 
 1. **Value** `{value, unit}`. `value` is a number, an array or `null`; when it is `null`, a `reason`
    key says why. The key is `value` for arrays too. A time series is a value with a `time` key
    beside it: `{time, value, unit}`. Statistics are `{min, max, mean}`, each a value. An output that
    is a flag or a text keeps its boolean or string. An economics value adds the parts of its result
-   as more keys, each a value or a text. In Python a result of `gm.evaluate` or `gm.optim` is a
+   as more keys, each a value or a text. In Python a result of `gm.evaluate` or `gm.study` is a
    `Value`, a `Quantity` with a `reason` and the `parts` of the result: `lcts(...).value`,
    `.unit`, `.to("EUR/MWh")`, `.parts["heat"]`. Money is in the unit `currency` (`currency/J`,
    `currency/yr`), whatever `Assumptions.currency` labels, and a year is `yr`.
@@ -87,10 +87,11 @@ from its own `__init__`; the files inside a folder are private.
 | `gm.Module`, `gm.Parameter`, `gm.Inlet`, `gm.Outlet`, `gm.Output` | see [modules.md](modules.md) | real |
 | `gm.Plant` | see [plants.md](plants.md) | real |
 | `gm.Stream`, `gm.Fluid`, `gm.BRINE`, `gm.WATER` | see [types.md](types.md) | real |
-| `gm.Problem`, `gm.Constraint`, `gm.Assumptions` | see [Problem](#problem) | real |
+| `gm.Case` | see [Case](#case) | real |
+| `gm.Problem`, `gm.Constraint`, `gm.Assumptions` | see [Problem](#problem); replaced by `gm.Case` in the next commits | real |
 | `gm.schedule`, `gm.simulate`, `gm.replay`, `gm.live`, `gm.resume`, `gm.call` | see [Running](#running) | real |
 | `gm.Results`, `gm.Dataset`, `gm.Engine` | see [engine.md](engine.md) | real |
-| `gm.modules`, `gm.plants`, `gm.physics`, `gm.ops`, `gm.runtime`, `gm.units`, `gm.errors`, `gm.data`, `gm.optim`, `gm.evaluate`, `gm.analysis`, `gm.compiler` | the folders, below | real |
+| `gm.modules`, `gm.plants`, `gm.case`, `gm.physics`, `gm.ops`, `gm.runtime`, `gm.units`, `gm.errors`, `gm.data`, `gm.study`, `gm.evaluate`, `gm.analysis`, `gm.compiler` | the folders, below | real |
 
 Not at the top: `gm.Clock` is `gemini.engine.Clock`; `Control`, `Boundary` and `State` are
 `gm.modules.Control`, `Boundary` and `State`; `gm.Quantity` is `gm.units.Quantity`; `Ports`,
@@ -204,7 +205,7 @@ for a value with a dimension only where the code works in SI by design: the para
 module and a plant (`set_params`, the plant dict, `gm.call`), a stream and a fluid. Everywhere
 else it is refused: the bounds of a `Constraint` (when judged, for a field with a unit), a
 `site` value, the prices and factors of `Assumptions`, and the variables, limits and
-distributions of `gm.optim`; a dimensionless value (an efficiency, a fraction, a rate, a count)
+distributions of `gm.study`; a dimensionless value (an efficiency, a fraction, a rate, a count)
 stays a number.
 
 A `Doublet` has `volume_imbalance`, a `HeatingGrid` and a `CoolingGrid` have `surplus`: see
@@ -223,10 +224,36 @@ A `Doublet` has `volume_imbalance`, a `HeatingGrid` and a `CoolingGrid` have `su
 The setters and getters of the settings (`set_precision`, `set_display_units`, `set_default_fluid`,
 `get_precision`, ...) are not public: change a setting with `gm.runtime.settings`.
 
+## Case
+
+`gm.Case` is the strict, typed entry boundary that replaces `gm.Problem`: fixed sections `time`,
+`environment`, `demand`, `choices`, `constraints` and `assumptions`, in a `case.json` with its CSV
+files next to it (design: `.tmp/case/design.md`). Every class is a frozen pydantic model that
+refuses unknown keys, with `to_dict`, `from_dict` and `schema`. Everything is stored in SI as plain
+numbers or arrays (`Quantity(12, "degC")` is 285.15) and written as `{"value", "unit"}` in the SI
+unit. No field has a default but absent (`None`).
+
+| Name | Meaning | Status |
+| --- | --- | --- |
+| `gm.Case(time, environment=None, demand=None, choices=None, constraints=None, assumptions=None)` | the case; `time` is required | real |
+| `gm.Case.from_json(path)`, `case.to_json(path)` | reads a `case.json` and the CSV files named in it, or writes both | real |
+| `gm.Case.from_dict(data, folder=None)`, `case.to_dict()`, `gm.Case.schema()` | plain data, files read from `folder`; JSON Schema closed at every level | real |
+| `gm.case.Time(start, end, step)` | `end` is excluded; `.index` is the UTC `DatetimeIndex` of the steps | real |
+| `gm.case.Environment(ground, reservoir, fluid, air)` with `Ground`, `Reservoir`, `Fluid`, `Air` | `temperature_at(depth)`, `pressure_at(depth)` apply the two rules of `gemini/physics/ground.py` | real |
+| `gm.case.Demand(file, time_column, heating, cooling)` with `Service(column, unit, supply_temperature, return_temperature)` | reads the CSV into `.frame`, in W on the index of `time` | real |
+| `gm.case.Choices(doublets, depth)` with `Range(min, max)` | what a study may vary | real |
+| `gm.case.Constraint(on, quantity, min=None, max=None, equals=None, over="each", when="always")` | a limit on a quantity of a role | real |
+| `gm.case.Assumptions(finance, emissions)` with `Finance`, `Capex`, `Opex`, `Revenue`, `Allocation`, `Emissions`, `CO2`, `CH4` | no default of any value | real |
+| `gm.case.roles()` | `{role: [quantities]}`, the closed table a `Constraint` names | real |
+
+An absent value that a call needs raises `missing_value` naming its path, `missing_assumption`
+below `assumptions`. How to read every value is in `.tmp/case/case-interface.md` until the
+sections that use the case are ported.
+
 ## Problem
 
 One `gm.Problem` carries what a plant is asked to do, for every call: `schedule`, `simulate`,
-`gm.evaluate.*` and `gm.optim.*` take `(plant, problem, ...)`. The format of `problem.json` is in
+`gm.evaluate.*` and `gm.study.*` take `(plant, problem, ...)`. The format of `problem.json` is in
 the docstring of `gm.Problem` and in `inputs/examples/*/problem.json`; see [data.md](data.md).
 
 | Name | Returns | Status |
@@ -336,7 +363,7 @@ returns is a value; every entry here takes *units*, except where a coefficient h
 | `gm.analysis.estimate_reservoir_pressure(flows, bottomhole_pressures, units=None)` | `{pressure, r_squared}` | real |
 | `gm.analysis.estimate_conductance(hot_in_T, hot_out_T, cold_in_T, cold_out_T, m_dot_hot, m_dot_cold, *, cp_hot, cp_cold, arrangement, units=None)` | a value of the apparent UA of an exchanger | real |
 
-## Evaluate and optim
+## Evaluate and study
 
 Every `gm.evaluate` function takes `(plant, problem, results, ...)`; only `capex` has no results.
 The cost functions return a value with the parts of the result as more keys. A value the inputs
@@ -365,12 +392,12 @@ constraint is a check, never an error.
 | `gm.evaluate.capacities(plant, problem, results)` | later: the peak load of each unit against its rating |
 | `gm.evaluate.report(plant, problem, results)` | later: totals, checks and costs as one document |
 | `gm.evaluate.compare(plant, problem, results, other)` | later: how a second run differs from the first |
-| `gm.optim.minimize(plant, problem, variables, objective, constraints=None, evaluations=100, *, plan=None)` | real: `{best, history, evaluations}`, `best` a `Value` of the objective whose `parts["parameters"]` are `{"path.parameter": Quantity}` for `set_params`; variable bounds and metric limits are `Quantity`; a failed trial has a `reason` and is never `best` |
-| `gm.optim.sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None)` | real: `{samples, summary}`, `summary` per metric `{mean, p5, p50, p95}`, each a `Value`; the fields of a distribution are `Quantity` |
-| `gm.optim.size(plant, problem, *, plan=None)` | later: the capacity of each unit that meets the problem at least cost |
-| `gm.optim.sensitivity(plant, problem, parameters, metrics, *, plan=None)` | later: how each metric moves with each parameter |
+| `gm.study.minimize(plant, problem, variables, objective, constraints=None, evaluations=100, *, plan=None)` | real: `{best, history, evaluations}`, `best` a `Value` of the objective whose `parts["parameters"]` are `{"path.parameter": Quantity}` for `set_params`; variable bounds and metric limits are `Quantity`; a failed trial has a `reason` and is never `best` |
+| `gm.study.sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None)` | real: `{samples, summary}`, `summary` per metric `{mean, p5, p50, p95}`, each a `Value`; the fields of a distribution are `Quantity` |
+| `gm.study.size(plant, problem, *, plan=None)` | later: the capacity of each unit that meets the problem at least cost |
+| `gm.study.sensitivity(plant, problem, parameters, metrics, *, plan=None)` | later: how each metric moves with each parameter |
 
-`problem` of `gm.optim.minimize` and `sample` plans the demand for each trial with `gm.schedule`
+`problem` of `gm.study.minimize` and `sample` plans the demand for each trial with `gm.schedule`
 on the design of that trial, so a variable that changes the design changes the plan. A `plan`
 (run input, a frame) stays fixed over the trials and lets `problem` be `None` for a building block
 with no demand and metrics that need no assumptions; with neither the call raises `ValidationError`
@@ -395,21 +422,22 @@ and `ROW_CODES` the row codes with their meaning.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.2.0, unreleased changes | | New `gm.Case` and the folder `gm.case` (`Case`, `Time`, `Environment`, `Ground`, `Reservoir`, `Fluid`, `Air`, `Demand`, `Service`, `Choices`, `Range`, `Constraint`, `Assumptions`, `Finance`, `Capex`, `Opex`, `Revenue`, `Allocation`, `Emissions`, `CO2`, `CH4`, `roles()`): a strict, frozen, SI-stored entry boundary with `to_dict`, `from_dict`, `schema`, `from_json`, `to_json`. New `gm.physics.ground.reservoir_temperature` and `reservoir_pressure`; `gm.units` gains `EUR/m3`, the type `MoneyPerVolume`. The folder `gm.optim` is renamed `gm.study`. `gm.Problem`, `gm.Constraint` and `gm.Assumptions` stay until the schedule, the run and `gm.evaluate` are ported to `gm.Case`. |
 | 0.2.0, unreleased changes | | The COP estimate of the cost dispatch reads the module's `carnot_fraction`, or `lorenz_fraction` for a Lorenz machine, which it had read as the Carnot default. The default 0.5 cites H. U. Frutschi, ABB Review 5/1996, pp. 33-34; the sample plants state it. |
 | 0.2.0, unreleased changes | | `plan.attrs["check_only"]` lists a constraint the schedule enforces in part with only the bounds left: a duration of `min` and `max`, of `equals` and another bound, or a brine cooling with a `min`. |
 | 0.2.0, unreleased changes | | A `Doublet` with a `depth` and no `gradient` or `surface_temperature` when a run or a schedule starts raises `ValidationError` code `missing_value` with the path of each value, whatever `on_error` says; `missing_parameters` lists them. |
 | 0.2.0, unreleased changes | | Private paths only: `gm.call` is `gemini/modules/call.py`, and the old project reader `gemini/plants/_utils/legacy/`, so no run folder imports above the run, in a function or not. No change to a name of this page. |
-| 0.2.0, unreleased changes | | One folder per concern, flat public names. Top level: `gemini/modules`, `plants`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`, `units`, `errors`, `data`, `optim`, `evaluate`, `analysis`, `compiler`, `_utils`; `gm.__all__` is pinned. The folders `core`, `base`, `registry`, `testing`, `backends`, `checks`, `economics`, `profiles`, `utils` and `graph` at the top are gone. Run folders import none of `compiler`, `data`, `optim`, `evaluate`, `analysis`; importing `gm.compiler` registers its executor, and a run works without it. |
-| 0.2.0, unreleased changes | | One `gm.Problem` for every call: `gm.Problem`, `gm.Constraint`, `gm.Assumptions`, with `to_dict`, `from_dict`, `schema`; `Problem.from_json`, `to_json`, `apply_site`. `gm.schedule(plant, problem)`; `gm.simulate(plant, problem=None, plan=None, ..., compile=True)`; every `gm.evaluate` function takes `(plant, problem, results, ...)`, `gm.optim.minimize` and `sample` `(plant, problem, ..., *, plan=None)`. A schedule loads sources by marginal cost and reads its limits from constraints; `attrs["check_only"]` lists the constraints it does not enforce. `Assumptions.prices` and `co2_price` replace the six flat price fields. A `Doublet` with a `depth` and no geotherm waits for the site. |
+| 0.2.0, unreleased changes | | One folder per concern, flat public names. Top level: `gemini/modules`, `plants`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`, `units`, `errors`, `data`, `study`, `evaluate`, `analysis`, `compiler`, `_utils`; `gm.__all__` is pinned. The folders `core`, `base`, `registry`, `testing`, `backends`, `checks`, `economics`, `profiles`, `utils` and `graph` at the top are gone. Run folders import none of `compiler`, `data`, `study`, `evaluate`, `analysis`; importing `gm.compiler` registers its executor, and a run works without it. |
+| 0.2.0, unreleased changes | | One `gm.Problem` for every call: `gm.Problem`, `gm.Constraint`, `gm.Assumptions`, with `to_dict`, `from_dict`, `schema`; `Problem.from_json`, `to_json`, `apply_site`. `gm.schedule(plant, problem)`; `gm.simulate(plant, problem=None, plan=None, ..., compile=True)`; every `gm.evaluate` function takes `(plant, problem, results, ...)`, `gm.study.minimize` and `sample` `(plant, problem, ..., *, plan=None)`. A schedule loads sources by marginal cost and reads its limits from constraints; `attrs["check_only"]` lists the constraints it does not enforce. `Assumptions.prices` and `co2_price` replace the six flat price fields. A `Doublet` with a `depth` and no geotherm waits for the site. |
 | 0.2.0, unreleased changes | | `gm.evaluate.constraints` replaces `Limits`, `limits` and `operating_time`; `gm.evaluate.totals` also gives `heating_coverage`, `cooling_coverage`, `cop`, `peak_heat` and `peak_cold`, the former `gm.kpi.compute`. `gm.checks.*`, `gm.economics.*` and `gm.kpi.*` are `gm.evaluate.*`, `gm.profiles.*` is `gm.data.*`, `calibrate` and `CalibrationResult` are in `gm.analysis`. |
 | 0.2.0, unreleased changes | | Naming: readers `from_<format>`, writers `to_<format>`. `Plant.save`, `load` are `to_json`, `from_json`; `gm.plants.from_dict` is `gm.Plant.from_dict`; `gm.plants.convert_legacy` is `gm.Plant.from_legacy`, which returns a plant; `Results.save`, `load` are `to_npz`, `from_npz`; `Engine.save_checkpoint`, `load_checkpoint` are `to_checkpoint`, `from_checkpoint`; `Module.load_state_dict` is `set_state_dict`. `gm.evaluate(...)` is `gm.call(...)`; `gm.testing.check_module` is `gm.modules.check`. `gm.runtime` has `settings` and `state` only. |
 | 0.2.0, unreleased changes | | A module class that states a `category` registers itself; `gm.modules.register` and `load_file` are gone, `abstract = True` leaves a class out. New codes `duplicate_name` and `conflicting_value`. Plant classes are in `gm.plants`, not `gm.modules`. |
-| 0.2.0, unreleased changes | | New names whose work lands later: `gm.plants.capabilities`, `gm.data.synthesize`, `gm.evaluate.capacities`, `report`, `compare`, `gm.optim.size`, `sensitivity`. New: `gm.compiler.compile`, `gm.ops.register_backend`. |
+| 0.2.0, unreleased changes | | New names whose work lands later: `gm.plants.capabilities`, `gm.data.synthesize`, `gm.evaluate.capacities`, `report`, `compare`, `gm.study.size`, `sensitivity`. New: `gm.compiler.compile`, `gm.ops.register_backend`. |
 | 0.2.0, unreleased changes | | `InjectionPump.efficiency` has no default: without a value or head and power curves it raises `missing_value`, and `gm.plants.convert_legacy` raises it for a project without the pump's power column. |
-| 0.2.0, unreleased changes | | gemini knows no sample problem. Removed: `gm.challenge_rules`, `HackathonPlant`, `gm.profiles.demand`, `gm.profiles.get`, `gm.profiles.names`, `gm.checks.operating_days`, `rules["operating_days"]`, `attrs["outage_days"]`, and `inputs/hackathon/`, now `inputs/examples/hackathon_2027/`. New: `gm.profiles.from_csv`, `gm.profiles.from_values`, `gm.checks.operating_time`, `rules["operating_time"]`, `attrs["outages"]`, `rules` on `gm.optim.minimize` and `sample`, where `profile=None` now raises. `gm.schedule` has no default for `doublet_flow` or `max_brine_cooling`, and works on any constant step. `gm.plants.example` of the five template plants raises `NotImplementedYet`. `Doublet.gradient` and `surface_temperature` have no default: a `depth` without them raises `missing_value`. `gm.checks.run_all` takes `duration`. `normal_density` takes its reference conditions. `profile_schema` describes columns, time and values only. |
+| 0.2.0, unreleased changes | | gemini knows no sample problem. Removed: `gm.challenge_rules`, `HackathonPlant`, `gm.profiles.demand`, `gm.profiles.get`, `gm.profiles.names`, `gm.checks.operating_days`, `rules["operating_days"]`, `attrs["outage_days"]`, and `inputs/hackathon/`, now `inputs/examples/hackathon_2027/`. New: `gm.profiles.from_csv`, `gm.profiles.from_values`, `gm.checks.operating_time`, `rules["operating_time"]`, `attrs["outages"]`, `rules` on `gm.study.minimize` and `sample`, where `profile=None` now raises. `gm.schedule` has no default for `doublet_flow` or `max_brine_cooling`, and works on any constant step. `gm.plants.example` of the five template plants raises `NotImplementedYet`. `Doublet.gradient` and `surface_temperature` have no default: a `depth` without them raises `missing_value`. `gm.checks.run_all` takes `duration`. `normal_density` takes its reference conditions. `profile_schema` describes columns, time and values only. |
 | 0.2.0, unreleased changes | | `make sandbox-image` builds `gemini-sandbox:<version>`, the image of geomind's module sandbox, from `docker/sandbox.Dockerfile`. |
 | 0.2.0, unreleased changes | | `gm.analysis.nodal` solves injection wells: the wellhead pressure of a rate, or the rate of a wellhead pressure. |
-| 0.2.0, unreleased changes | | `gm.challenge_rules()` and `gm.profiles.demand()`. `profile=None` in `gm.optim.minimize` and `sample` is the demand year under the challenge rules, and a demand frame is planned for each trial. Reading a finished run no longer builds the JSON of every column. |
+| 0.2.0, unreleased changes | | `gm.challenge_rules()` and `gm.profiles.demand()`. `profile=None` in `gm.study.minimize` and `sample` is the demand year under the challenge rules, and a demand frame is planned for each trial. Reading a finished run no longer builds the JSON of every column. |
 | 0.2.0, unreleased changes | | `gm.plants.example` of the five template plants holds the challenge values on two doublets, with `inputs`, and runs the demand year (`examples/cases/challenge_year.py`); a value file may state `size`. A plan states the unit of its columns in `attrs["units"]`, and a run reads them: a binding in another unit no longer misreads a plan. On a root plant, which has no ports, a failing row is now an error: it passed unnoticed on a traced plant. A stopped drive circuit of `AdsorptionChiller` has no driving-temperature limit. |
 | 0.2.0, unreleased changes | | `Doublet.volume_imbalance` and `InjectionReservoir.liquid_flow`. `gm.checks.Limits` takes a parameter. `gm.checks.limits` on a run whose every row failed gives `passed: null` with a reason `no_value` instead of a `KeyError`. |
 | 0.2.0, unreleased changes | | `HeatingGrid.surplus` and `CoolingGrid.surplus`, what the water gives above the demand. `gm.kpi.totals` adds `heat_useful`, `heat_surplus`, `cold_useful`, `cold_surplus`; `gm.kpi.compute`, `gm.economics.lcoh`, `lcoc` and `lcts` read the useful energy. `HackathonPlant`, `HeatingCoolingPlant`, `HeatingFullCoolingPlant` and `HeatingAbsorptionCoolingPlant` return the drive water of their chillers through a bypass past the users (`loads` and `heat_return`, `drive_splitter` and `drive_mixer`), a loop the engine closes, and `gm.schedule` sets its split: the heating supply stays at its setpoint. |
@@ -418,7 +446,7 @@ and `ROW_CODES` the row codes with their meaning.
 | 0.2.0, unreleased changes | | `Plant.set_inputs`, `Plant.input_value`, `Plant.target_of`, `Plant.source_of`. The plant dict has one key `inputs`, `{path: value}`, in both forms; `gm.plants.from_dict`, `gm.schedule` and a run use it. `boundary[""]["inputs"]` and `boundary[""]["root_inputs"]` are gone: a plant inlet field is the path `port.field`. |
 | 0.2.0, unreleased changes | | Leaves compute, plants connect. `_compute_outputs` is gone: a leaf computes once in `forward`. Every composite is a `Plant`, which never writes `forward`, with `HeatingSubstation`, `CoolingSubstation`, `NodalDoublet`, `DistrictEnergyPlant`, `BoilerChpPlant`, `ParallelExchangerPlant` and `ATESPlant` among them. The engine closes loops (`loop_not_converged`) and solves `Plant.constrain`. `CirculationPump` carries the flow of a building circuit, and its electricity is counted. Plant outputs are `Output.difference`, `Output.ratio` and `Output.sum` of paths; `Results` reads a path. |
 | 0.2.0, unreleased changes | | No JSON file in `gemini/`: `gemini/assets/` is gone. A plant of a class stores `{type, size?, params}`, `to_dict(structure=True)` its structure. Templates are the plant classes `HeatingPlant`, `HeatingCoolingPlant`, `HeatingFullCoolingPlant`, `HeatingAbsorptionCoolingPlant` and `HeatingHeatPumpCoolingPlant`, and `DistrictNetwork` and `MultiWellPlant` take their size. Removed names are listed below. Code `loop_without_state` and `migration_failed` are gone, `loop_not_converged` is new. |
-| 0.2.0, unreleased changes | | `gm.optim.minimize` and `gm.optim.sample` are built, on the metrics of `gm.kpi` and `gm.economics`; each takes `assumptions`. |
+| 0.2.0, unreleased changes | | `gm.study.minimize` and `gm.study.sample` are built, on the metrics of `gm.kpi` and `gm.economics`; each takes `assumptions`. |
 | 0.2.0, unreleased changes | | `gm.evaluate`: a volume unit on `m_dot` names `flow` in its message, `path` and `suggestions`; the code stays `invalid_call`. |
 | 0.2.0, unreleased changes | | `gm.economics.annualised_cost` and `gm.economics.lcts`, the levelised cost of heat and cold together. |
 | 0.2.0, unreleased changes | | `rules["operating_days"]` of `gm.schedule` is built: a count or a list of outage dates, `attrs["outage_days"]`, the column `<heat pump>.is_running`. New `gm.checks.operating_days`, since replaced; `gm.checks.run_all` takes `days`. |
@@ -435,9 +463,9 @@ and `ROW_CODES` the row codes with their meaning.
 | 0.2.0, unreleased changes | | Ports carry a `Power`: `Inlet(Power, kind="electricity")`, `Outlet(Power, kind="heat")`; `many=True`, `drawn=True`, `offered=True`; consumers get `power_in`, generators `power_out`; a plant port may list several ends. `gm.streams.names()` adds `heat`, `air`, `waste`, `chemical`. |
 | 0.2.0, unreleased changes | | Layout: helpers in `gemini/modules/_utils/`, physics of one category in its `_physics.py`. Public names unchanged. |
 | 0.2.0, unreleased changes | | One unit format. New `gm.units.Unit`, a `str` enum generated from the unit table, and `gm.units.Quantity(value, unit)` is the one shape of a value with a dimension: `.si`, `.to(unit)`, `to_dict`, `from_dict`, equality on SI. Removed: `gm.units.parse`, `split_quantity`, and every reading of unit text: `"150 m3/h"` is `ValidationError` `invalid_value` in `set_params`, the plant dict, `gm.call`, `gm.Stream`, `gm.Fluid`, `gm.Problem`, `gm.Constraint` and `gm.Assumptions`, which take a `Quantity` or `{"value", "unit"}`. A unit of another dimension is `invalid_unit` and lists the units of the field; the schema of a parameter with a unit offers `{"value": number, "unit": enum}`. New units `yr`, `%/yr`, `g/kWh`, `kg/J`, `J/yr`, `1/yr`, `EUR`, `EUR/MWh`, `EUR/kWh`, `EUR/kg`, `EUR/t`, `EUR/W`, `EUR/m`, `EUR/(W/K)` (the currency is a label: nothing converts between currencies), and quantities `MoneyPerMass`, `MoneyPerPower`, `MoneyPerLength`, `MoneyPerConductance`, `MassPerEnergy`, `AnnualEnergy`, `AnnualRate`. `currency/year` is `currency/yr`. |
-| 0.2.0, unreleased changes | | `Assumptions`: `co2_price`, `electricity_emission_factor` and every cost factor are a `Quantity` (the price profile `{"unit", "values"}` is a `Quantity` with an array), and a bare number raises. `Constraint` bounds, `Problem.site` values and the `gm.optim` variables, limits and distributions are `Quantity` for a field with a unit. `Assumptions.emission_factor()` gives the factor in SI. |
+| 0.2.0, unreleased changes | | `Assumptions`: `co2_price`, `electricity_emission_factor` and every cost factor are a `Quantity` (the price profile `{"unit", "values"}` is a `Quantity` with an array), and a bare number raises. `Constraint` bounds, `Problem.site` values and the `gm.study` variables, limits and distributions are `Quantity` for a field with a unit. `Assumptions.emission_factor()` gives the factor in SI. |
 | 0.2.0, unreleased changes | | `Results.units` is `{"<path>.<field>": unit}` for every column of `to_frame`; the former `{path: {field: unit}}` is `Results.declared` (and the constructor argument). New units `MWh`, `GWh`, `TWh`, `MJ`, `GJ`, `GW`, `kt`, `Mt`, `kg/yr`, `t/yr`, `kt/yr`, `Mt/yr`, `kWh/yr`, `MWh/yr`, `GWh/yr`, `kEUR`, `MEUR`, `EUR/J`, `EUR/yr`, `kEUR/yr`, `MEUR/yr`. |
-| 0.2.0, unreleased changes | | Outputs: each value of `gm.evaluate`, each check `value` and `limit`, and the results of `gm.optim.minimize` and `sample` are a `Value`, a `Quantity` in SI with `reason` and `parts`; `to_plain` gives the JSON of before, with `currency` for money and `yr` for years. `Value` and `measure` are in `gemini/types/shapes.py`. `gm.optim.minimize` returns `Value` objects, not JSON. |
+| 0.2.0, unreleased changes | | Outputs: each value of `gm.evaluate`, each check `value` and `limit`, and the results of `gm.study.minimize` and `sample` are a `Value`, a `Quantity` in SI with `reason` and `parts`; `to_plain` gives the JSON of before, with `currency` for money and `yr` for years. `Value` and `measure` are in `gemini/types/shapes.py`. `gm.study.minimize` returns `Value` objects, not JSON. |
 | 0.2.0 | 2026-10-31 | Demand profiles: `gm.profiles.get` reads the two organiser files of 2027; `profile_schema` describes what `get` returns. |
 | 0.2.0 | 2026-10-31 | No dangling ports: an unconnected port is `unconnected_port`; plant ports exist only when named, the automatic `<path>_<port>` ports are gone. |
 | 0.2.0 | 2026-10-31 | A module may set its children's values: every parameter route reaches an overridden `set_params`; `to_dict` stores no derived value. |
@@ -479,7 +507,7 @@ Names removed or renamed in the unreleased changes of 0.2.0:
 | `gm.profiles.demand`, `gm.profiles.get`, `gm.profiles.names` | `gm.profiles.from_csv`, `gm.profiles.from_values` |
 | `gm.checks.operating_days`, `rules["operating_days"]`, `days` of `run_all` | `gm.checks.operating_time`, `rules["operating_time"]`, `duration` |
 | `attrs["outage_days"]` of a plan | `attrs["outages"]` |
-| `profile=None` of `gm.optim.minimize`, `sample` | the caller's demand and `rules` |
+| `profile=None` of `gm.study.minimize`, `sample` | the caller's demand and `rules` |
 | `gm.plants.from_dict(data)` | `gm.Plant.from_dict(data)` |
 | `Plant.save(path)`, `gm.Plant.load(path)` | `Plant.to_json(path)`, `gm.Plant.from_json(path)` |
 | `Results.save(path)`, `gm.Results.load(path)` | `Results.to_npz(path)`, `gm.Results.from_npz(path)` |
@@ -493,10 +521,10 @@ Names removed or renamed in the unreleased changes of 0.2.0:
 | `gm.checks.Limits`, `gm.checks.limits`, `gm.checks.operating_time` | `gm.Constraint` and `gm.evaluate.constraints` |
 | `gm.economics.Assumptions` | `gm.Assumptions` |
 | `electricity_price`, `gas_price`, `waste_disposal_price`, `chemical_price`, `heat_price`, `cold_price` of `Assumptions` | `Assumptions.prices` (and `co2_price`) |
-| `rules` of `gm.schedule`, `gm.optim.minimize`, `sample`; `order`, `cooling_order`, `operating_time` as a list or a fraction | `gm.Constraint`s of the `gm.Problem`; `gm.schedule(plant, problem)` |
+| `rules` of `gm.schedule`, `gm.study.minimize`, `sample`; `order`, `cooling_order`, `operating_time` as a list or a fraction | `gm.Constraint`s of the `gm.Problem`; `gm.schedule(plant, problem)` |
 | `gm.schedule(plant, demand, rules)`, `gm.simulate(plant, profile)` | `gm.schedule(plant, problem)`, `gm.simulate(plant, problem)` |
 | `gm.profiles.*` | `gm.data.*` |
-| `gm.optim.calibrate`, `gm.optim.CalibrationResult` | `gm.analysis.calibrate`, `gm.analysis.CalibrationResult` |
+| `gm.study.calibrate`, `gm.study.CalibrationResult` | `gm.analysis.calibrate`, `gm.analysis.CalibrationResult` |
 | `gm.modules.register`, `gm.modules.load_file` | none: a class that states a `category` registers itself in `Module.__init_subclass__`; `abstract = True` leaves it out; a second class of a name raises `duplicate_name` |
 | `gm.modules.<Plant class>` | `gm.plants.<Plant class>` |
 | `gm.backends.settings(backend)` | `gm.runtime.settings(backend=...)` |

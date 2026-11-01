@@ -279,7 +279,7 @@ decisions outlast the move.
   not one node of a graph, the same row by row on every backend.
 - A year on a plant with a loop runs row by row, 59 module calls a step on the sample plant with treatment: 6 s, and
   9 s on `HeatingCoolingPlant`, on the same profile as any eager call, with no one hot spot. A trial
-  of `gm.optim` therefore takes 6 to 9 s on a plant with a heat-driven chiller, not the 1 s asked for,
+  of `gm.study` therefore takes 6 to 9 s on a plant with a heat-driven chiller, not the 1 s asked for,
   and 0.4 s on one without. Reading the run
   takes 0.15 s of it, down from 3.9 s. Tracing a loop into the graph is what would close the gap.
 - `DoubletHeatPlant` keeps its measured values, which `tests/fixtures/module_api_baseline` and

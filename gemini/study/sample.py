@@ -4,7 +4,7 @@ import numpy as np
 
 from gemini._utils.strings import close_matches, join_names
 from gemini.errors import ValidationError
-from gemini.optim._utils.trial import (
+from gemini.study._utils.trial import (
     checked_metric,
     parameter_si,
     quantities,
@@ -27,7 +27,7 @@ def _checked_distribution(plant, name, distribution):
     kind = distribution.get("kind")
     if kind not in DISTRIBUTIONS:
         raise ValidationError(
-            f"optim.sample: {name}: kind = {kind!r}; expected one of {join_names(DISTRIBUTIONS)}",
+            f"study.sample: {name}: kind = {kind!r}; expected one of {join_names(DISTRIBUTIONS)}",
             path=name,
             code="unknown_name",
             suggestions=close_matches(str(kind), list(DISTRIBUTIONS)),
@@ -35,7 +35,7 @@ def _checked_distribution(plant, name, distribution):
     missing = set(DISTRIBUTIONS[kind]) - set(distribution)
     if missing:
         raise ValidationError(
-            f"optim.sample: {name}: expected {join_names(sorted(missing))} for {kind}",
+            f"study.sample: {name}: expected {join_names(sorted(missing))} for {kind}",
             path=name,
             code="missing_value",
         )
@@ -51,7 +51,7 @@ def _draw(generator, plant, name, distribution):
     try:
         return float(getattr(generator, kind)(*fields))
     except ValueError as error:
-        raise ValidationError(f"optim.sample: {name}: {error}", path=name) from error
+        raise ValidationError(f"study.sample: {name}: {error}", path=name) from error
 
 
 def _spread(samples, name):
@@ -103,7 +103,7 @@ def sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None):
         give it, each a ``Value`` that is ``None`` with a ``reason`` when none does.
     """
     if count < 1:
-        raise ValidationError(f"optim.sample: count = {count}; expected at least 1", path="count")
+        raise ValidationError(f"study.sample: count = {count}; expected at least 1", path="count")
     names = [checked_metric(name, problem) for name in metrics]
     for name, distribution in distributions.items():
         _checked_distribution(plant, name, distribution)

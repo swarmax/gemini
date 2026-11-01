@@ -18,8 +18,8 @@ calls physics functions. `gemini/modules/` holds `Module`, the declarations, `Mo
 goes in an `_utils/` folder, code of one category in a private file of its folder
 ([where a file goes](.claude/docs/conventions.md#module-rules)). Public names are flat,
 `gm.<folder>.<Name>`, exported by the folder's `__init__`; inner files are private. The run folders
-(`modules`, `plants`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`, `units`, `errors`,
-`_utils`) import none of `compiler`, `data`, `optim`, `evaluate`, `analysis`
+(`modules`, `plants`, `case`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`, `units`, `errors`,
+`_utils`) import none of `compiler`, `data`, `study`, `evaluate`, `analysis`
 ([dependencies](.claude/docs/conventions.md#dependencies)).
 
 **Read/write naming.** Every reader is `from_<format>` and every writer `to_<format>`: `from_csv`,
@@ -79,7 +79,7 @@ Read every file in `.claude/docs/` before changing the repository:
 - [Data](.claude/docs/data.md): read/write naming, in-memory datasets, sampling, gaps, `problem.json`
   and where data lives.
 - [Engine](.claude/docs/engine.md): clocks, runs, callbacks, results, checkpoints and live.
-- [Economics](.claude/docs/economics.md): `gm.evaluate` costs, totals, KPIs, constraints and checks, `gm.optim` and well analysis.
+- [Economics](.claude/docs/economics.md): `gm.evaluate` costs, totals, KPIs, constraints and checks, `gm.study` and well analysis.
 - [Equipment](.claude/docs/equipment.md): every shipped module, its model and energy audit.
 - [Errors](.claude/docs/errors.md): the rule for raising, the seven `gm.errors` classes, the codes.
 - [Glossary](.claude/docs/glossary.md): one name per concept for parameters, outputs and ports.
@@ -117,11 +117,12 @@ gemini/
 ├── runtime/          # context-local backend, precision, display units and default fluid
 ├── modules/          # module.py, declarations.py, container.py, call.py, check.py, _utils/; one folder per category with its _physics.py
 ├── plants/           # plant.py (Plant) and the plant classes, one file each; _utils/ holds the plant tools
+├── case/             # Case and its sections (time, environment, demand, choices, constraints, assumptions), roles; _utils/ (demand frame, fields, profiles, access)
 ├── engine/           # Engine, Clock, executor.py, eager.py, rows.py, loader, runner, chunks, checkpoint, callbacks
-├── run/              # Problem, Constraint, Assumptions, schedule, simulate, replay, live, resume, call, Results, Dataset; _utils/ (demand, roles, limits, sources)
+├── run/              # Problem, Constraint, Assumptions, schedule, simulate, replay, live, resume, call, Results, Dataset; _utils/ (roles, limits, sources)
 ├── compiler/         # graph/ (Tracer, Graph, passes, cache), executor.py, gm.compiler.compile; optional, registers itself
 ├── data/             # from_csv, from_values, profile_schema, synthesize (stub), legacy/ (old CSV files and the way back to the old project)
-├── optim/            # minimize, sample, size (stub), sensitivity (stub)
+├── study/            # minimize, sample, size (stub), sensitivity (stub)
 ├── evaluate/         # totals, constraints, balances, bounds, run_all, capex, opex, lcoh, lcoc, lcts, annualised_cost, co2, npv, payback; capacities, report, compare (stubs)
 └── analysis/         # calibrate, nodal, injectivity, pump curve, corrosion, erosion, fits
 docs/schemas/         # generated JSON Schemas and samples of the exchanged documents

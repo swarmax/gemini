@@ -5,7 +5,7 @@ from scipy.optimize import differential_evolution
 
 from gemini._utils.strings import join_path
 from gemini.errors import ValidationError
-from gemini.optim._utils.trial import (
+from gemini.study._utils.trial import (
     checked_metric,
     limit_si,
     parameter_si,
@@ -52,7 +52,7 @@ def _checked_variables(plant, variables):
     """Return ``(names, bounds)`` of the variables, or raise for one that does not fit."""
     if not variables:
         raise ValidationError(
-            "optim.minimize: variables = []; expected at least one",
+            "study.minimize: variables = []; expected at least one",
             path="variables",
             code="missing_value",
         )
@@ -63,7 +63,7 @@ def _checked_variables(plant, variables):
         lower, upper = (parameter_si(plant, name, item[end]) for end in ("lower", "upper"))
         if not lower < upper:
             raise ValidationError(
-                f"optim.minimize: {name}: lower = {item['lower']}, upper = {item['upper']}; "
+                f"study.minimize: {name}: lower = {item['lower']}, upper = {item['upper']}; "
                 "expected lower below upper",
                 path=name,
             )
@@ -76,7 +76,7 @@ def _generations(evaluations, count):
     population = max(SMALLEST_POPULATION, POPULATION_PER_VARIABLE * count)
     if evaluations < population:
         raise ValidationError(
-            f"optim.minimize: evaluations = {evaluations}; {count} variables need at least "
+            f"study.minimize: evaluations = {evaluations}; {count} variables need at least "
             f"{population}",
             path="evaluations",
         )

@@ -19,11 +19,11 @@ A package may import only the packages to its left:
 
 `gemini._utils`, `gemini.errors` ← `gemini.ops.kernels` ← `gemini.ops` ← `gemini.physics`
 ← `gemini.units`, `gemini.types` ← `gemini.runtime` ← `gemini.modules` ← `gemini.plants`
-← `gemini.run` ⇄ `gemini.engine` ← `gemini.compiler`, `gemini.data`, `gemini.optim`,
+← `gemini.case` ← `gemini.run` ⇄ `gemini.engine` ← `gemini.compiler`, `gemini.data`, `gemini.study`,
 `gemini.evaluate`, `gemini.analysis` ← `gemini/__init__`.
 
-The **run folders** are `modules`, `plants`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`,
-`units`, `errors` and `_utils`. They import none of `compiler`, `data`, `optim`, `evaluate` and
+The **run folders** are `modules`, `plants`, `case`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`,
+`units`, `errors` and `_utils`. They import none of `compiler`, `data`, `study`, `evaluate` and
 `analysis`, not even inside a function, and `modules` imports neither `plants` nor `run`.
 Two imports below the rule stay inside a function, neither of them across these layers:
 
@@ -35,9 +35,11 @@ Two imports below the rule stay inside a function, neither of them across these 
 `gemini/engine/__init__.py` imports `gemini.run` first and never `.engine`, which keeps one import
 order from either side. `gemini/compiler/__init__.py` registers its executor when it is imported,
 and `gemini/__init__.py` imports it; the run works without it, see
-[engine.md](engine.md#folders-and-imports). `gemini/run/_utils/demand.py` holds the demand frame,
-because a `Problem` reads it and `run` imports no `data`; `gm.data` exports `from_csv` and
-`from_values` from it.
+[engine.md](engine.md#folders-and-imports). `gemini/case/_utils/demand.py` holds the demand frame,
+because a `Case` reads it and `case` imports no `data`; `gm.data` exports `from_csv` and
+`from_values` from it. `gemini.case` sits above `plants`, because it finds the units of a role by
+module class, and below `run`: it imports none of `run`, `engine`, `evaluate`, `study`, `compiler`,
+`data` and `analysis` (`tests/unit/test_code_quality.py` enforces it).
 
 `gemini/runtime/context.py` and `gemini/run/` sit in a package lower in the order than their own
 place. They stay safe because neither `gemini/ops/kernels/__init__.py` nor
@@ -94,7 +96,7 @@ to `SNAPSHOTS` for the new version; never edit the hash of a released version.
 
 **Physics lives in `gemini/physics/` or a `_physics.py`.** Modules declare and wire; they never
 define physics. `gemini/physics/` keeps the textbook formulas and anything more than one category,
-or `analysis`, `optim` or `evaluate`, reads. Physics of one category lives in
+or `analysis`, `study` or `evaluate`, reads. Physics of one category lives in
 `gemini/modules/<category>/_physics.py`, which imports only `gemini.physics`, `gemini.ops`,
 `gemini.types` and `gemini.errors`, never another category's `_physics.py`; when a second category
 needs a function it moves up into `gemini/physics/`. Its functions keep `@ops.physics` and stay
@@ -118,7 +120,7 @@ formula twice.
 
 `tests/unit/test_code_quality.py` checks the first and the last. A class in `_utils` belongs to no
 category, and the public names stay in `gm.modules`. Fitting and calibration belong in `gm.analysis`
-or `gm.optim`, not in modules; a plant class belongs in `gemini/plants/`, never in `modules`.
+or `gm.study`, not in modules; a plant class belongs in `gemini/plants/`, never in `modules`.
 
 1. Assign declarations and children only in `__init__`, after `super().__init__()`.
 2. Constructor sections are `# Parameters`, `# Inlets`, `# Controls`, `# Boundaries`, `# States`,

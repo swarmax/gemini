@@ -1,0 +1,152 @@
+"""The roles of a plant: what each unit is for, its quantities, and how to find its units.
+
+A role is found from the class of a module and, for a heat pump and a chiller, from the grid its
+outlet reaches, never from a module name. ``roles()`` lists the closed table; the private table
+below says, for each quantity of a role, its dimension, the result field or parameter it reads
+below the unit, and whether that is a result or a parameter.
+"""
+
+from collections import namedtuple
+
+from gemini._utils.strings import close_matches, did_you_mean, join_names, join_path
+from gemini.errors import ValidationError
+from gemini.modules.cooling import AbsorptionUnit, AdsorptionChiller
+from gemini.modules.exchangers import HeatExchanger
+from gemini.modules.grids import CoolingGrid, HeatingGrid
+from gemini.modules.heating import CHP, Boiler, HeatPump
+from gemini.plants import Doublet
+
+Reads = namedtuple("Reads", "dimension path source")
+"""One quantity of a role: the dimension of its bounds, the path below the unit, ``result`` or
+``parameter``."""
+
+TABLE = {
+    "doublet": {
+        "production_flow": Reads("volume_flow", "reservoir.liquid_flow", "result"),
+        "brine_cooling": Reads("temperature_difference", "brine_cooling", "result"),
+        "production_temperature": Reads("temperature", "riser.wellhead_out.temperature", "result"),
+        "injection_temperature": Reads("temperature", "injector.wellhead_in.temperature", "result"),
+        "pump_power": Reads("power", "power_in", "result"),
+        "pump_efficiency": Reads("efficiency", "pump_efficiency", "parameter"),
+        "volume_imbalance": Reads("volume_flow", "volume_imbalance", "result"),
+        "wellhead_pressure": Reads("pressure", "riser.wellhead_out.pressure", "result"),
+    },
+    "heat_pump": {
+        "heat_output": Reads("power", "heat_output", "result"),
+        "cop": Reads("ratio", "cop", "result"),
+        "lift": Reads("temperature_difference", "temperature_lift", "result"),
+    },
+    "boiler": {
+        "heat_output": Reads("power", "heat_output", "result"),
+        "fuel_input": Reads("power", "fuel", "result"),
+    },
+    "chp": {
+        "heat_output": Reads("power", "heat_output", "result"),
+        "power_output": Reads("power", "power_out", "result"),
+    },
+    "chiller": {
+        "cold_output": Reads("power", "cold_output", "result"),
+        "cop": Reads("ratio", "cop", "result"),
+    },
+    "heat_exchanger": {
+        "duty": Reads("power", "duty", "result"),
+        "approach": Reads("temperature_difference", "approach_temperature", "result"),
+    },
+    "heating_supply": {
+        "temperature": Reads("temperature", "supply_in.temperature", "result"),
+        "unmet": Reads("power", "unmet_demand", "result"),
+    },
+    "cooling_supply": {
+        "temperature": Reads("temperature", "supply_in.temperature", "result"),
+        "unmet": Reads("power", "unmet_sensible", "result"),
+    },
+    "plant": {
+        "electricity_bought": Reads("power", "electricity_bought", "result"),
+        "gas_bought": Reads("power", "gas_bought", "result"),
+        "co2": Reads("mass_flow", "co2", "result"),
+        "heat_surplus": Reads("power", "heat_surplus", "result"),
+        "cold_surplus": Reads("power", "cold_surplus", "result"),
+    },
+}
+"""``{role: {quantity: Reads}}``: the one table of roles."""
+
+
+def roles():
+    """Return the closed table of roles as ``{role: [quantities]}``.
+
+    A constraint is on a role and a quantity of it. The roles are ``doublet``, ``heat_pump``,
+    ``boiler``, ``chp``, ``chiller`` (absorption, adsorption and compression), ``heat_exchanger``,
+    ``heating_supply``, ``cooling_supply`` and ``plant``.
+    """
+    return {role: list(quantities) for role, quantities in TABLE.items()}
+
+
+def check_role(role):
+    """Return ``role`` or raise ``unknown_name`` listing the roles."""
+    if role not in TABLE:
+        raise ValidationError(
+            f"role {role!r} is unknown; expected one of {join_names(TABLE)}"
+            f"{did_you_mean(role, TABLE)}",
+            suggestions=close_matches(role, TABLE),
+            code="unknown_name",
+        )
+    return role
+
+
+def reads(role, quantity):
+    """Return the ``Reads`` of ``quantity`` of ``role``, or raise saying what the role has."""
+    check_role(role)
+    if quantity not in TABLE[role]:
+        raise ValidationError(
+            f"{quantity!r} is not a quantity of {role!r}; expected one of "
+            f"{join_names(TABLE[role])}{did_you_mean(quantity, TABLE[role])}",
+            suggestions=close_matches(quantity, TABLE[role]),
+            code="invalid_value",
+        )
+    return TABLE[role][quantity]
+
+
+def units_of(plant, role):
+    """Return the paths of the units of ``role`` in ``plant``, found by class and wiring.
+
+    The root plant is the path ``""`` and is the only unit of the role ``plant``. A heat pump is
+    a ``heat_pump`` when its ``sink_out`` reaches a ``HeatingGrid`` and a ``chiller`` when its
+    ``source_out`` reaches a ``CoolingGrid``; an absorption or adsorption unit is a ``chiller``
+    when its ``chilled_out`` reaches a ``CoolingGrid``. A plant without such a unit gives ``[]``.
+    """
+    if check_role(role) == "plant":
+        return [""]
+    return [path for path, module in plant.named_modules() if _is(plant, path, module, role)]
+
+
+def _is(plant, path, module, role):
+    """Whether ``module`` at ``path`` is a unit of ``role``."""
+    if role == "heat_pump":
+        return isinstance(module, HeatPump) and _reaches(plant, path, "sink_out", HeatingGrid)
+    if role == "chiller":
+        return _is_chiller(plant, path, module)
+    return isinstance(module, _CLASSES[role])
+
+
+def _is_chiller(plant, path, module):
+    """Whether ``module`` at ``path`` cools: a heat pump to the cooling grid, or a sorption unit."""
+    if isinstance(module, HeatPump):
+        return _reaches(plant, path, "source_out", CoolingGrid)
+    sorption = isinstance(module, (AbsorptionUnit, AdsorptionChiller))
+    return sorption and _reaches(plant, path, "chilled_out", CoolingGrid)
+
+
+def _reaches(plant, path, port, grid):
+    """Return whether the outlet ``path.port`` feeds a module of class ``grid``."""
+    fed = plant.feeds(join_path(path, port))
+    return any(isinstance(plant.get_submodule(item), grid) for item in fed)
+
+
+_CLASSES = {
+    "doublet": Doublet,
+    "boiler": Boiler,
+    "chp": CHP,
+    "heat_exchanger": HeatExchanger,
+    "heating_supply": HeatingGrid,
+    "cooling_supply": CoolingGrid,
+}

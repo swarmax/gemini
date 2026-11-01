@@ -12,7 +12,7 @@ import math
 from gemini import ops, units
 from gemini.errors import PhysicsError
 from gemini.ops import Constant
-from gemini.physics import heat_transfer
+from gemini.physics import constants, heat_transfer
 
 EULER_GAMMA = 0.5772156649015329
 """Euler-Mascheroni constant [-] of the line-source long-time asymptote."""
@@ -35,6 +35,79 @@ _ANGLE_MARGIN = 1e-12
 
 
 @ops.physics
+@ops.physics
+def reservoir_temperature(
+    surface_temperature: float,
+    gradient: float,
+    depth: float,
+    reference_depth: float,
+    reference_temperature: float | None = None,
+) -> float:
+    """Return the reservoir temperature [K] at a depth, from a reference point or the surface.
+
+    Parameters
+    ----------
+    surface_temperature : float
+        Mean temperature at the surface [K].
+    gradient : float
+        Geothermal gradient [K/m].
+    depth : float
+        True vertical depth [m] where the temperature is wanted.
+    reference_depth : float
+        Depth [m] of the reference temperature.
+    reference_temperature : float, optional
+        Measured temperature [K] at ``reference_depth``; without it the temperature is the
+        geotherm from the surface.
+
+    Returns
+    -------
+    float
+        ``T = T_ref + g (z - z_ref)`` with the reference temperature given, else
+        ``T = T_s + g z``.
+
+    Notes
+    -----
+    Linear conductive geotherm (see ``geotherm_temperature``): a measured temperature anchors the
+    line at its depth and the gradient carries it to another depth, so the given value is never
+    overridden by the surface value.
+    Reference: Turcotte and Schubert, Geodynamics, chapter 4.
+    """
+    if reference_temperature is None:
+        return geotherm_temperature(surface_temperature, gradient, depth)
+    return reference_temperature + gradient * (depth - reference_depth)
+
+
+@ops.physics
+def reservoir_pressure(
+    reference_pressure: float, density: float, depth: float, reference_depth: float
+) -> float:
+    """Return the reservoir pressure [Pa] at a depth, from the pressure at a reference depth.
+
+    Parameters
+    ----------
+    reference_pressure : float
+        Absolute pressure [Pa] at ``reference_depth``.
+    density : float
+        Density [kg/m3] of the brine in the column between the two depths, taken as constant.
+    depth : float
+        True vertical depth [m] where the pressure is wanted.
+    reference_depth : float
+        Depth [m] of the reference pressure.
+
+    Returns
+    -------
+    float
+        ``p = p_ref + rho g (z - z_ref)`` with ``g`` the standard gravity of
+        ``gemini.physics.constants.G``.
+
+    Notes
+    -----
+    The hydrostatic balance of a static column of uniform density (White, Fluid Mechanics, 8th
+    ed., section 2.3); the pressure at the reference depth is the measured anchor.
+    """
+    return reference_pressure + density * constants.G * (depth - reference_depth)
+
+
 @ops.physics
 def aquifer_volumetric_heat_capacity(
     porosity: float, fluid_heat_capacity: float, rock_heat_capacity: float

@@ -20,6 +20,23 @@
    "schema": [],
    "to_dict": []
   },
+  "Case": {
+   "__init__": [
+    "data"
+   ],
+   "from_dict": [
+    "data",
+    "folder"
+   ],
+   "from_json": [
+    "path"
+   ],
+   "schema": [],
+   "to_dict": [],
+   "to_json": [
+    "path"
+   ]
+  },
   "Constraint": {
    "__init__": [
     "path",
@@ -393,6 +410,30 @@
     "units"
    ]
   },
+  "case": {
+   "Air": "class",
+   "Allocation": "class",
+   "Assumptions": "class",
+   "CH4": "class",
+   "CO2": "class",
+   "Capex": "class",
+   "Case": "class",
+   "Choices": "class",
+   "Constraint": "class",
+   "Demand": "class",
+   "Emissions": "class",
+   "Environment": "class",
+   "Finance": "class",
+   "Fluid": "class",
+   "Ground": "class",
+   "Opex": "class",
+   "Range": "class",
+   "Reservoir": "class",
+   "Revenue": "class",
+   "Service": "class",
+   "Time": "class",
+   "roles": []
+  },
   "compiler": {
    "compile": [
     "plant"
@@ -765,38 +806,6 @@
     "third"
    ]
   },
-  "optim": {
-   "minimize": [
-    "plant",
-    "problem",
-    "variables",
-    "objective",
-    "constraints",
-    "evaluations",
-    "plan"
-   ],
-   "sample": [
-    "plant",
-    "problem",
-    "distributions",
-    "metrics",
-    "count",
-    "seed",
-    "plan"
-   ],
-   "sensitivity": [
-    "plant",
-    "problem",
-    "parameters",
-    "metrics",
-    "plan"
-   ],
-   "size": [
-    "plant",
-    "problem",
-    "plan"
-   ]
-  },
   "physics": {
    "chemistry": "module",
    "combustion": "module",
@@ -858,6 +867,38 @@
     "changes"
    ],
    "state": []
+  },
+  "study": {
+   "minimize": [
+    "plant",
+    "problem",
+    "variables",
+    "objective",
+    "constraints",
+    "evaluations",
+    "plan"
+   ],
+   "sample": [
+    "plant",
+    "problem",
+    "distributions",
+    "metrics",
+    "count",
+    "seed",
+    "plan"
+   ],
+   "sensitivity": [
+    "plant",
+    "problem",
+    "parameters",
+    "metrics",
+    "plan"
+   ],
+   "size": [
+    "plant",
+    "problem",
+    "plan"
+   ]
   },
   "units": {
    "Quantity": "class",
@@ -952,6 +993,7 @@
  "top_level": [
   "Assumptions",
   "BRINE",
+  "Case",
   "Constraint",
   "Dataset",
   "Engine",
@@ -968,6 +1010,7 @@
   "WATER",
   "analysis",
   "call",
+  "case",
   "compiler",
   "data",
   "errors",
@@ -975,7 +1018,6 @@
   "live",
   "modules",
   "ops",
-  "optim",
   "physics",
   "plants",
   "replay",
@@ -983,6 +1025,7 @@
   "runtime",
   "schedule",
   "simulate",
+  "study",
   "units"
  ],
  "version": "0.2.0"

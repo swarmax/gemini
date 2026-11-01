@@ -1,7 +1,7 @@
 """One trial of a search: the metrics it may read and the run it makes."""
 
 import gemini as gm
-from gemini.optim._utils import trial
+from gemini.study._utils import trial
 from tests.fixtures.errors import raises
 from tests.fixtures.result_tables import make_results
 

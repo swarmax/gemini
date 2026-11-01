@@ -1,4 +1,4 @@
-"""``gm.optim.minimize`` on a boiler and a heat user."""
+"""``gm.study.minimize`` on a boiler and a heat user."""
 
 import json
 
@@ -7,7 +7,7 @@ import pytest
 
 import gemini as gm
 from gemini._utils.jsonable import to_plain
-from gemini.optim._utils import trial
+from gemini.study._utils import trial
 from tests.fixtures.errors import raises
 from tests.fixtures.result_tables import make_results
 
@@ -69,7 +69,7 @@ def profile():
 def half_covered():
     """Return the search for the smallest peak that covers half the demand: half its capacity."""
     constraints = [{"metric": "heating_coverage", "minimum": 0.5}]
-    return gm.optim.minimize(
+    return gm.study.minimize(
         boiler_plant(), None, CAPACITY, "peak_heat", constraints, evaluations=20, plan=profile()
     )
 
@@ -95,7 +95,7 @@ def test_a_trial_that_breaks_a_constraint_is_recorded_and_never_best(half_covere
 def test_a_failed_run_is_recorded_too():
     """A bound of the parameter refuses a trial; the others carry on."""
     variables = [{"path": "boiler", "parameter": "efficiency", "lower": 0.5, "upper": 1.5}]
-    result = gm.optim.minimize(
+    result = gm.study.minimize(
         boiler_plant(), None, variables, "peak_heat", evaluations=10, plan=profile()
     )
     failed = [item for item in result["history"] if item.reason]
@@ -109,7 +109,7 @@ def test_a_failed_run_is_recorded_too():
 def test_every_trial_failing_leaves_no_best():
     """No value, with the reason."""
     variables = [{"path": "boiler", "parameter": "efficiency", "lower": 1.2, "upper": 1.5}]
-    result = gm.optim.minimize(
+    result = gm.study.minimize(
         boiler_plant(), None, variables, "peak_heat", evaluations=5, plan=profile()
     )
     assert result["best"].value is None and result["best"].parts["parameters"] is None
@@ -119,7 +119,7 @@ def test_every_trial_failing_leaves_no_best():
 def test_a_leading_minus_maximises():
     """The value keeps the sign of the metric."""
     variables = [dict(CAPACITY[0], upper=watts(DEMAND))]
-    result = gm.optim.minimize(
+    result = gm.study.minimize(
         boiler_plant(), None, variables, "-peak_heat", evaluations=10, plan=profile()
     )
     assert result["best"].value == pytest.approx(DEMAND, rel=0.1)
@@ -132,7 +132,7 @@ def repeated():
     plant = boiler_plant()
     before = plant.to_dict()
     runs = [
-        gm.optim.minimize(plant, None, CAPACITY, "peak_heat", evaluations=5, plan=profile())
+        gm.study.minimize(plant, None, CAPACITY, "peak_heat", evaluations=5, plan=profile())
         for _ in "ab"
     ]
     return plant, before, runs
@@ -150,7 +150,7 @@ def test_an_economic_metric_reads_the_assumptions_of_the_problem():
     values = gm.Assumptions(
         discount_rate=0.05, lifetime_years=20, prices={"gas": {"value": 40.0, "unit": "EUR/MWh"}}
     )
-    run = gm.optim.minimize(
+    run = gm.study.minimize(
         boiler_plant(),
         problem(assumptions=values),
         variables,
@@ -164,7 +164,7 @@ def test_an_economic_metric_reads_the_assumptions_of_the_problem():
 def test_an_economic_metric_without_assumptions_gives_the_reason():
     """What is missing is in the history, and no trial is best."""
     variables = [dict(CAPACITY[0], lower=watts(DEMAND), upper=watts(2 * DEMAND))]
-    idle = gm.optim.minimize(
+    idle = gm.study.minimize(
         boiler_plant(), problem(), variables, "lcts", evaluations=5, plan=profile()
     )
     assert "discount_rate" in idle["history"][0].reason and idle["best"].value is None
@@ -185,7 +185,7 @@ def test_a_search_that_does_not_fit_is_refused(arguments, code):
     """Before any simulation."""
     call = dict(variables=CAPACITY, objective="peak_heat") | arguments
     with raises(gm.errors.ValidationError, code):
-        gm.optim.minimize(boiler_plant(), None, plan=profile(), **call)
+        gm.study.minimize(boiler_plant(), None, plan=profile(), **call)
 
 
 def recorded_runs(monkeypatch):
@@ -204,7 +204,7 @@ def test_each_trial_runs_a_copy_on_the_problem_and_the_plan(monkeypatch):
     """The plant itself is never run, and the problem and the plan go to every trial."""
     calls = recorded_runs(monkeypatch)
     plant, demanded, plan = boiler_plant(), problem(), profile()
-    found = gm.optim.minimize(plant, demanded, CAPACITY, "peak_heat", evaluations=5, plan=plan)
+    found = gm.study.minimize(plant, demanded, CAPACITY, "peak_heat", evaluations=5, plan=plan)
     assert len(calls) == found["evaluations"] == 5
     assert all(copy is not plant and given is demanded for copy, given, _ in calls)
     assert all(given_plan is plan for _, _, given_plan in calls)
@@ -214,18 +214,18 @@ def test_each_trial_runs_a_copy_on_the_problem_and_the_plan(monkeypatch):
 def test_without_a_plan_the_run_plans_the_problem(monkeypatch):
     """The plan stays ``None``: ``gm.simulate`` schedules the demand on the design of the trial."""
     calls = recorded_runs(monkeypatch)
-    gm.optim.minimize(boiler_plant(), problem(), CAPACITY, "peak_heat", evaluations=5)
+    gm.study.minimize(boiler_plant(), problem(), CAPACITY, "peak_heat", evaluations=5)
     assert [item[2] for item in calls] == [None] * 5
 
 
 def test_no_problem_and_no_plan_are_refused():
     """Nothing is assumed: not a demand, not a plan."""
     with raises(gm.errors.ValidationError, "missing_value") as refused:
-        gm.optim.minimize(boiler_plant(), None, CAPACITY, "peak_heat", evaluations=5)
+        gm.study.minimize(boiler_plant(), None, CAPACITY, "peak_heat", evaluations=5)
     assert refused.value.path == "problem"
 
 
 def test_an_economic_metric_without_a_problem_is_refused():
     """The prices are in the problem."""
     with raises(gm.errors.ValidationError, "missing_value", match="assumptions"):
-        gm.optim.minimize(boiler_plant(), None, CAPACITY, "lcts", evaluations=5, plan=profile())
+        gm.study.minimize(boiler_plant(), None, CAPACITY, "lcts", evaluations=5, plan=profile())

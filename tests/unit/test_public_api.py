@@ -10,51 +10,56 @@ from tests.fixtures.capture_public_api import SNAPSHOT, capture, fingerprint
 
 SNAPSHOTS = {
     "0.1.0": "f19ae90f18bb5a5a85e1b1f730276c9a50fdba0d46108c4bcd56488b48178a8b",
-    "0.2.0": "51684fed141bab76219243b3bfd32ea90cf5d9d2c52ce87b81dd575cad75928b",
+    "0.2.0": "c6fa73afe75606e51ef711040413b35894a4fa9b066bf936aea6798963fd1cb1",
 }
 """Hash of the snapshot per ``gm.__version__``: a released entry never changes."""
 
 
+EXPECTED = {
+    "Module",
+    "Plant",
+    "Parameter",
+    "Inlet",
+    "Outlet",
+    "Output",
+    "Stream",
+    "Fluid",
+    "BRINE",
+    "WATER",
+    "Case",
+    "Problem",
+    "Constraint",
+    "Assumptions",
+    "schedule",
+    "simulate",
+    "replay",
+    "live",
+    "resume",
+    "call",
+    "Results",
+    "Dataset",
+    "Engine",
+    "modules",
+    "plants",
+    "case",
+    "physics",
+    "ops",
+    "runtime",
+    "units",
+    "errors",
+    "data",
+    "study",
+    "evaluate",
+    "analysis",
+    "compiler",
+}
+"""The names of the top level, exactly."""
+
+
 def test_public_names_and_docs():
     """Interactive completion exposes exactly the documented, individually documented names."""
-    expected = {
-        "Module",
-        "Plant",
-        "Parameter",
-        "Inlet",
-        "Outlet",
-        "Output",
-        "Stream",
-        "Fluid",
-        "BRINE",
-        "WATER",
-        "Problem",
-        "Constraint",
-        "Assumptions",
-        "schedule",
-        "simulate",
-        "replay",
-        "live",
-        "resume",
-        "call",
-        "Results",
-        "Dataset",
-        "Engine",
-        "modules",
-        "plants",
-        "physics",
-        "ops",
-        "runtime",
-        "units",
-        "errors",
-        "data",
-        "optim",
-        "evaluate",
-        "analysis",
-        "compiler",
-    }
-    assert set(dir(gm)) == expected == set(gm.__all__)
-    assert all(getattr(gm, name).__doc__ for name in expected)
+    assert set(dir(gm)) == EXPECTED == set(gm.__all__)
+    assert all(getattr(gm, name).__doc__ for name in EXPECTED)
     assert all(getattr(gm.modules, name).__doc__ for name in gm.modules.__all__)
     assert "Doublet" in gm.plants.names()
 

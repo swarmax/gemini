@@ -24,4 +24,4 @@ def sensitivity(plant, problem, parameters, metrics, *, plan=None):
     NotImplementedYet
         Always: the sensitivity is not built yet.
     """
-    raise NotImplementedYet("optim.sensitivity")
+    raise NotImplementedYet("study.sensitivity")

@@ -9,7 +9,7 @@ The run lives in `engine/` (`Engine`, `Clock`, `executor.py`, `eager.py`, `rows.
 
 **Dependency rules.** The run folders are `modules`, `plants`, `physics`, `ops`, `runtime`,
 `engine`, `run`, `types`, `units`, `errors` and `_utils`. They import none of `compiler`, `data`,
-`optim`, `evaluate` and `analysis`, not even inside a function; those sit above the run and import
+`study`, `evaluate` and `analysis`, not even inside a function; those sit above the run and import
 it. `modules` imports neither `plants` nor `run`: `gm.call` is `gemini/modules/call.py`, which needs
 no engine, and `run` re-exports it. The old project reader that builds a plant is
 `gemini/plants/_utils/legacy/`.
@@ -18,8 +18,8 @@ no engine, and `run` re-exports it. The old project reader that builds a plant i
 `gemini/engine/__init__.py` imports `gemini.run` first and never `.engine`, which keeps one import
 order from either side of that cycle.
 
-`gemini/run/_utils/demand.py` holds the demand frame (`from_csv`, `from_values`, `from_frame`,
-`from_dict`, `to_dict`), because a `Problem` reads it and `run` imports no `data`; `gm.data`
+`gemini/case/_utils/demand.py` holds the demand frame (`from_csv`, `from_values`, `from_frame`,
+`from_dict`, `to_dict`), because a `Case` reads it and `case` imports no `data`; `gm.data`
 exports `from_csv` and `from_values` from it.
 
 **The compiler is optional.** `gemini/compiler/__init__.py` registers its executor

@@ -20,4 +20,4 @@ def size(plant, problem, *, plan=None):
     NotImplementedYet
         Always: the sizing is not built yet.
     """
-    raise NotImplementedYet("optim.size")
+    raise NotImplementedYet("study.size")

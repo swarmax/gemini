@@ -684,6 +684,7 @@ def test_no_framework_names_in_tracked_text_files():
 RUN_FOLDERS = (
     "modules",
     "plants",
+    "case",
     "physics",
     "ops",
     "runtime",
@@ -694,7 +695,7 @@ RUN_FOLDERS = (
     "errors",
     "_utils",
 )
-ABOVE_THE_RUN = ("compiler", "data", "optim", "evaluate", "analysis")
+ABOVE_THE_RUN = ("compiler", "data", "study", "evaluate", "analysis")
 REMOVED_FOLDERS = {"core", "base", "testing", "backends", "checks", "economics", "profiles"}
 READ_WRITE_NAME = re.compile(r"^\s*(?:def|class) (_?(?:read|write|load|save|parse|dump)_\w*)", re.M)
 """What a reader or a writer is never called: ``from_<format>`` and ``to_<format>`` are the rule."""
@@ -732,6 +733,46 @@ def test_the_run_folders_import_nothing_above_the_run():
         if name.startswith(tuple(f"gemini.{folder}" for folder in ABOVE_THE_RUN))
     }
     assert wrong == set()
+
+
+CASE_NEVER_IMPORTS = (
+    "gemini.run",
+    "gemini.engine",
+    "gemini.evaluate",
+    "gemini.study",
+    "gemini.compiler",
+    "gemini.data",
+    "gemini.analysis",
+)
+
+
+def test_the_case_imports_nothing_that_runs_or_judges():
+    """The case sits above the plants and below the run: it reads no run, evaluation or study."""
+    assert [
+        (path, name)
+        for path in PACKAGE_FILES
+        if path.startswith("gemini/case/")
+        for name in every_import(path)
+        if name.startswith(CASE_NEVER_IMPORTS)
+    ] == []
+
+
+def test_the_case_has_no_default_but_absent():
+    """A field of ``gm.case`` is required or ``None``; ``over`` and ``when`` are the two choices."""
+    import gemini as gm
+    from gemini.case._utils.section import Section
+
+    allowed = {("Constraint", "over"): "each", ("Constraint", "when"): "always"}
+    found = []
+    for name in gm.case.__all__:
+        cls = getattr(gm.case, name)
+        if not (isinstance(cls, type) and issubclass(cls, Section)):
+            continue
+        for field, info in cls.model_fields.items():
+            default = None if info.is_required() else info.default
+            if default is not None and allowed.get((name, field)) != default:
+                found.append(f"{name}.{field}")
+    assert found == []
 
 
 def test_modules_never_import_plants():

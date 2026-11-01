@@ -2,19 +2,21 @@
 
 from gemini import (
     analysis,
+    case,
     compiler,
     data,
     errors,
     evaluate,
     modules,
     ops,
-    optim,
     physics,
     plants,
     runtime,
+    study,
     units,
 )
 from gemini._utils.version import package_version
+from gemini.case import Case
 from gemini.engine.engine import Engine
 from gemini.modules import Inlet, Module, Outlet, Output, Parameter
 from gemini.plants import Plant
@@ -45,6 +47,7 @@ __all__ = [
     "Fluid",
     "BRINE",
     "WATER",
+    "Case",
     "Problem",
     "Constraint",
     "Assumptions",
@@ -59,13 +62,14 @@ __all__ = [
     "Engine",
     "modules",
     "plants",
+    "case",
     "physics",
     "ops",
     "runtime",
     "units",
     "errors",
     "data",
-    "optim",
+    "study",
     "evaluate",
     "analysis",
     "compiler",

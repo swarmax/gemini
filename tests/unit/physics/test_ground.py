@@ -324,3 +324,20 @@ def test_geotherm_temperature_is_linear_in_depth():
     assert_function_matches(
         ground.geotherm_temperature, [(285.15, 0.03, 2500.0), (280.0, 0.0, 0.0)]
     )
+
+
+def test_reservoir_temperature_anchors_a_given_temperature_or_follows_the_surface():
+    """Without a reference temperature T = T_s + g z; with one T = T_ref + g (z - z_ref)."""
+    assert ground.reservoir_temperature(285.15, 0.03, 2500.0, 2500.0) == pytest.approx(360.15)
+    assert ground.reservoir_temperature(None, 0.03, 3500.0, 2500.0, 363.15) == pytest.approx(393.15)
+    assert ground.reservoir_temperature(None, 0.03, 2000.0, 2500.0, 363.15) == pytest.approx(348.15)
+
+
+def test_reservoir_pressure_adds_the_brine_column_from_the_reference_depth():
+    """Pressure is p_ref + rho g (z - z_ref), above and below the reference."""
+    reference = 251.0e5
+    assert ground.reservoir_pressure(reference, 1030.0, 3000.0, 2500.0) == pytest.approx(
+        reference + 1030.0 * 9.81 * 500.0
+    )
+    assert ground.reservoir_pressure(reference, 1030.0, 2500.0, 2500.0) == reference
+    assert ground.reservoir_pressure(reference, 1030.0, 2000.0, 2500.0) < reference

@@ -15,7 +15,7 @@ listed in [equipment.md](equipment.md); its classes are good references for new 
 
 **Physics lives in `gemini/physics/` or a `_physics.py`.** Modules declare and wire; they never
 define physics. `gemini/physics/` keeps the textbook formulas and anything more than one category,
-or `analysis`, `optim` or `evaluate`, reads. Physics of one category lives in
+or `analysis`, `study` or `evaluate`, reads. Physics of one category lives in
 `gemini/modules/<category>/_physics.py`, which imports only `gemini.physics`, `gemini.ops`,
 `gemini.types` and `gemini.errors`, never another category's `_physics.py`; when a second category
 needs a function it moves up into `gemini/physics/`. Its functions keep `@ops.physics` and stay
@@ -23,7 +23,7 @@ traceable on every backend. Reuse existing physics functions wherever possible a
 a new physics function only when nothing existing can do the job, and generalise an existing one
 rather than writing a second copy. Never write a formula inside a module, and never write the same
 formula twice.
-Fitting and calibration belong in `gm.analysis` or `gm.optim`, not in modules. A plant class
+Fitting and calibration belong in `gm.analysis` or `gm.study`, not in modules. A plant class
 belongs in `gemini/plants/`; `gemini.modules` never imports `gemini.plants`.
 
 **Where a file goes under `gemini/modules/`.** There are four homes:

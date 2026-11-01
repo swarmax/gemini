@@ -24,7 +24,7 @@ def checked_metric(name, problem):
     known = [*KPI_NAMES, *ECONOMICS]
     if name not in known:
         raise ValidationError(
-            f"optim: metric = {name!r}; expected one of {join_names(known)}"
+            f"study: metric = {name!r}; expected one of {join_names(known)}"
             f"{did_you_mean(name, known)}",
             path="metric",
             code="unknown_name",
@@ -32,7 +32,7 @@ def checked_metric(name, problem):
         )
     if name in ECONOMICS and problem is None:
         raise ValidationError(
-            f"optim: metric = {name!r} needs the assumptions of a problem; problem = None",
+            f"study: metric = {name!r} needs the assumptions of a problem; problem = None",
             path="problem",
             code="missing_value",
         )
@@ -59,7 +59,7 @@ def parameter_si(plant, name, bound, difference=False):
         return number - units.to_si(0, bound.unit) if difference else number
     if declaration.unit not in (None, "-"):
         raise ValidationError(
-            f"optim: {name} = {bound!r}; expected {units.QUANTITY_FORM}, because the parameter "
+            f"study: {name} = {bound!r}; expected {units.QUANTITY_FORM}, because the parameter "
             f"has the unit {declaration.unit!r}",
             path=name,
             code="invalid_value",
@@ -83,7 +83,7 @@ def limit_si(bound, metric, name):
         return units.value_in_si(bound, str(metric.unit), name)
     if metric.unit != "-":
         raise ValidationError(
-            f"optim: {name} limit = {bound!r}; expected {units.QUANTITY_FORM}, because the metric "
+            f"study: {name} limit = {bound!r}; expected {units.QUANTITY_FORM}, because the metric "
             f"has the unit {str(metric.unit)!r}",
             path=name,
             code="invalid_value",
@@ -95,7 +95,7 @@ def require_input(problem, plan):
     """Raise ``missing_value`` unless a search has a problem or a plan to run."""
     if problem is None and plan is None:
         raise ValidationError(
-            "optim: problem = None and plan = None; expected a problem or a plan",
+            "study: problem = None and plan = None; expected a problem or a plan",
             path="problem",
             code="missing_value",
         )

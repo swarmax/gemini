@@ -7,7 +7,7 @@ W, ready for ``gm.schedule``. ``synthesize(heating, cooling, start, step)`` will
 figures. ``profile_schema()`` is the JSON Schema of the profile document.
 """
 
-from gemini.run._utils.demand import from_csv, from_values
+from gemini.case._utils.demand import from_csv, from_values
 
 from .schema import profile_schema
 from .synthesize import synthesize

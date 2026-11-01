@@ -248,3 +248,9 @@ def test_reports_print_in_their_own_units():
     assert units.Quantity(2e6, "kg/yr").to("t/yr").value == pytest.approx(2000.0)
     assert units.Quantity(7.2e12, "J/yr").to("GWh/yr").value == pytest.approx(2.0)
     assert units.Unit.GWH == "GWh" and units.Unit.T_PER_YR == "t/yr"
+
+
+def test_a_cost_per_volume_converts_to_currency_per_m3():
+    """EUR/m3 is the unit of a storage factor and is SI already."""
+    assert units.Quantity(40, "EUR/m3").si == 40
+    assert units.fits("EUR/m3", "money_per_volume")

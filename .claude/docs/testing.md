@@ -6,7 +6,7 @@ Every test belongs to one automatically marked folder tier:
 
 - `tests/unit/` mirrors source files and receives `unit`. Its folders are those of `gemini/`:
   `_utils`, `analysis`, `compiler`, `data`, `engine`, `errors`, `evaluate`, `modules`, `ops`,
-  `optim`, `physics`, `plants`, `run`, `runtime`, `types` and `units`; the files at its top
+  `study`, `physics`, `plants`, `run`, `runtime`, `types` and `units`; the files at its top
   (`test_code_quality.py`, `test_package_boundaries.py`, `test_public_api.py`, `test_mirror.py`, ...)
   guard the package as a whole.
 - `tests/integration/` combines runtime components and receives `integration`.
@@ -209,7 +209,7 @@ allowed keys and a registered plant in `inputs/plants/`, no `datasets/` folder, 
 data folders outside `gemini/_utils/paths.py`. It enforces the structure of the package:
 
 - the run folders (`modules`, `plants`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`,
-  `units`, `errors`, `_utils`) import none of `compiler`, `data`, `optim`, `evaluate`, `analysis`,
+  `units`, `errors`, `_utils`) import none of `compiler`, `data`, `study`, `evaluate`, `analysis`,
   apart from `Plant.from_legacy` and `gm.modules.check`, which import inside a function ([conventions.md](conventions.md#dependencies));
 - `modules` never imports `plants`;
 - no folder named `core`, `base`, `testing`, `backends`, `checks`, `economics` or `profiles`
