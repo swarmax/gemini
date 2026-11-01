@@ -4,13 +4,8 @@ import numpy as np
 
 from gemini._utils.strings import close_matches, join_names
 from gemini.errors import ValidationError
-from gemini.study._utils.trial import (
-    checked_metric,
-    parameter_si,
-    quantities,
-    require_input,
-    run_trial,
-)
+from gemini.study._utils.target import check_name, quantities, value_si
+from gemini.study._utils.trial import checked_metric, run_trial
 from gemini.types.shapes import measure
 
 DISTRIBUTIONS = {
@@ -21,9 +16,9 @@ DISTRIBUTIONS = {
 """The fields of each distribution, in the order of the method of its name of the generator."""
 
 
-def _checked_distribution(plant, name, distribution):
+def _checked_distribution(plant, case, name, distribution):
     """Refuse a distribution that does not fit: the parameter, the kind or a missing field."""
-    plant.get(name)
+    check_name(plant, case, name)
     kind = distribution.get("kind")
     if kind not in DISTRIBUTIONS:
         raise ValidationError(
@@ -41,11 +36,11 @@ def _checked_distribution(plant, name, distribution):
         )
 
 
-def _draw(generator, plant, name, distribution):
+def _draw(generator, plant, case, name, distribution):
     """Return one random value of a parameter, in SI."""
     kind = distribution["kind"]
     fields = [
-        parameter_si(plant, name, distribution[field], difference=field == "std")
+        value_si(plant, case, name, distribution[field], difference=field == "std")
         for field in DISTRIBUTIONS[kind]
     ]
     try:
@@ -67,24 +62,29 @@ def _spread(samples, name):
     return {key: measure(number, unit) for key, number in spread.items()}
 
 
-def sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None):
+def sample(plant, case, distributions, metrics, count, seed=0, *, plan=None):
     """Return the spread of metrics when uncertain parameters are drawn at random.
 
-    Each draw copies the plant, sets the drawn values with ``set_params``, simulates it on the
-    problem (``gm.simulate`` plans the demand on that design) and reads the metrics. The plant
-    itself is not changed.
+    Each draw copies the plant and the case, sets the drawn values, simulates the copy on the case
+    (``gm.simulate`` plans the demand on that design) and reads the metrics. The plant and the case
+    themselves are not changed. A draw that breaks the bounds of a value of the case, such as a
+    negative price, is a draw whose run failed.
 
     Parameters
     ----------
-    plant : Module
+    plant : Plant
         A plant with parameter values.
-    problem : Problem or None
+    case : Case
         What the plant is asked to do, as for ``minimize``.
     distributions : dict
-        For each uncertain parameter ``"path.parameter"``, its distribution:
+        For each uncertain value, its distribution. A key is ``"path.parameter"`` for a parameter
+        of the plant, or ``"case.<path>"`` for a number of the case, with the path of its place in
+        ``case.json``, for example ``case.assumptions.finance.opex.electricity`` or
+        ``case.environment.reservoir.permeability``; a profile of the case becomes the drawn
+        constant. The distribution is
         ``{"kind": "normal", "mean", "std"}``, ``{"kind": "uniform", "lower", "upper"}`` or
         ``{"kind": "triangular", "lower", "mode", "upper"}``, each field a ``Quantity`` or its dict
-        (a plain number only for a parameter without a dimension).
+        (a plain number only for a value without a dimension).
     metrics : list of str
         The metrics to record, as the ``objective`` of ``minimize`` without a sign.
     count : int
@@ -104,16 +104,17 @@ def sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None):
     """
     if count < 1:
         raise ValidationError(f"study.sample: count = {count}; expected at least 1", path="count")
-    names = [checked_metric(name, problem) for name in metrics]
+    names = [checked_metric(name) for name in metrics]
     for name, distribution in distributions.items():
-        _checked_distribution(plant, name, distribution)
+        _checked_distribution(plant, case, name, distribution)
     generator = np.random.default_rng(seed)
     samples = []
-    require_input(problem, plan)
     for _ in range(count):
-        drawn = {key: _draw(generator, plant, key, item) for key, item in distributions.items()}
-        found, reason = run_trial(plant, problem, plan, drawn, names)
+        drawn = {
+            key: _draw(generator, plant, case, key, item) for key, item in distributions.items()
+        }
+        found, reason = run_trial(plant, case, plan, drawn, names)
         failed = {"reason": reason} if reason else {}
-        samples.append({"parameters": quantities(plant, drawn), "metrics": found, **failed})
+        samples.append({"parameters": quantities(plant, case, drawn), "metrics": found, **failed})
     summary = {name: _spread(samples, name) for name in names}
     return {"samples": samples, "summary": summary}

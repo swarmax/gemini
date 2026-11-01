@@ -8,13 +8,9 @@ below the unit, and whether that is a result or a parameter.
 
 from collections import namedtuple
 
-from gemini._utils.strings import close_matches, did_you_mean, join_names, join_path
+from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import ValidationError
-from gemini.modules.cooling import AbsorptionUnit, AdsorptionChiller
-from gemini.modules.exchangers import HeatExchanger
-from gemini.modules.grids import CoolingGrid, HeatingGrid
-from gemini.modules.heating import CHP, Boiler, HeatPump
-from gemini.plants import Doublet
+from gemini.plants._utils import roles as by_class
 
 Reads = namedtuple("Reads", "dimension path source")
 """One quantity of a role: the dimension of its bounds, the path below the unit, ``result`` or
@@ -98,43 +94,9 @@ def reads(role, quantity):
 def units_of(plant, role):
     """Return the paths of the units of ``role`` in ``plant``, found by class and wiring.
 
-    A heat pump is
-    a ``heat_pump`` when its ``sink_out`` reaches a ``HeatingGrid`` and a ``chiller`` when its
-    ``source_out`` reaches a ``CoolingGrid``; an absorption or adsorption unit is a ``chiller``
-    when its ``chilled_out`` reaches a ``CoolingGrid``. A plant without such a unit gives ``[]``.
+    The roles are decided by ``gemini.plants._utils.roles``: a heat pump is a ``heat_pump`` when
+    its ``sink_out`` reaches a ``HeatingGrid`` and a ``chiller`` when its ``source_out`` reaches a
+    ``CoolingGrid``; an absorption or adsorption unit is a ``chiller`` when its ``chilled_out``
+    reaches a ``CoolingGrid``. A plant without such a unit gives ``[]``.
     """
-    check_role(role)
-    return [path for path, module in plant.named_modules() if _is(plant, path, module, role)]
-
-
-def _is(plant, path, module, role):
-    """Whether ``module`` at ``path`` is a unit of ``role``."""
-    if role == "heat_pump":
-        return isinstance(module, HeatPump) and _reaches(plant, path, "sink_out", HeatingGrid)
-    if role == "chiller":
-        return _is_chiller(plant, path, module)
-    return isinstance(module, _CLASSES[role])
-
-
-def _is_chiller(plant, path, module):
-    """Whether ``module`` at ``path`` cools: a heat pump to the cooling grid, or a sorption unit."""
-    if isinstance(module, HeatPump):
-        return _reaches(plant, path, "source_out", CoolingGrid)
-    sorption = isinstance(module, (AbsorptionUnit, AdsorptionChiller))
-    return sorption and _reaches(plant, path, "chilled_out", CoolingGrid)
-
-
-def _reaches(plant, path, port, grid):
-    """Return whether the outlet ``path.port`` feeds a module of class ``grid``."""
-    fed = plant.feeds(join_path(path, port))
-    return any(isinstance(plant.get_submodule(item), grid) for item in fed)
-
-
-_CLASSES = {
-    "doublet": Doublet,
-    "boiler": Boiler,
-    "chp": CHP,
-    "heat_exchanger": HeatExchanger,
-    "heating_supply": HeatingGrid,
-    "cooling_supply": CoolingGrid,
-}
+    return by_class.units_of(plant, check_role(role))

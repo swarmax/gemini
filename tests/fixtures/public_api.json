@@ -821,16 +821,16 @@
   "study": {
    "minimize": [
     "plant",
-    "problem",
-    "variables",
+    "case",
     "objective",
+    "variables",
     "constraints",
     "evaluations",
     "plan"
    ],
    "sample": [
     "plant",
-    "problem",
+    "case",
     "distributions",
     "metrics",
     "count",
@@ -839,15 +839,14 @@
    ],
    "sensitivity": [
     "plant",
-    "problem",
+    "case",
     "parameters",
     "metrics",
     "plan"
    ],
    "size": [
     "plant",
-    "problem",
-    "plan"
+    "case"
    ]
   },
   "units": {

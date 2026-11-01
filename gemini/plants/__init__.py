@@ -1,6 +1,7 @@
 """The plant classes and the functions of the plant dict."""
 
-from ._utils.catalogue import capabilities, example, get, names, validate
+from ._utils.capabilities import capabilities
+from ._utils.catalogue import example, get, names, validate
 from ._utils.schema import schema
 from .atesplant import ATESPlant
 from .boilerchpplant import BoilerChpPlant

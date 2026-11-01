@@ -10,6 +10,7 @@ from gemini import units
 from gemini.units import Quantity
 from tests.fixtures import ROOT
 from tests.fixtures.errors import raises
+from tests.unit.study.conftest import shallow_case, shallow_plant
 
 TEXT = re.compile(r"\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s+(\S+)\s*")
 QUOTED = re.compile(r"[\"'][+-]?[.\d][^\"'\n]* \S+[\"']")
@@ -72,10 +73,8 @@ def _plant_input(value):
 
 def _minimize(bound):
     def call():
-        variables = [{"path": "boiler", "parameter": "capacity", "lower": bound, "upper": 3e6}]
-        plant = gm.Plant("Boiler")
-        plant.add("Boiler", name="boiler")
-        return gm.study.minimize(plant, None, variables, "peak_heat", plan=None)
+        variables = [{"path": "", "parameter": "depth", "lower": bound, "upper": 3e3}]
+        return gm.study.minimize(shallow_plant(), shallow_case(), "lcts", variables)
 
     return call
 

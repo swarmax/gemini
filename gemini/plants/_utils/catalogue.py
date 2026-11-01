@@ -80,19 +80,6 @@ def example(name):
     return plant.set_inputs(values.get("inputs", {}))
 
 
-def capabilities():
-    """Return what each plant class can serve and be sized by.
-
-    A stub: the name is final and its work lands later.
-
-    Raises
-    ------
-    NotImplementedYet
-        Always.
-    """
-    raise NotImplementedYet("plants.capabilities: not built yet")
-
-
 def validate(data, on_error="raise"):
     """Check a plant dict and return ``[]``, or raise one ``ValidationError`` with every problem.
 
