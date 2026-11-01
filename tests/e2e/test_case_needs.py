@@ -90,11 +90,6 @@ def case_of(folder, *constraints):
     return gm.Case.from_dict(data, folder)
 
 
-def run_on(plant, case):
-    """Return the results of the case on ``plant``; a failed step fails the test."""
-    return gm.simulate(plant, case)
-
-
 @pytest.fixture(scope="module")
 def folder(tmp_path_factory):
     """Return a folder holding the demand file written for this module."""
@@ -118,7 +113,7 @@ def plant():
 @pytest.fixture(scope="module")
 def results(plant, case):
     """Return one run of the plant on the case, read by the constraint tests."""
-    return run_on(plant, case)
+    return gm.simulate(plant, case)
 
 
 def worst(plant, case, results, on, quantity, **bounds):
@@ -144,7 +139,7 @@ def test_heating_and_cooling_demand_come_from_a_file(case):
 def test_a_plant_runs_on_one_to_three_doublets(case, doublets):
     """Every step runs, and the first doublet carries flow."""
     plant = gm.Plant.from_dict(sized_dict(doublets))
-    results = run_on(plant, case)
+    results = gm.simulate(plant, case)
     assert results.errors() == []
     assert max(results.get("d0.reservoir", "liquid_flow")["value"]) > 0
 
@@ -220,7 +215,7 @@ def duration(**bound):
 def test_a_limit_on_the_operating_time(folder):
     """Each doublet runs the time of the rule, with its outages at whole steps."""
     plant = gm.Plant.from_dict(sized_dict(2))
-    results = run_on(plant, case_of(folder, duration(max={"value": 11, "unit": "h"})))
+    results = gm.simulate(plant, case_of(folder, duration(max={"value": 11, "unit": "h"})))
     for hours, passes in ((11, True), (5, False)):
         bound = gm.case.Constraint(**duration(equals=Quantity(hours, "h")))
         case = case_of(folder).model_copy(update={"constraints": (bound,)})

@@ -38,16 +38,21 @@ def example_environment():
     return env | {"PYTHONIOENCODING": "utf-8"}
 
 
-def run_example(path, folder, timeout):
-    """Run one example from ``folder`` and return the finished process."""
+def run_example(path, folder, timeout, runner=None, **variables):
+    """Run one example from ``folder`` and return the finished process.
+
+    ``runner`` is a script that runs the example in its place; ``variables`` are added to the
+    environment.
+    """
+    command = [sys.executable, str(runner or path)] + ([str(path)] if runner else [])
     return subprocess.run(
-        [sys.executable, str(path)],
+        command,
         cwd=folder,
         capture_output=True,
         text=True,
         encoding="utf-8",
         timeout=timeout,
-        env=example_environment(),
+        env=example_environment() | variables,
     )
 
 

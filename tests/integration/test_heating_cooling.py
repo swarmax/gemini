@@ -3,7 +3,8 @@
 import pytest
 
 import gemini as gm
-from tests.fixtures.heating_cooling import HEAT, filled_dict, two_days_case
+from tests.fixtures.heating_cooling import HEAT, two_days_case
+from tests.fixtures.sample_cases import template_plant
 
 pytestmark = pytest.mark.slow
 
@@ -23,7 +24,7 @@ def _run(data):
 @pytest.mark.parametrize("name", PLANTS)
 def test_every_plant_runs_one_simulate(name):
     """A plant builds, validates and runs two ticks without a row error."""
-    data = filled_dict(name)
+    data = template_plant(name).to_dict(structure=True)
     assert gm.plants.validate(data) == []
     plant, results = _run(data)
     assert results.errors() == []
@@ -61,7 +62,7 @@ def _targets(data, source):
 
 def test_an_agent_removes_a_unit_by_editing_the_plant_dict():
     """The peak boiler leaves with its gas chain and what it joined is connected around it."""
-    data = filled_dict("HeatingCoolingPlant")
+    data = template_plant("HeatingCoolingPlant").to_dict(structure=True)
     joined = [
         (_sources(data, "peak_boiler.fluid_in"), _targets(data, "peak_boiler.fluid_out")),
         (_sources(data, "gas_makeup.gas_in"), _targets(data, "gas_makeup.excess_out")),

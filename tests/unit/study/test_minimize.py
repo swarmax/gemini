@@ -21,11 +21,6 @@ DEPTH = [
 ]
 
 
-def megawatts(number):
-    """Return ``number`` as a power in MW."""
-    return gm.units.Quantity(number, "MW")
-
-
 @pytest.fixture
 def found(runs):
     """Return the search over the choices of the case: 1 to 3 doublets and the depth."""

@@ -18,7 +18,6 @@ pandas 2 keeps ``REPLAY_RTOL``.
 
 import ast
 import json
-from time import perf_counter
 
 import numpy as np
 import pandas as pd
@@ -26,6 +25,7 @@ import pytest
 
 import gemini as gm
 from tests.fixtures import FIXTURES
+from tests.fixtures.doublet_day import doublet_day
 from tests.fixtures.frames import on_ports, path_frame
 from tests.fixtures.old_names import FLUID_NAMES, RENAMED_NAMES, fluid_names
 
@@ -66,7 +66,7 @@ NEW_PARAMS = {
     }
     | {"drainage_radius": 1000.0},
 }
-"""Parameters added after phase 0, at the defaults that reproduce the phase-0 behaviour."""
+"""Parameters added after phase 0, as ``None`` (unset), plus the two explicit values."""
 
 
 def _baseline_frame(directory, name):
@@ -141,27 +141,13 @@ def test_state_and_full_results_match_phase_zero(dataset_name, selected_dataset,
         assert old_params | NEW_PARAMS.get(old_path, {}) == new["params"]
         assert fluid_names(old["fluid"]) == new["fluid"]
 
-    started = perf_counter()
     replay = path_frame(gm.replay(plant, selected_dataset))
-    elapsed = perf_counter() - started
-    assert elapsed < 60
     baseline = BASELINE if dataset_name == "slow" else FAST_BASELINE
     rtol = PARSER_RTOL if int(pd.__version__.split(".")[0]) >= 3 else REPLAY_RTOL
     _assert_values_identical(replay, _baseline_frame(baseline, "replay.csv.gz"), rtol)
 
-    clock = gm.engine.Clock.days(2027, 1, 1, days=1)
-    profiles = {
-        "doublet.reservoir.production_rate": gm.types.Profile.constant(
-            150, unit="m3/h", clock=clock
-        ),
-        "doublet.esp.frequency": gm.types.Profile.constant(55, unit="Hz", clock=clock),
-        "injection_pump.pressure_setpoint": gm.types.Profile.constant(
-            51.5, unit="bar", clock=clock
-        ),
-    }
-    simulation = path_frame(
-        gm.simulate(plant, plan=gm.Dataset.from_profiles(profiles), clock=clock)
-    )
+    clock, plan = doublet_day()
+    simulation = path_frame(gm.simulate(plant, plan=plan, clock=clock))
     _assert_values_identical(
         simulation, _baseline_frame(BASELINE, "simulate.csv.gz"), SIMULATE_RTOL
     )

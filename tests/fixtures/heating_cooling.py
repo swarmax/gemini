@@ -5,17 +5,12 @@ The days are round numbers every plant covers.
 
 import pandas as pd
 
-from tests.fixtures.sample_cases import sample_case, template_plant
+from tests.fixtures.sample_cases import sample_case
 
 HEAT = 12e6
 """Heating demand of the days [W]."""
 COLD = 5e6
 """Cooling demand of the days [W]."""
-
-
-def filled_dict(name):
-    """Return the plant dict of plant class ``name`` with the values of the sample case."""
-    return template_plant(name).to_dict(structure=True)
 
 
 def days_case(heat, cold=None, start="2027-07-01"):
@@ -33,11 +28,6 @@ def days_case(heat, cold=None, start="2027-07-01"):
     demand = case.demand.model_copy(update={"frame": frame})
     constraints = tuple(item for item in case.constraints if item.over != "duration")
     return case.model_copy(update={"time": time, "demand": demand, "constraints": constraints})
-
-
-def two_days():
-    """Return two days of demand [W]."""
-    return days_case([HEAT] * 2, [COLD] * 2).demand.frame
 
 
 def two_days_case():

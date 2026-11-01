@@ -8,12 +8,10 @@ duration and the temporary working directory are removed. Adding a backend means
 """
 
 import re
-import subprocess
-import sys
 
 import pytest
 
-from tests.e2e.test_examples import EXAMPLES, TIMEOUT_S, example_environment
+from tests.e2e.test_examples import EXAMPLES, TIMEOUT_S, run_example
 from tests.fixtures import ROOT
 from tests.fixtures.parity import BACKENDS, REFERENCE, others
 
@@ -25,16 +23,7 @@ TIMING = re.compile(r"\b(elapsed|took|duration|wall[- ]?time|runtime)\b|\d\s*(ms
 def _run(path, backend, folder):
     """Run one example under ``backend`` in ``folder`` and return its standard output."""
     folder.mkdir()
-    env = example_environment() | {"GEMINI_EXAMPLE_BACKEND": backend}
-    completed = subprocess.run(
-        [sys.executable, str(WRAPPER), str(path)],
-        cwd=folder,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=TIMEOUT_S,
-        env=env,
-    )
+    completed = run_example(path, folder, TIMEOUT_S, runner=WRAPPER, GEMINI_EXAMPLE_BACKEND=backend)
     assert completed.returncode == 0, f"{backend}: {completed.stderr}"
     return completed.stdout.replace(str(folder), "<cwd>")
 

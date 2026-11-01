@@ -21,10 +21,10 @@ from gemini import runtime
 from gemini._utils import paths
 from gemini.compiler.graph import GraphCache, run
 from gemini.types.flows import Stream
+from tests.fixtures.parity import BACKENDS, RTOL
 
 DATASET = paths.doublet_heat("doublet_2024_15min_month.csv")
-COLUMNS = ["fluid_in.m_dot", "fluid_in.T", "fluid_in.p", "frequency"]
-RTOL = 1e-12
+COLUMNS = ["suction.m_dot", "suction.T", "suction.p", "frequency"]
 
 
 def load():
@@ -139,7 +139,7 @@ def benchmark_plant(repeat):
 def run_case(name, function, rows, repeat):
     """Print one case on every backend, checking that the result frames are equal."""
     expected = None
-    for backend in ("numpy", "python"):
+    for backend in BACKENDS:
         with runtime.settings(backend=backend):
             seconds, engine = best_time(function, repeat)
         results = engine.results.to_frame()

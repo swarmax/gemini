@@ -14,8 +14,8 @@ from gemini.compiler.graph import GraphCache, Proxy, run
 from gemini.errors import PhysicsError
 from gemini.modules.pumps import esp as esp_file
 from gemini.types.flows import Stream
+from tests.fixtures.parity import RTOL
 
-RTOL = 1e-12
 COLUMNS = ["suction.m_dot", "suction.T", "suction.p", "frequency"]
 
 

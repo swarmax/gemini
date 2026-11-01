@@ -38,9 +38,7 @@ TOOL_DIRECTIVE = re.compile(
 NESTING = (ast.If, ast.For, ast.While, ast.With, ast.Try, ast.AsyncFor, ast.AsyncWith, ast.Match)
 MAX_NESTING = 3
 MAX_LINES = 40
-LONG_FUNCTIONS = {
-    "tests/e2e/test_quickstart.py::test_quickstart": "one end-to-end quickstart path",
-}
+LONG_FUNCTIONS = {}
 EARLY_EXITS = (ast.Return, ast.Raise, ast.Continue, ast.Break)
 BUILTIN_ERRORS = {"ValueError", "TypeError", "KeyError", "RuntimeError"}
 RAISED_CLASSES = {

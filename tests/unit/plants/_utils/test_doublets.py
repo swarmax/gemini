@@ -58,18 +58,6 @@ GEOTHERM = {
 }
 
 
-def brine_side(plant):
-    """Return the modules of a heating plant that carry the brine."""
-    named = dict(plant.named_modules())
-    groups = ("d", "production_mixers.", "injection_splitters.", "filters.")
-    singles = ("degasser", "heat_exchanger", "injection_pump")
-    return [
-        module
-        for path, module in named.items()
-        if path in singles or (path.startswith(groups) and "." not in path.removeprefix("d"))
-    ]
-
-
 def designed(count):
     """Return a heating plant on ``count`` doublets with the sample problem's values."""
     plant = gm.plants.HeatingPlant(doublets=count)

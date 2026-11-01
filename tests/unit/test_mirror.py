@@ -2,8 +2,7 @@
 
 Every ``gemini/<path>/<name>.py`` except ``__init__.py`` (including ``gemini/_utils/`` and
 ``gemini/errors/``) needs ``tests/unit/<path>/test_<name>.py`` defining at least one test
-function. ``PLACEHOLDERS`` lists the mirror files that still hold only a docstring while their
-owners write the tests; it is emptied once every file has a test and must never grow.
+function.
 """
 
 import ast
@@ -12,7 +11,6 @@ from tests.fixtures import ROOT
 
 SOURCE = ROOT / "gemini"
 UNIT_TESTS = ROOT / "tests/unit"
-PLACEHOLDERS = set()
 
 
 def _mirror(source):
@@ -45,18 +43,10 @@ def test_source_files_have_mirrored_unit_tests():
 
 
 def test_mirrored_unit_tests_define_tests():
-    """Every mirror outside ``PLACEHOLDERS`` defines at least one test function."""
+    """Every mirror defines at least one test function."""
     empty = [
         str(mirror.relative_to(UNIT_TESTS))
         for _, mirror in _mirrors()
-        if mirror.exists()
-        and str(mirror.relative_to(UNIT_TESTS)) not in PLACEHOLDERS
-        and not _defines_test(mirror)
+        if mirror.exists() and not _defines_test(mirror)
     ]
     assert empty == []
-
-
-def test_placeholders_are_existing_mirrors():
-    """``PLACEHOLDERS`` names only real mirror files, so a typo cannot hide a source file."""
-    mirrors = {str(mirror.relative_to(UNIT_TESTS)) for _, mirror in _mirrors()}
-    assert PLACEHOLDERS <= mirrors

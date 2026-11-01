@@ -234,8 +234,7 @@ data folders outside `gemini/_utils/paths.py`. It enforces the structure of the 
 `tests/unit/plants/_utils/test_catalogue.py` pins the hash of each example plant.
 `tests/unit/test_mirror.py` enforces source mirroring: every `gemini/<path>/<name>.py` except
 `__init__.py`, including `gemini/_utils/` and `gemini/errors/`, has a mirrored
-`tests/unit/<path>/test_<name>.py` that defines at least one test. Its `PLACEHOLDERS` set of
-mirrors still holding only a docstring is empty and must never grow.
+`tests/unit/<path>/test_<name>.py` that defines at least one test.
 `tests/unit/test_package_boundaries.py` checks that `gemini.errors` and the topic files of
 `gemini._utils` import nothing else from `gemini` (`paths.py` and `registry.py` may import
 `gemini.errors`), that `gemini/run/dataset.py` imports no module or engine code and that

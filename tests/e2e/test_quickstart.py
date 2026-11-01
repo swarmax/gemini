@@ -1,64 +1,67 @@
-"""The public quickstart acceptance path."""
+"""The public quickstart acceptance path, one test per step."""
 
 import pandas as pd
 import pytest
 
 import gemini as gm
+from tests.fixtures.doublet_day import doublet_day
 
 pytestmark = pytest.mark.e2e
 
 
-def test_quickstart(tmp_path, monkeypatch, dataset_path):
-    """Run the quickstart calls against the committed shared example.
+@pytest.fixture
+def plant():
+    """Return the shared example plant, new for each test."""
+    return gm.plants.example("DoubletHeatPlant")
 
-    The body is one end-to-end path through the public API, so it stays one function.
-    """
-    monkeypatch.chdir(tmp_path)
 
-    plant = gm.plants.example("DoubletHeatPlant")
+@pytest.fixture
+def df(dataset_path):
+    """Return the committed dataset as a frame."""
+    return pd.read_csv(dataset_path, parse_dates=["time"])
+
+
+@pytest.fixture
+def data(df):
+    """Return the committed dataset as a ``Dataset``."""
+    return gm.Dataset.from_frame(df, time_column="time")
+
+
+def test_replay_and_resume(tmp_path, plant, df, data):
+    """Replay writes a checkpoint and resume reads it back to the same length."""
     print(plant)
-
-    df = pd.read_csv(dataset_path, parse_dates=["time"])
-    data = gm.Dataset.from_frame(df, time_column="time")
-
-    res = gm.replay(plant, data, checkpoint="runs/replay.ckpt")
+    res = gm.replay(plant, data, checkpoint=str(tmp_path / "replay.ckpt"))
     print(res.to_frame(table="energy"))
-    esp_power = res["doublet.esp"].power
-    assert len(esp_power) == len(df)
+    assert len(res["doublet.esp"].power) == len(df)
+    assert len(gm.resume(str(tmp_path / "replay.ckpt"))) == len(res) == len(df)
 
-    res2 = gm.resume("runs/replay.ckpt")
 
+def test_calibrate_and_save_the_plant(tmp_path, plant, data):
+    """A calibrated plant saves to JSON and loads back with the same state."""
     fit = gm.analysis.calibrate(
         plant, data, params=[plant.get("heat_exchanger.thermal_conductance")]
     )
     print(fit)
-    plant.to_json("runs/my_plant.json")
-    assert gm.Plant.from_json("runs/my_plant.json").state_dict() == plant.state_dict()
+    plant.to_json(tmp_path / "my_plant.json")
+    assert gm.Plant.from_json(tmp_path / "my_plant.json").state_dict() == plant.state_dict()
 
-    clock = gm.engine.Clock.days(2027, 1, 1, days=1)
-    profiles = {
-        "doublet.reservoir.production_rate": gm.types.Profile.constant(
-            150, unit="m3/h", clock=clock
-        ),
-        "doublet.esp.frequency": gm.types.Profile.constant(55, unit="Hz", clock=clock),
-        "injection_pump.pressure_setpoint": gm.types.Profile.constant(
-            51.5, unit="bar", clock=clock
-        ),
-    }
-    sim = gm.simulate(plant, plan=gm.Dataset.from_profiles(profiles), clock=clock)
+
+def test_simulate_profiles(plant):
+    """A day of constant profiles simulates 24 hourly ticks."""
+    clock, plan = doublet_day()
+    sim = gm.simulate(plant, plan=plan, clock=clock)
     print(sim.to_frame(table="energy"))
+    assert len(sim) == 24
 
+
+def test_live_in_two_days(tmp_path, plant, df):
+    """Live runs day one, then day two from the same checkpoint."""
     start = df["time"].iloc[0]
     second = start + pd.Timedelta(days=1)
     third = start + pd.Timedelta(days=2)
     day1 = df[df["time"] < second]
     day2 = df[(df["time"] >= second) & (df["time"] < third)]
-    out1 = gm.live(
-        plant, gm.Dataset.from_frame(day1, time_column="time"), "runs/live.ckpt", now=second
-    )
-    out2 = gm.live(
-        plant, gm.Dataset.from_frame(day2, time_column="time"), "runs/live.ckpt", now=third
-    )
-    assert len(res) == len(res2) == len(df)
-    assert len(sim) == 24
+    checkpoint = str(tmp_path / "live.ckpt")
+    out1 = gm.live(plant, gm.Dataset.from_frame(day1, time_column="time"), checkpoint, now=second)
+    out2 = gm.live(plant, gm.Dataset.from_frame(day2, time_column="time"), checkpoint, now=third)
     assert len(out1) == len(day1) and len(out2) == len(day2)
