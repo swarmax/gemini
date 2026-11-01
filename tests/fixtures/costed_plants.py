@@ -1,38 +1,35 @@
-"""Plants whose consumers declare a cost, and runs of them, for the economics tests.
+"""Plants whose consumers are equipment with a cost, and runs of them, for the economics tests.
 
 The consumers join the plant with ``add_module``, so the test classes stay out of the registry.
 """
 
 import gemini as gm
 from gemini.modules import CoolingGrid, ElectricityGrid, GasGrid, HeatingGrid
-from gemini.types.cost import Cost
+from gemini.modules._utils.cost import Equipment
 from tests.fixtures.result_tables import make_results
 
 HOURS = 24
 """Ticks of an hour in the runs below."""
 
 
-class CostedHeatingGrid(HeatingGrid):
-    """A heat consumer that declares 1000 EUR, 10 EUR/year fixed and 1e-9 EUR/J variable cost."""
+class CostedHeatingGrid(Equipment, HeatingGrid):
+    """A heat consumer that is equipment of the kind ``degasser``: a fixed item."""
 
-    def capex(self, assumptions):
-        """Return the declared cost."""
-        return Cost(
-            capex=1000.0,
-            opex_fixed=10.0,
-            opex_variable=1e-9,
-            currency="EUR",
-            price_year=2024,
-            source="test fixture",
-        )
+    equipment_kind = "degasser"
+
+    def capex(self, finance):
+        """Return the capex factor of the kind."""
+        return self.capex_of(finance)
 
 
-class CostedCoolingGrid(CoolingGrid):
-    """A cooling consumer that declares 2000 EUR and no running cost."""
+class CostedCoolingGrid(Equipment, CoolingGrid):
+    """A cooling consumer that is equipment of the kind ``flare``: a fixed item."""
 
-    def capex(self, assumptions):
-        """Return the declared cost."""
-        return Cost(capex=2000.0, currency="EUR", price_year=2024, source="test fixture")
+    equipment_kind = "flare"
+
+    def capex(self, finance):
+        """Return the capex factor of the kind."""
+        return self.capex_of(finance)
 
 
 def _with_grids(plant):
@@ -56,6 +53,14 @@ def cooling_plant():
     return _with_grids(plant)
 
 
+def heating_cooling_plant():
+    """Return a plant with a costed heat consumer and a costed cooling consumer."""
+    plant = gm.Plant("HeatingCooling")
+    plant._add_module("heat", CostedHeatingGrid())
+    plant._add_module("cool", CostedCoolingGrid())
+    return _with_grids(plant)
+
+
 def day(heat=1000.0, cold=None, electricity=100.0, generated=None, fuel=None):
     """Return a day of hourly constant powers [W] at the edge modules."""
     sold = generated or 0.0
@@ -72,6 +77,7 @@ def day(heat=1000.0, cold=None, electricity=100.0, generated=None, fuel=None):
             "supply_in.enthalpy_flow": [heat] * HOURS,
             "return_out.enthalpy_flow": [0.0] * HOURS,
             "unmet_demand": [0.0] * HOURS,
+            "operating": [1.0] * HOURS,
         }
     if cold is not None:
         columns["cool"] = {

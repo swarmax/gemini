@@ -1,154 +1,225 @@
-"""Investment of a plant against the declared costs."""
+"""Investment of a plant against the capex of its equipment."""
 
 import pytest
 
 import gemini as gm
 from gemini._utils.jsonable import to_plain
+from gemini.case._utils.kinds import EQUIPMENT_KINDS
 from gemini.evaluate._utils import cost
+from gemini.modules import Module
 from gemini.modules.pumps import _physics
+from gemini.run._utils.apply import apply_case
+from gemini.units import Quantity
+from tests.fixtures.cases import make_case
 from tests.fixtures.costed_plants import heating_plant
 from tests.fixtures.errors import raises
-from tests.fixtures.result_tables import make_problem
 
-
-def test_capex_is_the_declared_cost_with_its_source():
-    """The investment is ``total_cost``'s, in its currency, with year and source."""
-    result = gm.evaluate.capex(heating_plant(), make_problem())
-    assert to_plain(result) == {
-        "value": 1000.0,
-        "unit": "currency",
-        "price_year": {"value": 2024, "unit": "-"},
-        "source": "test fixture",
-    }
-
-
-def test_capex_of_a_plant_without_declared_costs_is_null_with_a_reason():
-    """Built-in modules declare no cost: nothing is invented."""
-    result = gm.evaluate.capex(heating_plant(costed=False), make_problem(), on_error="record")
-    assert result.value is None
-    assert result.reason == cost.NO_COST
-    assert result.unit == "currency"
-    no_euro = gm.evaluate.capex(
-        heating_plant(costed=False),
-        make_problem(assumptions=gm.Assumptions(currency="USD")),
-        on_error="record",
-    )
-    assert no_euro.unit == "currency"
-
-
-def test_a_factor_without_a_source_is_asked_for(shared_plant):
-    """The heat exchanger has no sourced factor: the error names it, the record says why."""
-    recorded = gm.evaluate.capex(shared_plant, make_problem(), on_error="record")
-    assert recorded.value is None and "exchanger_cost" in recorded.reason
-    with raises(gm.errors.ValidationError, "missing_assumption", match="exchanger_cost"):
-        gm.evaluate.capex(shared_plant, make_problem())
-
-
-COSTS = gm.Assumptions(
-    pump_cost=gm.units.Quantity(0.5, "currency/W"),
-    exchanger_cost=gm.units.Quantity(100.0, "currency/(W/K)"),
-    chiller_cost=gm.units.Quantity(0.3, "currency/W"),
-    flare_cost=gm.units.Quantity(1e5, "currency"),
-    makeup_cost=gm.units.Quantity(2e4, "currency"),
+ALL = gm.case.Capex(
+    drilling=Quantity(1000.0, "currency/m"),
+    production_pump=Quantity(0.5, "currency/W"),
+    injection_pump=Quantity(0.4, "currency/W"),
+    circulation_pump=Quantity(0.2, "currency/W"),
+    heat_pump=Quantity(0.67, "currency/W"),
+    boiler=Quantity(0.06, "currency/W"),
+    electric_boiler=Quantity(0.03, "currency/W"),
+    chp=Quantity(0.95, "currency/W"),
+    absorption_chiller=Quantity(0.3, "currency/W"),
+    adsorption_chiller=Quantity(0.35, "currency/W"),
+    compression_chiller=Quantity(0.25, "currency/W"),
+    heat_exchanger=Quantity(100.0, "currency/(W/K)"),
+    cooler=Quantity(0.1, "currency/W"),
+    pipe=Quantity(300.0, "currency/m"),
+    thermal_storage=Quantity(50.0, "currency/m3"),
+    ice_storage=Quantity(40.0, "currency/m3"),
+    degasser=Quantity(1e6, "currency"),
+    flare=Quantity(1e5, "currency"),
+    gas_makeup=Quantity(2e4, "currency"),
 )
+"""A factor for every kind."""
 
 
-def priced(kind, params):
+def priced(kind, params, capex=ALL):
     """Return the capex of one module in a plant of its own, its ports aside."""
     plant = gm.Plant("One")
     plant.add(kind, name="unit", params=params)
-    return gm.evaluate.capex(plant, make_problem(assumptions=COSTS))
+    return gm.evaluate.capex(plant, make_case(finance={"capex": capex}))
 
 
 @pytest.mark.parametrize(
     "kind, params, expected",
     [
         ("HeatPump", {"mode": "heating", "capacity": {"value": 10, "unit": "MW"}}, 0.67e7),
-        ("Boiler", {"capacity": {"value": 10, "unit": "MW"}, "efficiency": 0.9}, 0.06e7),
-        (
-            "CHP",
-            {
-                "electric_capacity": {"value": 1, "unit": "MW"},
-                "electric_efficiency": 0.4,
-                "thermal_efficiency": 0.45,
-                "maximum_outlet_temperature": 363.15,
-            },
-            0.95e6,
-        ),
+        ("HeatPump", {"mode": "cooling", "capacity": {"value": 10, "unit": "MW"}}, 0.25e7),
+        ("Boiler", {"capacity": {"value": 10, "unit": "MW"}}, 0.06e7),
+        ("ElectricBoiler", {"capacity": {"value": 10, "unit": "MW"}}, 0.03e7),
+        ("CHP", {"electric_capacity": {"value": 1, "unit": "MW"}}, 0.95e6),
+        ("AdsorptionChiller", {"capacity": {"value": 2, "unit": "MW"}}, 0.35 * 2e6),
+        ("Cooler", {"capacity": {"value": 3, "unit": "MW"}}, 0.1 * 3e6),
+        ("Pipe", {"length": {"value": 120, "unit": "m"}}, 300 * 120),
+        ("ThermalStorage", {"volume": {"value": 200, "unit": "m3"}}, 50 * 200),
         ("Degasser", {}, 1.0e6),
         ("Flare", {}, 1e5),
         ("GasMakeup", {}, 2e4),
     ],
-    ids=["heat_pump", "boiler", "chp", "degasser", "flare", "makeup"],
+    ids=[
+        "heat_pump",
+        "compression_chiller",
+        "boiler",
+        "electric_boiler",
+        "chp",
+        "adsorption_chiller",
+        "cooler",
+        "pipe",
+        "thermal_storage",
+        "degasser",
+        "flare",
+        "gas_makeup",
+    ],
 )
 def test_equipment_costs_come_from_its_design(kind, params, expected):
-    """A factor times a capacity, or a fixed item."""
+    """A factor times a capacity, a length or a volume, or a fixed item."""
     assert priced(kind, params).value == pytest.approx(expected)
 
 
-def test_the_exchanger_and_the_chiller_cost_by_their_size():
+def test_the_exchanger_and_the_absorption_chiller_cost_by_their_size():
     """Conductance and capacity."""
-    exchanger = dict(
-        thermal_conductance=1e6,
-        hot_nominal_pressure_drop=0,
-        cold_nominal_pressure_drop=0,
-        hot_nominal_mass_flow=100.0,
-        cold_nominal_mass_flow=100.0,
-    )
+    exchanger = dict(thermal_conductance={"value": 1e6, "unit": "W/K"})
     assert priced("HeatExchanger", exchanger).value == pytest.approx(1e8)
-    chiller = dict(
-        mode="chiller",
-        capacity=1e7,
-        characteristic_slope=7e5,
-        minimum_driving_difference=10.0,
-        rejection_coefficient=2.2,
-        evaporator_coefficient=1.2,
-        auxiliary_power_ratio=0.01,
-    )
+    chiller = dict(capacity={"value": 1e7, "unit": "W"})
     assert priced("AbsorptionUnit", chiller).value == pytest.approx(3e6)
 
 
-def test_a_doublet_pays_for_its_wells_and_its_pump():
-    """Two wells by the metre; the pump by its shaft power at the nominal flow."""
-    design = {
-        "depth": {"value": 2500, "unit": "m"},
-        "gradient": {"value": 30, "unit": "K/km"},
-        "surface_temperature": {"value": 12, "unit": "degC"},
-        "permeability": {"value": 200, "unit": "mD"},
-        "thickness": {"value": 100, "unit": "m"},
-        "well_diameter": {"value": 0.244, "unit": "m"},
-    }
-    wells = 2 * 2500 * 5.7e6 / (2 * 2300)
-    assert priced("Doublet", design).value == pytest.approx(wells)
-    pump = {
-        "nominal_flow": {"value": 300, "unit": "m3/h"},
-        "pump_efficiency": 0.7,
-        "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
-    }
+def test_a_circulation_pump_costs_by_its_shaft_power_at_the_nominal_flow():
+    """Hydraulic power over the efficiency, at the flow and the rise of the design."""
     plant = gm.Plant("One")
-    doublet = plant.add("Doublet", name="unit", params=design | pump)
-    power = 300 / 3600 * _physics.head(0.0, 60.0, 1, doublet.esp.head_coefficients) / 0.7
-    result = gm.evaluate.capex(plant, make_problem(assumptions=COSTS))
-    assert result.value == pytest.approx(wells + 0.5 * power)
-    assert "SDE+" in result.parts["source"] and "assumptions.pump_cost" in result.parts["source"]
+    pump = plant.add(
+        "CirculationPump",
+        name="unit",
+        params={
+            "flow": {"value": 50, "unit": "kg/s"},
+            "pressure_rise": {"value": 3, "unit": "bar"},
+            "loop_pressure": {"value": 5, "unit": "bar"},
+            "efficiency": 0.6,
+        },
+    )
+    density = pump.fluid.properties(0, 0).rho_l
+    power = 50 / density * 3e5 / 0.6
+    result = gm.evaluate.capex(plant, make_case(finance={"capex": ALL}))
+    assert result.value == pytest.approx(0.2 * power)
 
 
-def test_a_doublet_without_a_design_declares_no_cost():
-    """The old way has no depth to price."""
-    assert gm.plants.get("Doublet").capex(COSTS) is None
-
-
-def test_the_site_of_the_problem_gives_the_design_values():
-    """A depth the plant does not state comes from the site; the plant itself is unchanged."""
-    design = {
-        "gradient": {"value": 30, "unit": "K/km"},
-        "surface_temperature": {"value": 12, "unit": "degC"},
-        "permeability": {"value": 200, "unit": "mD"},
-        "thickness": {"value": 100, "unit": "m"},
-        "well_diameter": {"value": 0.244, "unit": "m"},
+def test_a_centrifugal_pump_costs_by_its_shaft_power_at_the_best_efficiency_flow():
+    """The head of the curve at the best-efficiency flow, over the best efficiency."""
+    params = {
+        "head_coefficients": [3e5, -1e5, -2e6],
+        "rated_frequency": {"value": 50, "unit": "Hz"},
+        "best_efficiency": 0.7,
+        "best_efficiency_flow": {"value": 0.1, "unit": "m3/s"},
+        "motor_efficiency": 0.95,
     }
+    head = 3e5 - 1e5 * 0.1 - 2e6 * 0.1**2
+    expected = 0.2 * 0.1 * head / 0.7
+    assert priced("CentrifugalPump", params).value == pytest.approx(expected)
+
+
+DESIGN = {
+    "depth": {"value": 2500, "unit": "m"},
+    "gradient": {"value": 30, "unit": "K/km"},
+    "surface_temperature": {"value": 12, "unit": "degC"},
+    "permeability": {"value": 200, "unit": "mD"},
+    "thickness": {"value": 100, "unit": "m"},
+    "well_diameter": {"value": 0.244, "unit": "m"},
+}
+PUMP = {
+    "nominal_flow": {"value": 300, "unit": "m3/h"},
+    "pump_efficiency": 0.7,
+    "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
+}
+
+
+def test_a_doublet_pays_for_its_wells_by_the_metre_and_its_pump_by_its_power():
+    """The wells together are two depths; the pump is its shaft power at the nominal flow."""
     plant = gm.Plant("One")
-    plant.add("Doublet", name="unit", params=design)
-    sited = make_problem(site={"unit.depth": {"value": 2500, "unit": "m"}})
-    assert gm.evaluate.capex(plant, sited).value == pytest.approx(2 * 2500 * 5.7e6 / 4600)
-    assert gm.evaluate.capex(plant, make_problem(), on_error="record").value is None
+    plant.add("Doublet", name="unit", params=DESIGN | PUMP)
+    case = make_case(finance={"capex": ALL})
+    result = gm.evaluate.capex(plant, case)
+    head = apply_case(plant, case).unit.esp.head_coefficients
+    power = 300 / 3600 * _physics.head(0.0, 60.0, 1, head) / 0.7
+    drilling = sum(
+        item.value for item in result.parts["modules"].values() if item.parts["kind"] == "drilling"
+    )
+    assert drilling == pytest.approx(2 * 2500 * 1000.0)
+    assert result.parts["modules"]["unit"].value == pytest.approx(0.5 * power)
+    assert result.value == pytest.approx(2 * 2500 * 1000.0 + 0.5 * power)
+
+
+def test_a_doublet_without_a_nominal_flow_cannot_price_its_pump():
+    """Nothing is estimated: the error names the missing design value."""
+    plant = gm.Plant("One")
+    plant.add("Doublet", name="unit", params=DESIGN)
+    with raises(gm.errors.ValidationError, "missing_value", match="nominal_flow"):
+        gm.evaluate.capex(plant, make_case(finance={"capex": ALL}))
+
+
+def test_the_capex_is_the_sum_of_the_modules_with_their_kinds_and_price_year():
+    """Per module a value with its kind; the total, the currency and the price year."""
+    case = make_case(finance={"capex": ALL, "price_year": 2015, "currency": "EUR"})
+    result = gm.evaluate.capex(heating_plant(), case)
+    assert to_plain(result) == {
+        "value": 1e6,
+        "unit": "currency",
+        "modules": {"heat": {"value": 1e6, "unit": "currency", "kind": "degasser"}},
+        "price_year": {"value": 2015, "unit": "-"},
+    }
+
+
+def test_a_plant_without_equipment_has_no_capex_with_a_reason():
+    """The grids are not equipment: nothing is invented."""
+    case = make_case(finance={"capex": ALL})
+    result = gm.evaluate.capex(heating_plant(costed=False), case, on_error="record")
+    assert result.value is None
+    assert result.reason == cost.NO_COST
+    assert result.unit == "currency"
+    with raises(gm.errors.ValidationError, "no_value"):
+        gm.evaluate.capex(heating_plant(costed=False), case)
+
+
+def test_a_factor_the_case_lacks_is_missing_assumption_naming_the_kind():
+    """A degasser without a factor: the error names its path, the record says why."""
+    case = make_case(finance={"capex": gm.case.Capex(boiler=Quantity(0.06, "currency/W"))})
+    recorded = gm.evaluate.capex(heating_plant(), case, on_error="record")
+    assert recorded.value is None and "assumptions.finance.capex.degasser" in recorded.reason
+    with raises(
+        gm.errors.ValidationError,
+        "missing_assumption",
+        match=r"assumptions\.finance\.capex\.degasser",
+    ):
+        gm.evaluate.capex(heating_plant(), case)
+
+
+def test_a_case_without_finance_is_missing_assumption():
+    """No finance section, no capex."""
+    with raises(gm.errors.ValidationError, "missing_assumption", match="assumptions.finance"):
+        gm.evaluate.capex(heating_plant(), make_case())
+
+
+def test_every_kind_but_two_is_declared_by_a_module():
+    """Injection pumps and ice stores have no design value to size them from.
+
+    A heat pump is a ``heat_pump`` or, in cooling mode, a ``compression_chiller``.
+    """
+    declared = {
+        module_class.equipment_kind
+        for module_class in _subclasses(Module)
+        if isinstance(getattr(module_class, "equipment_kind", None), str)
+    }
+    declared |= {"heat_pump", "compression_chiller"}
+    assert set(EQUIPMENT_KINDS) - declared == {"injection_pump", "ice_storage"}
+
+
+def _subclasses(root):
+    """Return every subclass of ``root``, at any depth."""
+    found = set()
+    for sub in root.__subclasses__():
+        found |= {sub} | _subclasses(sub)
+    return found

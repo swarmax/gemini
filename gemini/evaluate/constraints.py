@@ -1,18 +1,22 @@
-"""The constraints of a problem, checked against a finished run."""
+"""The constraints of a case, checked against a finished run."""
 
 import numpy as np
 
-from gemini import units
 from gemini._utils.strings import join_path
+from gemini.case import Constraint
+from gemini.case._utils.fields import si_unit_of
+from gemini.case.roletable import reads, units_of
 from gemini.errors import ValidationError
 from gemini.evaluate._utils.columns import (
+    field_of,
     fields,
     is_parameter,
-    matched,
     parameter_values,
     series,
 )
+from gemini.run._utils.apply import apply_case
 from gemini.types.shapes import check, measure
+from gemini.units import Quantity
 
 TOLERANCE = 1e-9
 """Relative margin of a limit: a value on the limit passes through its rounding; numerical."""
@@ -27,83 +31,98 @@ NO_FLOW = "the module carried no flow in this run"
 """The reason when ``when="running"`` leaves no step."""
 
 
-def constraints(plant, problem, results):
-    """Check every constraint of ``problem`` against a finished run.
+def constraints(plant, case, results):
+    """Check every constraint of ``case`` and the supply temperatures of its services.
 
-    Each ``Constraint`` path is matched against the module paths of ``plant``, name by name, and
-    each match is checked on its own; a violated constraint is an answer, not an error. A result
+    A ``Constraint`` is on a role and a quantity of it (``gm.case.roles()``); it applies to every
+    unit of the role in ``plant`` on its own, the units being found by class and wiring. A result
     field is read over the run, a composite's through the leaves its formula names; with
     ``when="running"`` only the steps in which the module carried flow count. ``over`` gives how
     the run is read: ``each`` judges every step and reports the worst; ``sum``, ``mean``, ``max``
     and ``min`` judge one figure of the run; ``duration`` judges the total time of the steps
-    that count. A parameter path takes ``over="each"`` and is judged once, or at each date inside
-    the run when it changes over time, with the site of the problem applied to the plant.
-    A value on a limit passes within ``TOLERANCE``, a duration within half a step.
+    that count. A parameter is judged once, or at each date inside the run when it changes over
+    time, with the case applied to the plant. A value on a limit passes within ``TOLERANCE``, a
+    duration within half a step.
+
+    The service requirement is checked as well: each ``HeatingGrid`` must receive water at least at
+    ``demand.heating.supply_temperature`` and each ``CoolingGrid`` at most at
+    ``demand.cooling.supply_temperature``, in the steps in which it runs. A service without a
+    supply temperature adds no check. A role with no unit in the plant gives one check with
+    ``passed`` ``None`` and ``unit_path`` ``None``, whose value says ``no_value``.
 
     Parameters
     ----------
     plant : Module
         The plant of the run.
-    problem : Problem
-        The problem whose constraints are checked, and whose site gives design values.
+    case : Case
+        The case whose constraints and services are checked, and that gives design values.
     results : Results
         A finished run.
 
     Returns
     -------
     list of dict
-        One check ``{name, passed, value, limit, path, worst_step}`` per matched module and
-        constraint: ``name`` is the matched ``<module path>.<field>``, ``path`` the path of the
-        constraint, ``value`` the worst value of the run for ``each`` and the figure otherwise
-        and ``limit`` the bound that was violated, else the nearest, in the unit of the field
-        (``s`` for ``duration``). ``worst_step`` is the ISO 8601 time of the worst step, ``None``
-        for a figure of the run and for a parameter. ``passed`` is ``None``, with the reason in
-        ``value``, for a module that carried no flow, and with ``no_value`` for a field the
-        run does not hold, every row having failed.
+        One check ``{name, role, unit_path, quantity, passed, value, limit, worst_step}`` per unit
+        and constraint: ``name`` is ``<unit path>.<field>``, ``role`` and ``quantity`` those of the
+        constraint, ``unit_path`` the path of the unit (``""`` for the plant). ``value`` is a
+        ``Quantity`` (SI, ``s`` for ``duration``): the worst value of the run for ``each`` and the
+        figure otherwise, and ``limit`` the bound that was violated, else the nearest.
+        ``worst_step`` is the ISO 8601 time of the worst step, ``None`` for a figure of the run and
+        for a parameter. ``passed`` is ``None``, with the reason in ``value``, for a unit that
+        carried no flow, and with ``no_value`` for a field the run does not hold.
 
     Raises
     ------
     ValidationError
-        With code ``unknown_name`` for a path that matches no module, or no module with that
-        field, and ``invalid_value`` for a parameter with an ``over`` other than ``each``.
+        With code ``unknown_name`` for a role quantity that a unit of the plant does not hold.
     """
     frame = results.to_frame()
-    sited = problem.apply_site(plant)
+    sited = apply_case(plant, case)
     checks = []
-    for constraint in problem.constraints:
-        paths, name = matched(sited, constraint.path)
-        checks += [
-            _check(sited, frame, results.durations, constraint, path, name) for path in paths
-        ]
+    for constraint in (*(case.constraints or ()), *_services(case)):
+        found = units_of(sited, constraint.on)
+        if not found:
+            checks.append(_no_unit(constraint))
+        checks += [_check(sited, frame, results.durations, constraint, path) for path in found]
     return checks
 
 
-def _in_unit(bound, name, unit, quantity, path):
-    """Return a bound in the SI unit of its field; a number is accepted for a field of no unit."""
-    if bound is None:
-        return bound
-    if isinstance(bound, units.Quantity):
-        return units.value_in_si(bound, unit, path, quantity)
-    if unit != "-":
-        raise ValidationError(
-            f"constraint {path}: {name} = {bound!r}; expected {units.QUANTITY_FORM}, because the "
-            f"field has the unit {unit!r}",
-            path=path,
-            code="invalid_value",
+def _no_unit(constraint):
+    """Return the undecided check of a constraint whose role has no unit in the plant."""
+    unit = "s" if constraint.over == "duration" else si_unit_of(constraint.dimension)
+    lower, upper = _bounds(constraint)
+    reason = f"no_value: the plant has no unit of the role {constraint.on!r}"
+    name = f"{constraint.on}.{constraint.quantity}"
+    limit = measure(lower if lower is not None else upper, unit)
+    verdict = check(name, None, measure(None, unit, reason), limit)
+    return verdict | _where(constraint, None, None)
+
+
+def _services(case):
+    """Return the constraints that the supply temperatures of the services of ``case`` make."""
+    demand = case.demand
+    if demand is None:
+        return []
+    required = [
+        (demand.heating, "heating_supply", "min"),
+        (demand.cooling, "cooling_supply", "max"),
+    ]
+    return [
+        Constraint(
+            on=role,
+            quantity="temperature",
+            when="running",
+            **{bound: Quantity(service.supply_temperature, "K")},
         )
-    return bound
+        for service, role, bound in required
+        if service is not None and service.supply_temperature is not None
+    ]
 
 
-def _bounds(constraint, unit, quantity):
-    """Return ``(lower, upper)`` of a constraint in ``unit``; ``equals`` sets both."""
-    given = {name: getattr(constraint, name) for name in ("min", "max", "equals")}
-    bound = {
-        name: _in_unit(item, name, unit, quantity, constraint.path)
-        for name, item in given.items()
-        if item is not None
-    }
-    lower = [bound[name] for name in ("min", "equals") if name in bound]
-    upper = [bound[name] for name in ("max", "equals") if name in bound]
+def _bounds(constraint):
+    """Return ``(lower, upper)`` of a constraint; ``equals`` sets both."""
+    lower = [bound for bound in (constraint.min, constraint.equals) if bound is not None]
+    upper = [bound for bound in (constraint.max, constraint.equals) if bound is not None]
     return (max(lower) if lower else None, min(upper) if upper else None)
 
 
@@ -112,9 +131,9 @@ def _reading(plant, frame, constraint, path, name):
     if is_parameter(plant, path, name):
         if constraint.over != "each":
             raise ValidationError(
-                f"constraint {constraint.path}: over = {constraint.over!r}; expected 'each' for "
-                "a parameter",
-                path=constraint.path,
+                f"constraint {constraint.on}.{constraint.quantity}: over = {constraint.over!r}; "
+                "expected 'each' for a parameter",
+                path=f"{constraint.on}.{constraint.quantity}",
                 code="invalid_value",
             )
         values = parameter_values(plant, frame, path, name)
@@ -164,16 +183,19 @@ def _no_reason(values, keep, over):
     return None
 
 
-def _check(plant, frame, durations, constraint, path, name):
-    """Return the check of one constraint on one matched module."""
-    unit, quantity = ("s", None) if constraint.over == "duration" else fields(plant, path)[name]
-    bounds = _bounds(constraint, unit, quantity)
+def _check(plant, frame, durations, constraint, unit_path):
+    """Return the check of one constraint on one unit of its role."""
+    read = reads(constraint.on, constraint.quantity)
+    path, name = field_of(plant, join_path(unit_path, read.path))
+    unit = "s" if constraint.over == "duration" else fields(plant, path)[name][0]
+    bounds = _bounds(constraint)
     values, keep = _reading(plant, frame, constraint, path, name)
     label = join_path(path, name)
     reason = _no_reason(values, keep, constraint.over)
     if reason:
         limit = measure(bounds[0] if bounds[0] is not None else bounds[1], unit)
-        return check(label, None, measure(None, unit, reason), limit) | _where(constraint, None)
+        verdict = check(label, None, measure(None, unit, reason), limit)
+        return verdict | _where(constraint, unit_path, None)
     measured, margin, position = _measure(constraint, values, keep, durations, bounds)
     lower, upper = bounds
     passed = (lower is None or measured >= lower - margin) and (
@@ -181,9 +203,15 @@ def _check(plant, frame, durations, constraint, path, name):
     )
     step = None if position is None or is_parameter(plant, path, name) else frame.index[position]
     limit = measure(_nearest(measured, lower, upper), unit)
-    return check(label, bool(passed), measure(measured, unit), limit) | _where(constraint, step)
+    verdict = check(label, bool(passed), measure(measured, unit), limit)
+    return verdict | _where(constraint, unit_path, step)
 
 
-def _where(constraint, step):
-    """Return the keys that tell which constraint a check answers and when it was worst."""
-    return {"path": constraint.path, "worst_step": None if step is None else step.isoformat()}
+def _where(constraint, unit_path, step):
+    """Return the keys that tell which constraint and unit a check answers and when it was worst."""
+    return {
+        "role": constraint.on,
+        "unit_path": unit_path,
+        "quantity": constraint.quantity,
+        "worst_step": None if step is None else step.isoformat(),
+    }

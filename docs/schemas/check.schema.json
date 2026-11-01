@@ -54,7 +54,7 @@
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "A judged quantity: {name, passed, value, limit}. value and limit are values. passed is null, with a reason in value, when there is nothing to judge. A constraint adds its path and worst_step.",
+  "description": "A judged quantity: {name, passed, value, limit}. value and limit are values. passed is null, with a reason in value, when there is nothing to judge. A constraint adds its role, unit_path, quantity and worst_step.",
   "properties": {
     "limit": {
       "$ref": "#/$defs/value"
@@ -68,7 +68,13 @@
         "null"
       ]
     },
-    "path": {
+    "quantity": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string"
+    },
+    "unit_path": {
       "type": "string"
     },
     "value": {

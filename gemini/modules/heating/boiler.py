@@ -2,15 +2,15 @@
 
 from gemini import ops
 from gemini.errors import PhysicsError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.heating import _burner
 from gemini.modules.module import Module
 from gemini.physics import energy, heat_transfer
 from gemini.types import Efficiency, Fuel, Power, Stream, Temperature
-from gemini.types.cost import scaled_cost
 
 
-class _BoilerBody(Module):
+class _BoilerBody(Equipment, Module):
     """Water side of a boiler: heat a forward stream to its setpoint, up to a duty limit."""
 
     abstract = True
@@ -33,6 +33,10 @@ class _BoilerBody(Module):
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="hot_water")
+
+    def capex(self, finance):
+        """Return the cost of the boiler from its capacity."""
+        return self.capex_of(finance, self.capacity)
 
     def _requested_duty(self, inlet):
         """Return the duty [W] that reaches the setpoint, refusing reverse flow."""
@@ -66,6 +70,8 @@ class Boiler(_BoilerBody):
     ``flue_out`` carries the CO2 of everything burned, formed and carried in the gas, to
     ``Atmosphere.gas_in``.
     """
+
+    equipment_kind = "boiler"
 
     def __init__(self):
         """Declare boiler design data, ports and computed performance."""
@@ -105,10 +111,6 @@ class Boiler(_BoilerBody):
         )
         return outlets
 
-    def capex(self, assumptions):
-        """Return the cost of the boiler from its capacity."""
-        return scaled_cost(assumptions, "boiler_cost", self.capacity)
-
     def _duty_limit(self, fuel):
         """Return the capacity, or less when the stream alone must cover the fuel [W]."""
         if _burner.has_grid(fuel):
@@ -119,6 +121,8 @@ class Boiler(_BoilerBody):
 
 class ElectricBoiler(_BoilerBody):
     """Auxiliary electric boiler with a thermal capacity limit; it has no gas ports."""
+
+    equipment_kind = "electric_boiler"
 
     def __init__(self):
         """Declare boiler design data, ports and computed performance."""

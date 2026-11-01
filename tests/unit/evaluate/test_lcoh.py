@@ -6,17 +6,15 @@ import gemini as gm
 from gemini._utils.jsonable import to_plain
 from gemini.evaluate._utils import cost
 from gemini.modules import CoolingGrid
-from gemini.units import SECONDS_PER_YEAR
+from gemini.units import SECONDS_PER_YEAR, Quantity
+from tests.fixtures.cases import costed_finance, make_case
 from tests.fixtures.costed_plants import day, heating_plant
 from tests.fixtures.errors import raises
-from tests.fixtures.result_tables import make_problem
 
-PRICES = make_problem(
-    assumptions=gm.Assumptions(prices={"electricity": gm.units.Quantity(2e-8, "currency/J")})
-)
+PRICES = make_case(finance=costed_finance(opex={"electricity": Quantity(2e-8, "currency/J")}))
 HEAT = 1000.0 * SECONDS_PER_YEAR
-OPEX = 10.0 + 1e-9 * HEAT + 2e-8 * 100.0 * SECONDS_PER_YEAR
-"""Yearly cost of the heating plant under ``PRICES``: fixed, variable and electricity."""
+OPEX = 10.0 + 2e-8 * 100.0 * SECONDS_PER_YEAR
+"""Yearly cost of the heating plant under ``PRICES``: the fixed opex and the electricity."""
 
 
 def test_lcoh_is_discounted_cost_over_discounted_heat():
@@ -35,13 +33,13 @@ def test_lcoh_at_zero_rate_spreads_the_cost_over_the_years():
     assert result.value == pytest.approx((1000.0 + OPEX * 10) / (HEAT * 10), rel=1e-12)
 
 
-def test_the_rate_and_lifetime_come_from_the_assumptions():
-    """Given in the assumptions, they give the same value as passed explicitly."""
-    both = make_problem(
-        assumptions=gm.Assumptions(
+def test_the_rate_and_lifetime_come_from_the_finance():
+    """Given in the finance of the case, they give the same value as passed explicitly."""
+    both = make_case(
+        finance=costed_finance(
+            opex={"electricity": Quantity(2e-8, "currency/J")},
             discount_rate=0.05,
-            lifetime_years=20,
-            prices={"electricity": gm.units.Quantity(2e-8, "currency/J")},
+            lifetime=Quantity(20, "yr"),
         )
     )
     explicit = gm.evaluate.lcoh(heating_plant(), PRICES, day(), 0.05, 20)
@@ -50,17 +48,20 @@ def test_the_rate_and_lifetime_come_from_the_assumptions():
 
 def test_a_missing_rate_is_asked_for():
     """No rate anywhere raises with the missing-value code."""
-    with pytest.raises(gm.errors.ValidationError, match="discount_rate") as error:
+    with raises(
+        gm.errors.ValidationError,
+        "missing_assumption",
+        match=r"assumptions\.finance\.discount_rate",
+    ):
         gm.evaluate.lcoh(heating_plant(), PRICES, day(), None, 20)
-    assert error.value.code == "missing_assumption"
 
 
-def test_null_with_a_reason_when_the_cost_or_the_heat_is_missing():
-    """No declared cost, no heat delivered, or heat and cold together give no value."""
+def test_null_with_a_reason_when_the_equipment_or_the_heat_is_missing():
+    """No equipment, no heat delivered, or heat and cold together give no value."""
     unpriced = gm.evaluate.lcoh(
         heating_plant(costed=False), PRICES, day(), 0.05, 20, on_error="record"
     )
-    assert unpriced.value is None and "no module declares a cost" in unpriced.reason
+    assert unpriced.value is None and "no module of the plant is equipment" in unpriced.reason
     idle = gm.evaluate.lcoh(heating_plant(), PRICES, day(heat=0.0), 0.05, 20, on_error="record")
     assert idle.reason == "the run delivers no heat"
     plant = heating_plant()

@@ -6,7 +6,7 @@ MASS_TOLERANCE = 1e-12
 """Smallest negative mass flow [kg/s] still read as zero."""
 
 
-def mass_balance(plant, problem, results):
+def mass_balance(plant, case, results):
     """Check the mass-flow ledger of a finished run: no mass flow is negative or infinite.
 
     It covers the columns whose unit in ``results.units`` is kg/s (for example
@@ -17,8 +17,8 @@ def mass_balance(plant, problem, results):
     ----------
     plant : Module
         The plant of the run; the check does not read it.
-    problem : Problem
-        The problem of the run; the check does not read it.
+    case : Case
+        The case of the run; the check does not read it.
     results : Results
         A finished run.
 

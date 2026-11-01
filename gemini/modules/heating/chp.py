@@ -2,15 +2,15 @@
 
 from gemini import ops
 from gemini.errors import PhysicsError, ValidationError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.heating import _burner
 from gemini.modules.module import Module
 from gemini.physics import combustion, heat_transfer
 from gemini.types import Efficiency, Fraction, Fuel, Power, Stream, Temperature
-from gemini.types.cost import scaled_cost
 
 
-class CHP(Module):
+class CHP(Equipment, Module):
     """Gas-engine combined heat and power unit heating a water circuit.
 
     ``load_fraction`` L is the electric output as a share of ``electric_capacity``; L = 0 means
@@ -40,6 +40,8 @@ class CHP(Module):
     electric_efficiency + thermal_efficiency <= 1 (typical gas engines: 0.35 to 0.44 electric,
     0.40 to 0.50 thermal, from manufacturer data).
     """
+
+    equipment_kind = "chp"
 
     def __init__(self):
         """Declare engine design data, the heated water circuit and energy flows."""
@@ -92,9 +94,9 @@ class CHP(Module):
         )
         return outlets
 
-    def capex(self, assumptions):
+    def capex(self, finance):
         """Return the cost of the engine from its electric capacity."""
-        return scaled_cost(assumptions, "chp_cost", self.electric_capacity)
+        return self.capex_of(finance, self.electric_capacity)
 
     def _load(self, fuel):
         """Return the load: the commanded one, or less when the stream alone must cover it."""

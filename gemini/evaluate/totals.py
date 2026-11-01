@@ -151,15 +151,15 @@ def _integral(series, seconds, unit):
     return measure(energy(series, seconds), unit)
 
 
-def totals(plant, problem, results):
+def totals(plant, case, results):
     """Return what crossed the plant's edge over a run, read from the edge modules' ports.
 
     Parameters
     ----------
     plant : Module
         The plant that produced ``results``.
-    problem : Problem
-        The problem of the run; the totals do not read it.
+    case : Case
+        The case of the run; the totals do not read it.
     results : Results
         A finished ``simulate`` or ``replay``.
 

@@ -3,10 +3,11 @@
 from gemini.evaluate._utils.flows import Flows
 from gemini.evaluate._utils.levelised import annualised
 from gemini.evaluate._utils.outcome import reported, unavailable
+from gemini.run._utils.apply import apply_case
 from gemini.types.shapes import measure
 
 
-def lcts(plant, problem, results, discount_rate=None, lifetime=None, on_error="raise"):
+def lcts(plant, case, results, discount_rate=None, lifetime=None, on_error="raise"):
     """Return the levelised cost of thermal supply [currency/J].
 
     ``annualised_cost / (heat + cold)``, the heat and the cold delivered per year as scaled from
@@ -20,24 +21,24 @@ def lcts(plant, problem, results, discount_rate=None, lifetime=None, on_error="r
         gives the JSON). ``{value, unit, annualised_cost, heat, cold}``, the last three each
         a value, ``heat`` and
         ``cold`` in J/year; ``value`` in currency/J (``.to("EUR/MWh")`` converts). A plant
-        that declares no cost, or a run that delivers neither heat nor cold, has no value.
+        without equipment with a cost, or a run that delivers neither heat nor cold, has no value.
     """
     return reported(
         on_error,
         "currency/J",
-        lambda: _lcts(plant, problem, results, (discount_rate, lifetime), on_error),
+        lambda: _lcts(plant, case, results, (discount_rate, lifetime), on_error),
     )
 
 
-def _lcts(plant, problem, results, discount, on_error):
+def _lcts(plant, case, results, discount, on_error):
     """Return the cost per joule of heat and cold; ``on_error`` applies to a missing value."""
     unit = "currency/J"
-    sited = problem.apply_site(plant)
+    sited = apply_case(plant, case)
     flows = Flows(sited, results)
     heat, cold = flows.energy("heat"), flows.energy("cold")
     if heat + cold <= 0:
         return unavailable(unit, "the run delivers neither heat nor cold", on_error)
-    cost = annualised(sited, problem, results, discount, on_error)
+    cost = annualised(sited, case, results, discount, on_error)
     if cost.value is None:
         return unavailable(unit, cost.reason, on_error)
     return measure(

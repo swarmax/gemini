@@ -1,13 +1,13 @@
 """Degasser separating a share of the free gas from the liquid, with a pressure loss."""
 
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.modules.treatment import _physics
 from gemini.types import Fraction, Pressure, PressureDifference, Stream
-from gemini.types.cost import scaled_cost
 
 
-class Degasser(Module):
+class Degasser(Equipment, Module):
     """Degasser that removes a share of the inlet free gas and applies a pressure loss.
 
     The inlet free gas is ``fluid.gas_mass_fraction * m_dot``; the share
@@ -41,6 +41,8 @@ class Degasser(Module):
     the example brine carries no free gas either. Separation efficiency is vessel specific and has
     no industry-typical value; set it from design data or a measured gas flow.
     """
+
+    equipment_kind = "degasser"
 
     def __init__(self):
         """Declare degasser design data, inlet and split outlets."""
@@ -88,6 +90,6 @@ class Degasser(Module):
         outlets = dict(liquid_out=liquid, gas_out=gas)
         return outlets
 
-    def capex(self, assumptions):
+    def capex(self, finance):
         """Return the cost of the degasser, a fixed item."""
-        return scaled_cost(assumptions, "degasser_cost")
+        return self.capex_of(finance)

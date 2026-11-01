@@ -1,14 +1,14 @@
 """The flows at the edge of a plant, scaled to a year and priced."""
 
-import numpy as np
 import pytest
 
 import gemini as gm
 from gemini.evaluate._utils.flows import Flows
-from gemini.units import SECONDS_PER_YEAR
+from gemini.units import SECONDS_PER_YEAR, Quantity
+from tests.fixtures.cases import make_case
 from tests.fixtures.costed_plants import HOURS, cooling_plant, day, heating_plant
 from tests.fixtures.errors import raises
-from tests.fixtures.result_tables import make_problem, make_results
+from tests.fixtures.result_tables import make_results
 
 HEAT_PER_YEAR = 1000.0 * SECONDS_PER_YEAR
 """Heat [J/year] of 1000 W delivered all year."""
@@ -32,6 +32,11 @@ def test_cold_is_counted_from_the_cooling_consumers():
     assert flows.energy("heat") == 0.0
 
 
+def opex_case(count=24, **prices):
+    """Return a case whose finance holds the opex ``prices``."""
+    return make_case(count=count, finance={"opex": gm.case.Opex(**prices)})
+
+
 def test_the_gas_price_buys_purchased_gas_only():
     """Co-produced gas costs nothing; a price per MWh prices what was purchased."""
     columns = {
@@ -39,59 +44,44 @@ def test_the_gas_price_buys_purchased_gas_only():
         "gas": {"gas_out.chemical_flow": [1e6] * HOURS},
     }
     flows = Flows(heating_plant(), make_results(columns))
-    problem = make_problem(
-        assumptions=gm.Assumptions(prices={"gas": {"value": 40.0, "unit": "EUR/MWh"}})
-    )
+    case = opex_case(gas=Quantity(40.0, "EUR/MWh"))
     assert flows.energy("fuel") == pytest.approx(1e6 * SECONDS_PER_YEAR)
-    assert flows.cost("fuel", problem) == pytest.approx(flows.energy("fuel") / 3.6e9 * 40.0)
-    assert flows.cost("electricity", make_problem()) == 0.0
-    with raises(gm.errors.ValidationError, "missing_assumption", match="gas"):
-        flows.cost("fuel", make_problem())
+    assert flows.cost("fuel", case) == pytest.approx(flows.energy("fuel") / 3.6e9 * 40.0)
+    assert flows.cost("electricity", make_case()) == 0.0
+    with raises(
+        gm.errors.ValidationError, "missing_assumption", match=r"assumptions\.finance\.opex\.gas"
+    ):
+        flows.cost("fuel", make_case(finance={"currency": "EUR"}))
 
 
 def test_a_constant_price_multiplies_the_energy_of_the_year():
     """Bit for bit the energy of the year times the price."""
     flows = Flows(heating_plant(), day())
-    problem = make_problem(
-        assumptions=gm.Assumptions(prices={"electricity": gm.units.Quantity(2e-8, "currency/J")})
-    )
-    assert flows.cost("electricity", problem) == flows.energy("electricity") * 2e-8
+    case = opex_case(electricity=Quantity(2e-8, "currency/J"))
+    assert flows.cost("electricity", case) == flows.energy("electricity") * 2e-8
 
 
 def test_a_price_profile_is_integrated_over_the_run():
     """The power of each step times its price: half a day at 1 and half at 3 averages to 2."""
     flows = Flows(heating_plant(), day())
     price = [1e-8] * (HOURS // 2) + [3e-8] * (HOURS // 2)
-    problem = make_problem(
-        assumptions=gm.Assumptions(prices={"electricity": gm.units.Quantity(price, "currency/J")})
-    )
-    constant = make_problem(
-        assumptions=gm.Assumptions(prices={"electricity": gm.units.Quantity(2e-8, "currency/J")})
-    )
-    assert flows.cost("electricity", problem) == pytest.approx(flows.cost("electricity", constant))
+    case = opex_case(electricity=Quantity(price, "currency/J"))
+    constant = opex_case(electricity=Quantity(2e-8, "currency/J"))
+    assert flows.cost("electricity", case) == pytest.approx(flows.cost("electricity", constant))
 
 
 def test_a_profile_weights_the_hours_that_draw_power():
     """Power drawn only in the dear hours is billed at the dear price, not the mean."""
     power = [0.0] * (HOURS // 2) + [100.0] * (HOURS // 2)
     run = make_results({"grid": {"net_import": power}})
-    price = np.array([1e-8] * (HOURS // 2) + [3e-8] * (HOURS // 2))
-    problem = make_problem(
-        assumptions=gm.Assumptions(
-            prices={"electricity": gm.units.Quantity(list(price), "currency/J")}
-        )
-    )
-    bill = Flows(heating_plant(), run).cost("electricity", problem)
+    price = [1e-8] * (HOURS // 2) + [3e-8] * (HOURS // 2)
+    case = opex_case(electricity=Quantity(price, "currency/J"))
+    bill = Flows(heating_plant(), run).cost("electricity", case)
     assert bill == pytest.approx(3e-8 * 100.0 * SECONDS_PER_YEAR / 2)
 
 
 def test_a_profile_of_another_length_than_the_run_is_refused():
     """One price per step of the run."""
-    problem = make_problem(
-        count=4,
-        assumptions=gm.Assumptions(
-            prices={"electricity": gm.units.Quantity([1e-8] * 4, "currency/J")}
-        ),
-    )
+    case = opex_case(count=4, electricity=Quantity([1e-8] * 4, "currency/J"))
     with raises(gm.errors.ValidationError, "invalid_value", match="one per step"):
-        Flows(heating_plant(), day()).cost("electricity", problem)
+        Flows(heating_plant(), day()).cost("electricity", case)

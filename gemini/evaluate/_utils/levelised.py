@@ -4,23 +4,32 @@ from gemini.evaluate._utils.cost import annuity, investment, lifetime_cost, year
 from gemini.evaluate._utils.discounting import discounting
 from gemini.evaluate._utils.flows import Flows
 from gemini.evaluate._utils.outcome import reported, unavailable
+from gemini.run._utils.apply import apply_case
 from gemini.types.shapes import measure
 
 
-def levelised(plant, problem, results, product, discount, on_error):
+def levelised(plant, case, results, product, discount, on_error):
     """Return the levelised cost of ``product`` ("heat" or "cold") over the lifetime."""
     return reported(
         on_error,
         "currency/J",
-        lambda: _cost_of(problem.apply_site(plant), problem, results, product, discount, on_error),
+        lambda: _cost_of(apply_case(plant, case), case, results, product, discount, on_error),
     )
 
 
-def _cost_of(plant, problem, results, product, discount, on_error):
+def _share(case, product):
+    """Return the share of the cost charged to ``product``, or ``None`` when the case lacks it."""
+    allocation = case.assumptions.finance.allocation
+    share = None if allocation is None else allocation.heat_cost_share
+    if share is None:
+        return None
+    return share if product == "heat" else 1 - share
+
+
+def _cost_of(plant, case, results, product, discount, on_error):
     """Compute the levelised cost; ``on_error`` applies to a value the plant cannot give."""
-    assumptions = problem.assumptions
-    rate, years = discounting(assumptions, *discount)
-    cost = investment(plant, assumptions, on_error)
+    rate, years = discounting(case, *discount)
+    cost = investment(plant, case, on_error)
     unit = "currency/J"
     if cost.value is None:
         return unavailable(unit, cost.reason, on_error)
@@ -31,13 +40,11 @@ def _cost_of(plant, problem, results, product, discount, on_error):
         return unavailable(unit, f"the run delivers no {product}", on_error)
     share = 1.0
     if flows.energy(other) > 0:
-        if assumptions.heat_cost_share is None:
+        share = _share(case, product)
+        if share is None:
             reason = "the plant delivers heat and cold; the split of its cost is not defined"
             return unavailable(unit, reason, on_error)
-        share = (
-            assumptions.heat_cost_share if product == "heat" else 1 - assumptions.heat_cost_share
-        )
-    yearly = yearly_cost(plant, problem, results, "raise").value
+    yearly = yearly_cost(plant, case, results, "raise").value
     factor = annuity(rate, years)
     return measure(
         share * lifetime_cost(cost.value, yearly, factor) / (delivered * factor),
@@ -50,15 +57,14 @@ def _cost_of(plant, problem, results, product, discount, on_error):
     )
 
 
-def annualised(plant, problem, results, discount, on_error):
-    """Return the annualised cost of a plant that already has its site."""
-    assumptions = problem.assumptions
-    rate, years = discounting(assumptions, *discount)
-    cost = investment(plant, assumptions, on_error)
+def annualised(plant, case, results, discount, on_error):
+    """Return the annualised cost of a plant that already has its design values."""
+    rate, years = discounting(case, *discount)
+    cost = investment(plant, case, on_error)
     unit = "currency/yr"
     if cost.value is None:
         return unavailable(unit, cost.reason, on_error)
-    yearly = yearly_cost(plant, problem, results, "raise").value
+    yearly = yearly_cost(plant, case, results, "raise").value
     factor = annuity(rate, years)
     return measure(
         lifetime_cost(cost.value, yearly, factor) / factor,

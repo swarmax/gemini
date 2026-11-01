@@ -2,6 +2,7 @@
 
 from gemini import ops
 from gemini.errors import PhysicsError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import energy, heat_transfer, pumps
@@ -17,7 +18,7 @@ from gemini.types import (
 )
 
 
-class CentrifugalPump(Module):
+class CentrifugalPump(Equipment, Module):
     """Centrifugal booster or circulation pump with affinity-law speed control.
 
     At the rated frequency the pressure rise follows the quadratic head curve
@@ -44,6 +45,8 @@ class CentrifugalPump(Module):
     the pump is stopped: no head, no power. A running pump against a closed valve (deadhead),
     whose shaft power would heat a trapped volume without bound, is outside the steady model.
     """
+
+    equipment_kind = "circulation_pump"
 
     repr_fields = ("rated_frequency", "best_efficiency", "best_efficiency_flow")
 
@@ -98,6 +101,13 @@ class CentrifugalPump(Module):
 
         outlets = dict(fluid_out=discharge, loss_out=loss_out, power_in=power_in)
         return outlets
+
+    def capex(self, finance):
+        """Return the cost of the pump from its shaft power at the best-efficiency flow."""
+        flow = self.best_efficiency_flow
+        head = pumps.centrifugal_head(flow, 1.0, self.head_coefficients)
+        hydraulic = pumps.hydraulic_power(flow, head)
+        return self.capex_of(finance, energy.input_power(hydraulic, self.best_efficiency))
 
     def _performance(self, suction):
         """Return flow [m3/s], head [Pa], hydraulic and shaft power [W] and efficiency [-]."""

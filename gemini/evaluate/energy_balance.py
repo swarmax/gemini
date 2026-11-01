@@ -9,7 +9,7 @@ _NONNEGATIVE_ENERGY = ("fuel", "power_in", "power_out")
 """The energy columns that are nonnegative; ``loss_out`` and ``heat_accumulation`` are signed."""
 
 
-def energy_balance(plant, problem, results):
+def energy_balance(plant, case, results):
     """Check the energy ledger of a finished run: the energy outputs have their sign.
 
     It reads every leaf column named ``power_in``, ``power_out`` or ``fuel`` and checks that each
@@ -20,8 +20,8 @@ def energy_balance(plant, problem, results):
     ----------
     plant : Module
         The plant of the run; the check does not read it.
-    problem : Problem
-        The problem of the run; the check does not read it.
+    case : Case
+        The case of the run; the check does not read it.
     results : Results
         A finished run.
 

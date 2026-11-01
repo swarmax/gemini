@@ -10,7 +10,7 @@ from tests.fixtures.capture_public_api import SNAPSHOT, capture, fingerprint
 
 SNAPSHOTS = {
     "0.1.0": "f19ae90f18bb5a5a85e1b1f730276c9a50fdba0d46108c4bcd56488b48178a8b",
-    "0.2.0": "e75c6951007bd9174f069689d09df972ed1cc304eea66567774506b03acdc9bd",
+    "0.2.0": "026eb2076648e9c1f06f02d189cd231f2ce23e5ba8208b392e66f3dbe862ef31",
 }
 """Hash of the snapshot per ``gm.__version__``: a released entry never changes."""
 
@@ -100,12 +100,12 @@ def test_the_package_has_one_version():
     assert gm.__version__ == "0.2.0"
 
 
-def test_every_economics_function_takes_the_plant_the_problem_and_the_results():
-    """``capex`` alone has no results; every function starts with the plant and the problem."""
+def test_every_economics_function_takes_the_plant_the_case_and_the_results():
+    """``capex`` alone has no results; every function starts with the plant and the case."""
     for name in ("opex", "lcoh", "lcoc", "lcts", "annualised_cost", "co2", "npv", "payback"):
         arguments = list(inspect.signature(getattr(gm.evaluate, name)).parameters)
-        assert arguments[:3] == ["plant", "problem", "results"], name
-    assert list(inspect.signature(gm.evaluate.capex).parameters)[:2] == ["plant", "problem"]
+        assert arguments[:3] == ["plant", "case", "results"], name
+    assert list(inspect.signature(gm.evaluate.capex).parameters)[:2] == ["plant", "case"]
 
 
 def test_call_stays_beside_the_run_functions():

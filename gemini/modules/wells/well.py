@@ -7,20 +7,24 @@ Both wells traverse a geothermal pipe path using the original GEMINI DPDT equati
 from typing import Literal
 
 from gemini.errors import PhysicsError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Parameter
 from gemini.modules.module import Module
 from gemini.physics import geometry, hydraulics
 from gemini.types import Dimensionless, HeatTransferCoefficient, PressureDifference, Temperature
 
 
-class _Well(Module):
+class _Well(Equipment, Module):
     """Pipe path, correlations, soil heat loss and affine pressure correction of one well.
 
     ``flow_direction`` is the direction the brine flows: ``"up"`` in a production well and
-    ``"down"`` in an injection well.
+    ``"down"`` in an injection well. A well is drilled: its capex is the drilling factor times
+    the length it traverses.
     """
 
     abstract = True
+
+    equipment_kind = "drilling"
 
     flow_direction = "up"
 
@@ -41,6 +45,14 @@ class _Well(Module):
             ge=0,
             calibratable=True,
         )
+
+    def capex(self, finance):
+        """Return the cost of drilling the length of the well that this module traverses."""
+        return self.capex_of(finance, self._drilled_length())
+
+    def _drilled_length(self):
+        """Return the measured length [m] of the well."""
+        return self.pipe_path.total_length
 
     def traverse(self, stream, from_md: float, to_md: float, direction: Literal["up", "down"]):
         """Traverse an arbitrary depth interval [m], returning uncorrected SI conditions."""

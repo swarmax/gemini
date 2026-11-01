@@ -4,7 +4,6 @@ from gemini.units import Quantity
 
 from . import streams
 from .bindings import Binding, ColumnInfo, DatedParams, ModuleBindings
-from .cost import Cost
 from .flows import Stream
 from .fluid import BRINE, GLYCOL_30, STEAM, WATER, Fluid
 from .ports import Ports
@@ -137,7 +136,6 @@ __all__ = [
     "ColumnInfo",
     "DatedParams",
     "ModuleBindings",
-    "Cost",
     "Quantity",
     "Stream",
     "BRINE",

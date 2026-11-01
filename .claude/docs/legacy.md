@@ -3,7 +3,7 @@
 The old format has one boundary in two places, both internal. `gemini/plants/_utils/legacy/` reads a
 project into a plant: `project.py` (`GeminiProject`), `tables.py`, `design.py` and `reader.py`
 (`from_folder`, `to_plant`). `gemini.data.legacy` holds what needs a run or a frame: `files.py`
-(`from_csv`, `to_csv`) and `convert.py` (`to_dataset`, `from_plant`, `results_to_frame`,
+(`from_csv`, `to_csv`) and `convert.py` (`to_dataset`, `from_plant`, `to_frame`,
 `check_wiring`), and re-exports `GeminiProject` and `to_plant`. The one public entry is
 `gm.Plant.from_legacy(folder)`.
 `GeminiProject.from_folder(folder)`/`project.to_folder(folder)` handle raw diagram and `.param`
@@ -19,7 +19,7 @@ and plant inlet streams (`plant.set_inputs`), and returns it.
 Old fields it cannot map are listed in one `GeminiWarning`. `to_dataset(project, frame)` renames
 tag columns and converts values to SI; old timestamps are taken as UTC wall time.
 `from_plant(plant, template)` writes through an old template without inventing fields.
-`results_to_frame(results, project)` maps predicted measured outputs back to old tag units, and
+`to_frame(results, project)` maps predicted measured outputs back to old tag units, and
 `check_wiring(plant, project)` compares observed stream identities with the old diagram. It runs
 one step on a copy of the plant with its assumed root inputs and `tables.TRACE_CONTROLS`, so the
 caller's plant is not changed, and returns an empty list when the wiring matches.

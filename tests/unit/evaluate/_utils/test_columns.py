@@ -1,4 +1,4 @@
-"""The modules a constraint path matches and the columns it reads."""
+"""The field a constraint reads and its columns."""
 
 import gemini as gm
 from gemini.evaluate._utils import columns
@@ -16,18 +16,21 @@ def test_a_port_quantity_is_part_of_the_field():
     assert columns.split_target("d*.brine_cooling") == ("d*", "brine_cooling")
 
 
-def test_matched_returns_the_modules_with_the_field():
-    """A pattern stays within a name; the field must exist on the module."""
-    paths, name = columns.matched(heating_plant(), "h*.unmet_demand")
-    assert (paths, name) == (["heat"], "unmet_demand")
+def test_field_of_returns_the_module_and_the_field():
+    """The module must be in the plant and the field must exist on it."""
+    assert columns.field_of(heating_plant(), "heat.unmet_demand") == ("heat", "unmet_demand")
+    assert columns.field_of(heating_plant(), "heat.supply_in.temperature") == (
+        "heat",
+        "supply_in.temperature",
+    )
 
 
-def test_matched_refuses_an_unknown_module_and_an_unknown_field():
+def test_field_of_refuses_an_unknown_module_and_an_unknown_field():
     """Both raise ``unknown_name``."""
-    with raises(gm.errors.ValidationError, "unknown_name", match="matches no module"):
-        columns.matched(heating_plant(), "cool.unmet_demand")
+    with raises(gm.errors.ValidationError, "unknown_name", match="not in the plant"):
+        columns.field_of(heating_plant(), "cool.unmet_demand")
     with raises(gm.errors.ValidationError, "unknown_name", match="no field"):
-        columns.matched(heating_plant(), "heat.unmet")
+        columns.field_of(heating_plant(), "heat.unmet")
 
 
 def test_a_parameter_is_told_from_an_output():

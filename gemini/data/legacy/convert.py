@@ -131,7 +131,7 @@ def _legacy_property(name, params, original):
     return original if value == original else value
 
 
-def results_to_frame(results, project):
+def to_frame(results, project):
     """Convert predicted bound outputs to their old tag columns and units."""
     design = from_legacy_design(project)
     frame = results.to_frame()

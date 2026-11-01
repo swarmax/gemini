@@ -418,7 +418,7 @@
   "evaluate": {
    "annualised_cost": [
     "plant",
-    "problem",
+    "case",
     "results",
     "discount_rate",
     "lifetime",
@@ -426,44 +426,42 @@
    ],
    "bounds": [
     "plant",
-    "problem",
+    "case",
     "results"
    ],
    "capacities": [
     "plant",
-    "problem",
+    "case",
     "results"
    ],
    "capex": [
     "plant",
-    "problem",
+    "case",
     "on_error"
    ],
    "co2": [
     "plant",
-    "problem",
+    "case",
     "results",
     "on_error"
    ],
    "compare": [
-    "plant",
-    "problem",
-    "results",
-    "other"
+    "reports",
+    "by"
    ],
    "constraints": [
     "plant",
-    "problem",
+    "case",
     "results"
    ],
    "energy_balance": [
     "plant",
-    "problem",
+    "case",
     "results"
    ],
    "lcoc": [
     "plant",
-    "problem",
+    "case",
     "results",
     "discount_rate",
     "lifetime",
@@ -471,7 +469,7 @@
    ],
    "lcoh": [
     "plant",
-    "problem",
+    "case",
     "results",
     "discount_rate",
     "lifetime",
@@ -479,7 +477,7 @@
    ],
    "lcts": [
     "plant",
-    "problem",
+    "case",
     "results",
     "discount_rate",
     "lifetime",
@@ -487,12 +485,12 @@
    ],
    "mass_balance": [
     "plant",
-    "problem",
+    "case",
     "results"
    ],
    "npv": [
     "plant",
-    "problem",
+    "case",
     "results",
     "discount_rate",
     "lifetime",
@@ -500,34 +498,34 @@
    ],
    "opex": [
     "plant",
-    "problem",
+    "case",
     "results",
     "on_error"
    ],
    "payback": [
     "plant",
-    "problem",
+    "case",
     "results",
     "on_error"
    ],
    "plant_balance": [
     "plant",
-    "problem",
+    "case",
     "results"
    ],
    "report": [
     "plant",
-    "problem",
+    "case",
     "results"
    ],
    "run_all": [
     "plant",
-    "problem",
+    "case",
     "results"
    ],
    "totals": [
     "plant",
-    "problem",
+    "case",
     "results"
    ]
   },
@@ -762,6 +760,7 @@
    "combustion": "module",
    "constants": "module",
    "corrosion": "module",
+   "costs": "module",
    "diagnostics": "module",
    "dispatch": "module",
    "doublet": "module",
@@ -921,7 +920,7 @@
   ]
  },
  "schemas": {
-  "check.schema.json": "c380e8735b88c2e0a926c9985c39ed77c06564faea3e61bbc68108e713aa7d18",
+  "check.schema.json": "db5a41e00bc889fd75ff0a2d40fa353be37e3cadaf7bba07a72b0b0d26cae372",
   "module_description.schema.json": "f40388d592d69073cba6a90dc83a23e69e7b3a8c7f9e88d48fdd3e19c6d1779e",
   "plant_dict.schema.json": "805fcf66162f3690ab37a8764cb7b916070b2c72f2cf6144fa358756a2b4813f",
   "problem.schema.json": "98fbbd71c3cdb8b5c55b3cca2d2829999ab8665e4eb7dd1062fcc77d970383b4",

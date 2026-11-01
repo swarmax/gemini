@@ -6,6 +6,7 @@ import numpy as np
 
 from gemini import ops
 from gemini.errors import PhysicsError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import diagnostics, heat_transfer, hydraulics
@@ -21,12 +22,13 @@ from gemini.types import (
     TemperatureDifference,
     ThermalConductance,
 )
-from gemini.types.cost import scaled_cost
 from gemini.types.results import NOT_ASSESSED
 
 
-class HeatExchanger(Module):
+class HeatExchanger(Equipment, Module):
     """Two-stream heat exchanger with thermal and fouling diagnostics."""
+
+    equipment_kind = "heat_exchanger"
 
     repr_fields = (
         "thermal_conductance",
@@ -92,9 +94,9 @@ class HeatExchanger(Module):
         cold, hot = inlets.get("cold_in"), inlets.get("hot_in")
         return (None if cold is None else cold.T), (None if hot is None else hot.T)
 
-    def capex(self, assumptions):
+    def capex(self, finance):
         """Return the cost of the exchanger from its thermal conductance."""
-        return scaled_cost(assumptions, "exchanger_cost", self.thermal_conductance)
+        return self.capex_of(finance, self.thermal_conductance)
 
     def _performance(self, hot_in, cold_in):
         self._check_inlets(hot_in, cold_in)

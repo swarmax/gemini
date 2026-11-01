@@ -37,7 +37,7 @@ def _limits(outputs, field):
     return _TEMPERATURE.limits() if field.endswith(".temperature") else {}
 
 
-def bounds(plant, problem, results):
+def bounds(plant, case, results):
     """Check that every recorded output is inside the limits its module declares.
 
     The limits are those of the output's declaration (``ge``, ``gt``, ``le``, ``lt`` from its
@@ -50,8 +50,8 @@ def bounds(plant, problem, results):
     plant : Module
         The plant that produced ``results``; a path of the results it lacks raises
         ``ValidationError``.
-    problem : Problem
-        The problem of the run; the check does not read it.
+    case : Case
+        The case of the run; the check does not read it.
     results : Results
         A finished run.
 

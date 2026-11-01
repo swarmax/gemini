@@ -6,7 +6,7 @@ import pytest
 
 import gemini as gm
 from gemini._utils.jsonable import to_plain
-from tests.fixtures.result_tables import make_problem
+from tests.fixtures.cases import make_case
 
 
 @pytest.fixture(scope="module")
@@ -50,10 +50,10 @@ CALLS = {
     "results.to_dict": lambda plant, results: results.to_dict(),
     "results.end_state": lambda plant, results: results.end_state,
     "evaluate": lambda plant, results: gm.call("Valve", {}, {}, {}, on_error="record"),
-    "kpi": lambda plant, results: gm.evaluate.totals(plant, make_problem(), results),
-    "checks.run_all": lambda plant, results: gm.evaluate.run_all(plant, make_problem(), results),
+    "kpi": lambda plant, results: gm.evaluate.totals(plant, make_case(), results),
+    "checks.run_all": lambda plant, results: gm.evaluate.run_all(plant, make_case(), results),
     "economics.capex": lambda plant, results: gm.evaluate.capex(
-        plant, make_problem(), on_error="record"
+        plant, make_case(), on_error="record"
     ),
     "testing.check_module": lambda plant, results: gm.modules.check(gm.modules.Valve),
     "error.to_dict": lambda plant, results: gm.errors.ValidationError(

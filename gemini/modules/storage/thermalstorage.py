@@ -4,6 +4,7 @@ from typing import Literal
 
 from gemini import ops
 from gemini.errors import PhysicsError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter, State
 from gemini.modules.module import Module
 from gemini.modules.storage import _physics
@@ -20,7 +21,7 @@ from gemini.types import (
 )
 
 
-class ThermalStorage(Module):
+class ThermalStorage(Equipment, Module):
     """Fully mixed (lumped) hot or chilled water tank with charge and discharge circuits.
 
     The tank content is ``module.fluid`` at one uniform temperature, the state ``temperature``.
@@ -61,6 +62,8 @@ class ThermalStorage(Module):
     NOTE(refactor): the tank temperature is a state, so the module is a graph break until
     ``scan`` exists; its arithmetic is written with ops all the same.
     """
+
+    equipment_kind = "thermal_storage"
 
     def __init__(self):
         """Declare tank design data, circuits, the tank temperature and its energies."""
@@ -123,6 +126,10 @@ class ThermalStorage(Module):
 
         outlets = dict(charge_out=charge_out, discharge_out=discharge_out, loss_out=loss_out)
         return outlets
+
+    def capex(self, finance):
+        """Return the cost of the tank from its volume."""
+        return self.capex_of(finance, self.volume)
 
     def _advance_states(self, inlets, outlets, dt):
         charge_in, discharge_in = inlets.charge_in, inlets.discharge_in

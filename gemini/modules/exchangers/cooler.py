@@ -4,6 +4,7 @@ from typing import Literal
 
 from gemini import ops
 from gemini.errors import PhysicsError, ValidationError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import dispatch, heat_transfer, psychrometrics
@@ -20,7 +21,7 @@ from gemini.types import (
 )
 
 
-class Cooler(Module):
+class Cooler(Equipment, Module):
     """Dry or wet (evaporative) closed-circuit cooler rejecting heat to ambient air.
 
     The fluid is cooled towards ``temperature_setpoint`` but not below the air on ``air_in`` plus
@@ -45,6 +46,8 @@ class Cooler(Module):
     values of 5 to 15 K are typical for dry coolers and 3 to 8 K for wet coolers (ASHRAE
     Handbook, HVAC Systems and Equipment, chapters on cooling towers and dry coolers).
     """
+
+    equipment_kind = "cooler"
 
     def __init__(self):
         """Declare cooler design data, the cooled stream, ambient air and energy flows."""
@@ -117,6 +120,10 @@ class Cooler(Module):
 
         outlets = dict(fluid_out=outlet, air_out=air_out, air_in=air_in, power_in=power_in)
         return outlets
+
+    def capex(self, finance):
+        """Return the cost of the cooler from its capacity."""
+        return self.capex_of(finance, self.capacity)
 
     def _air(self, air, water_T, heat):
         """Return the air taken and returned: it leaves at the cooled water, at least an approach.

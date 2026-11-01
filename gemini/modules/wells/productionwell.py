@@ -83,6 +83,11 @@ class ProductionWell(_Well):
         result = self.traverse(wellhead_stream, 0, self._esp_depth(), "down")
         return self.corrected(wellhead_stream, result)
 
+    def _drilled_length(self):
+        """Return the length [m] of the selected segment of the well."""
+        start, end = self._segment_interval()
+        return abs(start - end)
+
     def _segment_interval(self):
         """Return the measured-depth interval [m] the selected segment traverses upward."""
         if self.segment == "below_esp":

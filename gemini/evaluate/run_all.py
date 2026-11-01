@@ -1,21 +1,22 @@
 """All checks of a finished run together."""
 
 from gemini._utils.jsonable import to_plain
+from gemini.evaluate._utils.verdict import verdict
 from gemini.evaluate.bounds import bounds
 from gemini.evaluate.constraints import constraints
 from gemini.evaluate.energy_balance import energy_balance
 from gemini.evaluate.mass_balance import mass_balance
 
 
-def run_all(plant, problem, results):
+def run_all(plant, case, results):
     """Run the energy ledger, the mass ledger, the bounds and the constraints on a finished run.
 
     Parameters
     ----------
     plant : Module
         The plant that produced ``results``.
-    problem : Problem
-        The problem of the run; its constraints are checked.
+    case : Case
+        The case of the run; its constraints and its service requirements are checked.
     results : Results
         A finished run.
 
@@ -28,16 +29,9 @@ def run_all(plant, problem, results):
         ``True`` if none failed and at least one passed, and ``None`` if none could judge.
     """
     checks = [
-        energy_balance(plant, problem, results),
-        mass_balance(plant, problem, results),
-        bounds(plant, problem, results),
-        *constraints(plant, problem, results),
+        energy_balance(plant, case, results),
+        mass_balance(plant, case, results),
+        bounds(plant, case, results),
+        *constraints(plant, case, results),
     ]
-    return to_plain({"passed": _verdict([item["passed"] for item in checks]), "checks": checks})
-
-
-def _verdict(verdicts):
-    """Return ``False`` if any verdict failed, else ``True`` if any passed, else ``None``."""
-    if False in verdicts:
-        return False
-    return True if True in verdicts else None
+    return to_plain({"passed": verdict([item["passed"] for item in checks]), "checks": checks})

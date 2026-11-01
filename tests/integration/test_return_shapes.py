@@ -9,9 +9,9 @@ import pytest
 import gemini as gm
 from gemini._utils.jsonable import to_plain
 from tests.fixtures import ROOT
+from tests.fixtures.cases import costed_finance, make_case
 from tests.fixtures.costed_plants import cooling_plant, day, heating_plant
 from tests.fixtures.json_schema import check
-from tests.fixtures.result_tables import make_problem
 
 SCHEMAS = ROOT / "docs" / "schemas"
 PAGE = ROOT / ".claude" / "docs" / "api.md"
@@ -30,13 +30,16 @@ CORROSION = {
     "minimum_thickness": 0.005,
     "start": "2024-01-01T00:00:00Z",
 }
-VALUES = gm.Assumptions(
-    prices={
-        "electricity": gm.units.Quantity(2e-8, "currency/J"),
-        "heat": gm.units.Quantity(5e-8, "currency/J"),
-        "cold": gm.units.Quantity(4e-8, "currency/J"),
-    },
-    electricity_emission_factor=gm.units.Quantity(1e-7, "kg/J"),
+PRICED = make_case(
+    finance=costed_finance(
+        opex={"electricity": gm.units.Quantity(2e-8, "currency/J")},
+        revenue={
+            "heat": gm.units.Quantity(5e-8, "currency/J"),
+            "cold": gm.units.Quantity(4e-8, "currency/J"),
+        },
+        discount_rate=0.05,
+    ),
+    emissions={"CO2": gm.case.CO2(electricity=gm.units.Quantity(1e-7, "kg/J"))},
 )
 POINTS = [
     {"flow": 0.03, "frequency": 50, "head": 3e6},
@@ -51,18 +54,14 @@ RETIRED = {"values", "units", "tolerance", "timestamp", "class", "type", "module
 
 
 def _constrained():
-    """Return a problem with a constraint on each way of reading a run."""
-    demand = gm.data.from_values([1.0], "W", "2024-07-01", "1 h", "heating_demand")
+    """Return a case with a constraint on each way of reading a run."""
+    duty = {"on": "heat_exchanger", "quantity": "duty"}
     constraints = [
-        gm.Constraint("heat_exchanger.duty", min={"value": 0, "unit": "MW"}),
-        gm.Constraint(
-            "heat_exchanger.duty", max={"value": 1000, "unit": "MW"}, over="mean", when="running"
-        ),
-        gm.Constraint(
-            "heat_exchanger.duty", min={"value": 1, "unit": "h"}, over="duration", when="running"
-        ),
+        gm.case.Constraint(**duty, min={"value": 0, "unit": "MW"}),
+        gm.case.Constraint(**duty, max={"value": 1000, "unit": "MW"}, over="mean", when="running"),
+        gm.case.Constraint(**duty, min={"value": 1, "unit": "h"}, over="duration", when="running"),
     ]
-    return gm.Problem(demand, constraints=constraints)
+    return make_case(count=1, constraints=constraints)
 
 
 def _run_entries(plant, results):
@@ -122,7 +121,7 @@ def _analysis_entries(plant):
 def _economics_entries():
     costed, run = heating_plant(), day()
     cold, chilled = cooling_plant(), day(heat=None, cold=500.0)
-    priced = make_problem(assumptions=VALUES)
+    priced = PRICED
     return {
         "capex": lambda: gm.evaluate.capex(costed, priced),
         "opex": lambda: gm.evaluate.opex(costed, priced, run),
@@ -140,7 +139,7 @@ def _economics_entries():
 
 
 def _ledger_entries(plant, results):
-    problem = make_problem()
+    problem = make_case()
     return {
         "compute": lambda: gm.evaluate.totals(plant, problem, results),
         "totals": lambda: gm.evaluate.totals(plant, problem, results),

@@ -2,6 +2,7 @@
 
 from gemini import ops
 from gemini.errors import PhysicsError, ValidationError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import geometry, heat_transfer, hydraulics
@@ -16,7 +17,7 @@ from gemini.types import (
 )
 
 
-class Pipe(Module):
+class Pipe(Equipment, Module):
     """Surface pipeline carrying a single-phase liquid, with friction, elevation and heat loss.
 
     Pressure: ``p_out = p_in - friction_pressure_drop - rho g dz`` with ``dz`` the signed
@@ -48,6 +49,8 @@ class Pipe(Module):
     length``. Zero flow has no friction or heat exchange and keeps the static head; the stopped
     stream keeps the inlet temperature, which carries no energy.
     """
+
+    equipment_kind = "pipe"
 
     def __init__(self):
         """Declare pipe geometry, heat transfer, ports and hydraulic and thermal outputs."""
@@ -99,6 +102,10 @@ class Pipe(Module):
 
         outlets = dict(fluid_out=outlet, loss_out=loss_out)
         return outlets
+
+    def capex(self, finance):
+        """Return the cost of the pipe from its length."""
+        return self.capex_of(finance, self.length)
 
     def _check(self, inlet):
         """Reject a pipe shorter than its rise, reverse flow and free gas."""

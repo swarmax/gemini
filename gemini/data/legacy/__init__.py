@@ -3,7 +3,7 @@
 from gemini.plants._utils.legacy.project import GeminiProject
 from gemini.plants._utils.legacy.reader import to_plant
 
-from .convert import check_wiring, from_plant, results_to_frame, to_dataset
+from .convert import check_wiring, from_plant, to_dataset, to_frame
 from .files import from_csv, to_csv
 
 __all__ = [
@@ -13,6 +13,6 @@ __all__ = [
     "to_plant",
     "to_dataset",
     "from_plant",
-    "results_to_frame",
+    "to_frame",
     "check_wiring",
 ]

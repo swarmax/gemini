@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from gemini.errors import ValidationError
+from gemini.evaluate._utils.level import level
 from gemini.evaluate._utils.series import (
     edge_total,
     energy,
@@ -13,15 +13,15 @@ from gemini.evaluate._utils.series import (
 from gemini.modules.grids import ChemicalGrid, ElectricityGrid, GasGrid, WasteGrid
 from gemini.units import SECONDS_PER_YEAR
 
-CARRIERS = {
-    "heat": "heat",
-    "cold": "cold",
-    "electricity": "electricity",
-    "fuel": "gas",
-    "waste": "waste_disposal",
-    "chemical": "chemical",
+PRICES = {
+    "heat": "assumptions.finance.revenue.heat",
+    "cold": "assumptions.finance.revenue.cold",
+    "electricity": "assumptions.finance.opex.electricity",
+    "fuel": "assumptions.finance.opex.gas",
+    "waste": "assumptions.finance.opex.waste_disposal",
+    "chemical": "assumptions.finance.opex.chemical",
 }
-"""Each flow of ``Flows`` with the carrier whose price it takes."""
+"""Each flow of ``Flows`` with the path in the case of the price it takes."""
 
 
 class Flows:
@@ -51,25 +51,18 @@ class Flows:
         series = self.series[name]
         return 0.0 if series is None else energy(series, self.seconds) * self.scale
 
-    def cost(self, name, problem):
-        """Return the yearly money of ``name`` at the price of its carrier, zero when none flows.
+    def cost(self, name, case):
+        """Return the yearly money of ``name`` at its price in ``case``, zero when none flows.
 
         A price that is a number multiplies the amount of the year. A price along the demand
         multiplies the power of each step: the bill is the sum over the steps of power, duration
-        and price, scaled to a year. A carrier that flows without a price raises
-        ``missing_assumption``.
+        and price, scaled to a year. A flow that flows without a price raises
+        ``missing_assumption`` naming the path of the price.
         """
         if self.energy(name) <= 0:
             return 0.0
-        price = problem.assumptions.price(CARRIERS[name])
+        price = level(case, PRICES[name], len(self.seconds))
         if np.ndim(price) == 0:
-            return self.energy(name) * float(price)
-        if len(price) != len(self.seconds):
-            raise ValidationError(
-                f"price of {CARRIERS[name]} has {len(price)} values; expected {len(self.seconds)}, "
-                "one per step of the run",
-                path=f"assumptions.prices.{CARRIERS[name]}",
-                code="invalid_value",
-            )
+            return self.energy(name) * price
         power = self.series[name].to_numpy(dtype=float)
         return float(np.nansum(power * self.seconds * price)) * self.scale

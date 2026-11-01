@@ -81,7 +81,7 @@ def _module_checks(path, module, read):
     ]
 
 
-def plant_balance(plant, problem, results):
+def plant_balance(plant, case, results):
     """Check that mass and energy close for every module and for the whole plant.
 
     For a leaf, what enters equals what leaves through its ports, with the losses and the change
@@ -94,8 +94,8 @@ def plant_balance(plant, problem, results):
     ----------
     plant : Module
         The plant that produced ``results``.
-    problem : Problem
-        The problem of the run; the check does not read it.
+    case : Case
+        The case of the run; the check does not read it.
     results : Results or ModuleResult
         A finished run, or one call of ``plant``.
 

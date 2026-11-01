@@ -1,6 +1,4 @@
-"""The values a constraint reads: the modules a path matches and their fields over a run."""
-
-from fnmatch import fnmatchcase
+"""The values a constraint reads: the field of a module and its values over a run."""
 
 import numpy as np
 
@@ -12,18 +10,12 @@ from gemini.types.flows import FIELD_QUANTITIES
 
 
 def split_target(target):
-    """Return ``(module pattern, field)``: a port quantity is ``<port>.<quantity>``."""
+    """Return ``(module path, field)``: a port quantity is ``<port>.<quantity>``."""
     head, _, last = target.rpartition(".")
     if last in PORT_QUANTITIES:
-        pattern, _, port = head.rpartition(".")
-        return pattern, f"{port}.{last}"
+        module, _, port = head.rpartition(".")
+        return module, f"{port}.{last}"
     return head, last
-
-
-def _fits(path, pattern):
-    """Return whether a module path fits a pattern, part by part: ``*`` stays within a name."""
-    parts, wanted = path.split("."), pattern.split(".")
-    return len(parts) == len(wanted) and all(map(fnmatchcase, parts, wanted))
 
 
 def fields(plant, path):
@@ -45,32 +37,29 @@ def is_parameter(plant, path, name):
     )
 
 
-def matched(plant, target):
-    """Return the paths of the modules ``target`` matches and its field name.
+def field_of(plant, target):
+    """Return ``(path, name)``: the module and the field that ``target`` names in ``plant``.
 
-    A pattern that matches no module, or no module with that field, raises ``unknown_name`` with
-    suggestions.
+    A module or a field the plant lacks raises ``unknown_name`` with suggestions.
     """
     pattern, name = split_target(target)
-    paths = [path for path, _ in plant.named_modules() if path]
-    matching = [path for path in paths if _fits(path, pattern)]
-    if not matching:
+    paths = [path for path, _ in plant.named_modules()]
+    if pattern not in paths:
         raise ValidationError(
-            f"constraint: pattern = {pattern!r} matches no module{did_you_mean(pattern, paths)}",
+            f"{target}: module = {pattern!r} is not in the plant{did_you_mean(pattern, paths)}",
             path=pattern,
             code="unknown_name",
             suggestions=close_matches(pattern, paths),
         )
-    declared = [path for path in matching if name in fields(plant, path)]
-    if not declared:
-        names = sorted({item for path in matching for item in fields(plant, path)})
+    names = list(fields(plant, pattern))
+    if name not in names:
         raise ValidationError(
-            f"constraint: {pattern}: no field {name!r}{did_you_mean(name, names)}",
+            f"{target}: no field {name!r} in {pattern or 'the plant'}{did_you_mean(name, names)}",
             path=target,
             code="unknown_name",
             suggestions=close_matches(name, names),
         )
-    return declared, name
+    return pattern, name
 
 
 def _parameter_times(plant, frame, path):

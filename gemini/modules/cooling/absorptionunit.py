@@ -3,6 +3,7 @@
 from typing import Literal
 
 from gemini import ops
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.cooling import _physics, _sorption
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
@@ -16,10 +17,9 @@ from gemini.types import (
     TemperatureDifference,
     ThermalConductance,
 )
-from gemini.types.cost import scaled_cost
 
 
-class AbsorptionUnit(Module):
+class AbsorptionUnit(Equipment, Module):
     """Single-effect water/LiBr absorption chiller or heat pump driven by hot water.
 
     Three circuits: ``generator_in`` carries the driving hot water (the geothermal heat),
@@ -51,6 +51,8 @@ class AbsorptionUnit(Module):
     driving hot water of about 70 to 120 degC, cooling water of 20 to 40 degC and chilled water
     above 4 degC. Crystallisation limits are not modelled.
     """
+
+    equipment_kind = "absorption_chiller"
 
     def __init__(self):
         """Declare absorption machine design data, its three circuits and performance."""
@@ -106,9 +108,9 @@ class AbsorptionUnit(Module):
         )
         return outlets
 
-    def capex(self, assumptions):
+    def capex(self, finance):
         """Return the cost of the absorption unit from its capacity."""
-        return scaled_cost(assumptions, "chiller_cost", self.capacity)
+        return self.capex_of(finance, self.capacity)
 
     def _performance(self, inlets):
         """Return the duties [W], COP and outlet temperatures [K] of one operating point."""

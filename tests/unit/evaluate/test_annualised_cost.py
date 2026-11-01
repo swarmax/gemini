@@ -4,17 +4,15 @@ import pytest
 
 import gemini as gm
 from gemini._utils.jsonable import to_plain
-from gemini.units import SECONDS_PER_YEAR
+from gemini.units import SECONDS_PER_YEAR, Quantity
+from tests.fixtures.cases import costed_finance, make_case
 from tests.fixtures.costed_plants import day, heating_plant
 from tests.fixtures.errors import raises
-from tests.fixtures.result_tables import make_problem
 
-PRICES = make_problem(
-    assumptions=gm.Assumptions(prices={"electricity": gm.units.Quantity(2e-8, "currency/J")})
-)
+PRICES = make_case(finance=costed_finance(opex={"electricity": Quantity(2e-8, "currency/J")}))
 HEAT = 1000.0 * SECONDS_PER_YEAR
-OPEX = 10.0 + 1e-9 * HEAT + 2e-8 * 100.0 * SECONDS_PER_YEAR
-"""Yearly cost of the heating plant under ``PRICES``: fixed, variable and electricity."""
+OPEX = 10.0 + 2e-8 * 100.0 * SECONDS_PER_YEAR
+"""Yearly cost of the heating plant under ``PRICES``: the fixed opex and the electricity."""
 
 
 def test_the_annualised_cost_is_capex_over_the_annuity_plus_opex():
@@ -44,11 +42,11 @@ def test_lcts_without_energy_has_no_value():
 
 
 @pytest.mark.parametrize("name", ["lcts", "annualised_cost"])
-def test_no_declared_cost_has_no_value(name):
-    """A plant without a capex: a reason, or the error."""
+def test_no_equipment_has_no_value(name):
+    """A plant without equipment: a reason, or the error."""
     function = getattr(gm.evaluate, name)
     plant = heating_plant(costed=False)
     recorded = function(plant, PRICES, day(), 0.05, 20, on_error="record")
-    assert recorded.value is None and "no module declares a cost" in recorded.reason
-    with raises(gm.errors.ValidationError, "no_value", match="no module declares a cost"):
+    assert recorded.value is None and "no module of the plant is equipment" in recorded.reason
+    with raises(gm.errors.ValidationError, "no_value", match="no module of the plant is equipment"):
         function(plant, PRICES, day(), 0.05, 20)

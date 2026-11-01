@@ -28,7 +28,7 @@ def test_legacy_bridge(tmp_path):
         paths.doublet_heat("doublet_2024_15min.csv")
     ).read_bytes()
     results = gm.replay(plant, data.window(end=data.start))
-    old_results = legacy.results_to_frame(results, project)
+    old_results = legacy.to_frame(results, project)
     legacy.to_csv(old_results, tmp_path / "results.csv")
     assert len(legacy.from_csv(tmp_path / "results.csv")) == 1
     converted = legacy.from_plant(plant, project)

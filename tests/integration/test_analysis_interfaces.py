@@ -8,8 +8,8 @@ import pytest
 import gemini as gm
 from gemini._utils.jsonable import to_plain
 from tests.fixtures.booster_module import EXAMPLE, Booster
+from tests.fixtures.cases import costed_finance, make_case
 from tests.fixtures.costed_plants import day, heating_plant
-from tests.fixtures.result_tables import make_problem
 
 CASE = {"wellhead_pressure": {"value": 4.6, "unit": "bar"}, "rates": [20, 45], "frequency": 55.484}
 CORROSION = {
@@ -25,12 +25,12 @@ CORROSION = {
     "minimum_thickness": 0.005,
     "start": "2024-01-01T00:00:00Z",
 }
-VALUES = gm.Assumptions(
-    electricity_emission_factor=gm.units.Quantity(1e-7, "kg/J"),
-    prices={
-        "electricity": gm.units.Quantity(2e-8, "currency/J"),
-        "heat": gm.units.Quantity(5e-8, "currency/J"),
-    },
+PRICED = make_case(
+    finance=costed_finance(
+        opex={"electricity": gm.units.Quantity(2e-8, "currency/J")},
+        revenue={"heat": gm.units.Quantity(5e-8, "currency/J")},
+    ),
+    emissions={"CO2": gm.case.CO2(electricity=gm.units.Quantity(1e-7, "kg/J"))},
 )
 
 
@@ -45,7 +45,7 @@ def real_calls(example_run):
     """Return ``(name, result)`` of one call of every function that is built."""
     plant, replay = example_run
     costed, run = heating_plant(), day()
-    problem, priced = make_problem(), make_problem(assumptions=VALUES)
+    problem, priced = make_case(), PRICED
     return [
         ("analysis.nodal", gm.analysis.nodal(plant, "doublet", CASE)),
         ("analysis.pump_curve", gm.analysis.pump_curve(plant, "doublet.esp")),
@@ -58,7 +58,6 @@ def real_calls(example_run):
         ("economics.co2", gm.evaluate.co2(costed, priced, run)),
         ("economics.npv", gm.evaluate.npv(costed, priced, run, 0.05, 20)),
         ("economics.payback", gm.evaluate.payback(costed, priced, run)),
-        ("economics.Assumptions", VALUES.model_dump()),
         ("checks.energy_balance", gm.evaluate.energy_balance(plant, problem, replay)),
         ("checks.mass_balance", gm.evaluate.mass_balance(plant, problem, replay)),
         ("checks.bounds", gm.evaluate.bounds(plant, problem, replay)),

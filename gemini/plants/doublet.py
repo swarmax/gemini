@@ -1,5 +1,7 @@
 """A doublet: production and injection limbs, designed from its depth or set by hand."""
 
+from gemini.errors import ValidationError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.environment import Formation
 from gemini.modules.pumps import ESP
@@ -18,13 +20,9 @@ from gemini.types import (
     TemperatureGradient,
     VolumeFlow,
 )
-from gemini.types.cost import scaled_cost
-
-WELL_COUNT = 2
-"""The producer and the injector of a doublet."""
 
 
-class Doublet(Plant):
+class Doublet(Equipment, Plant):
     """Production and injection limbs, with the children's values derived from a design.
 
     ``depth`` is the true vertical depth of the reservoir midpoint, ``thickness`` its gross
@@ -58,6 +56,8 @@ class Doublet(Plant):
     A building block, not schedulable on its own: a run sets ``reservoir.production_rate`` and
     ``esp.frequency``; ``gm.schedule`` writes them for a doublet inside a plant with a demand.
     """
+
+    equipment_kind = "production_pump"
 
     def __init__(self):
         """Declare the limbs, the design values, the ports and the connections."""
@@ -150,22 +150,23 @@ class Doublet(Plant):
             self.reservoir.pressure if "reservoir.pressure" in self._stated_child_params else None
         )
 
-    def capex(self, assumptions):
-        """Return the cost of the design: both wells by the metre and the pump by its power.
+    def capex(self, finance):
+        """Return the cost of the production pump from its shaft power at the nominal flow.
 
-        A doublet without a design declares no cost; its children's own costs stand.
+        The doublet is equipment of the kind ``production_pump`` because it alone knows the flow
+        its pump is designed for; its wells are drilled by their own modules. A doublet without a
+        ``nominal_flow`` raises ``missing_value``.
         """
-        if self.depth is None:
-            return None
-        wells = scaled_cost(assumptions, "drilling_cost", WELL_COUNT * self.depth)
         if self.nominal_flow is None:
-            return wells
+            raise ValidationError(
+                f"{self.path}.nominal_flow is missing; expected the design flow of the pump",
+                path=f"{self.path}.nominal_flow",
+                code="missing_value",
+            )
         power = pumps.power(
             self.nominal_flow,
             float(constants.ESP_REFERENCE_FREQUENCY),
             self.esp.stage_count,
             self.esp.power_coefficients,
         )
-        pump = scaled_cost(assumptions, "pump_cost", power)
-        source = f"{wells.source}; {pump.source}"
-        return wells.model_copy(update={"capex": wells.capex + pump.capex, "source": source})
+        return self.capex_of(finance, power)

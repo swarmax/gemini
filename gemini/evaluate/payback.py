@@ -2,18 +2,19 @@
 
 from gemini.evaluate._utils.cashflow import net_cash_flow
 from gemini.evaluate._utils.outcome import reported, unavailable
+from gemini.run._utils.apply import apply_case
 from gemini.types.shapes import measure
 
 
-def payback(plant, problem, results, on_error="raise"):
+def payback(plant, case, results, on_error="raise"):
     """Return the simple payback time [year]: ``capex / (revenue - opex)``, without discounting.
 
     Parameters
     ----------
     plant : Module
         The plant of the run.
-    problem : Problem
-        Its assumptions give the prices of ``heat``, ``cold`` and energy, as for ``npv``; anything
+    case : Case
+        Its finance gives the prices of ``heat``, ``cold`` and energy, as for ``npv``; anything
         needed and missing raises ``ValidationError`` (code ``missing_assumption``).
     results : Results
         The finished run of the plant.
@@ -25,16 +26,15 @@ def payback(plant, problem, results, on_error="raise"):
     Value
         A ``gm.units.Quantity`` in SI, with the parts of the result in ``parts`` (``to_plain``
         gives the JSON). ``{value, unit, capex, net_cash_flow}`` with ``unit`` ``"yr"`` and
-        the last two each a
-        value. A plant that declares no cost, or whose yearly revenue does not exceed its yearly
-        cost (it never pays back), has no value.
+        the last two each a value. A plant without equipment with a cost, or whose yearly revenue
+        does not exceed its yearly cost (it never pays back), has no value.
     """
-    return reported(on_error, "yr", lambda: _payback(plant, problem, results, on_error))
+    return reported(on_error, "yr", lambda: _payback(plant, case, results, on_error))
 
 
-def _payback(plant, problem, results, on_error):
+def _payback(plant, case, results, on_error):
     """Return the payback time; ``on_error`` applies to a value the plant cannot give."""
-    cost, flow, unit, reason = net_cash_flow(problem.apply_site(plant), problem, results, on_error)
+    cost, flow, unit, reason = net_cash_flow(apply_case(plant, case), case, results, on_error)
     if cost is None:
         return unavailable("yr", reason, on_error)
     details = dict(capex=measure(cost, unit), net_cash_flow=measure(flow, "currency/yr"))

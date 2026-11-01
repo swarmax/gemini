@@ -2,15 +2,15 @@
 
 from gemini import ops
 from gemini.errors import PhysicsError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import combustion, gas
 from gemini.types import Efficiency, Fuel, MassFlow, Power, Stream
-from gemini.types.cost import scaled_cost
 from gemini.types.fluid import FLUE_CO2, Fluid
 
 
-class Flare(Module):
+class Flare(Equipment, Module):
     """Flare burning its inlet gas, with the CO2 and methane its composition gives.
 
     ``flue_out`` carries the CO2 the gas carries plus what burning forms and the methane that passes
@@ -18,6 +18,8 @@ class Flare(Module):
     5th ed., section 13.5 "Industrial Flares", 2018). ``burned_mass_flow`` closes ``mass_balance``.
     The chemical power burned is ``fuel``; it leaves as heat through ``loss_out``.
     """
+
+    equipment_kind = "flare"
 
     def __init__(self):
         """Declare the efficiency, the inlet and the emissions."""
@@ -86,6 +88,6 @@ class Flare(Module):
             kind="gas", gas_composition=gas.composition_of_masses({"CO2": co2, "CH4": methane})
         )
 
-    def capex(self, assumptions):
+    def capex(self, finance):
         """Return the cost of the flare, a fixed item."""
-        return scaled_cost(assumptions, "flare_cost")
+        return self.capex_of(finance)

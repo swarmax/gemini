@@ -1,13 +1,13 @@
 """Gas makeup: the co-produced gas first, the grid for the shortfall, the surplus to a flare."""
 
 from gemini import ops
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Inlet, Outlet
 from gemini.modules.module import Module
 from gemini.types import Stream
-from gemini.types.cost import scaled_cost
 
 
-class GasMakeup(Module):
+class GasMakeup(Equipment, Module):
     """A mixer of co-produced gas and grid gas in front of a burner.
 
     ``fuel_out`` offers the burner the gas of ``gas_in``, marked with the composition of the grid on
@@ -15,6 +15,8 @@ class GasMakeup(Module):
     makeup draws the shortfall from the grid through ``grid_in`` and sends the surplus to
     ``excess_out``, usually a ``Flare``.
     """
+
+    equipment_kind = "gas_makeup"
 
     offer_inlets = ("gas_in", "grid_in")
 
@@ -48,6 +50,6 @@ class GasMakeup(Module):
         outlets = dict(excess_out=excess_out, grid_in=grid_in)
         return outlets
 
-    def capex(self, assumptions):
+    def capex(self, finance):
         """Return the cost of the grid connection, a fixed item."""
-        return scaled_cost(assumptions, "makeup_cost")
+        return self.capex_of(finance)

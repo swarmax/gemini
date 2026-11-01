@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 import gemini as gm
+from gemini.case._utils.kinds import EQUIPMENT_KINDS
 from gemini.run._utils.apply import apply_case
 from gemini.units import Quantity
 from tests.fixtures.sample_problems import sample_case, template_dict
@@ -34,6 +35,14 @@ LIMITS = [
         "max": {"value": 45, "unit": "K"},
     },
 ]
+
+
+PLACEHOLDERS = {
+    "pipe": {"value": 300, "unit": "EUR/m"},
+    "cooler": {"value": 0.1, "unit": "EUR/W"},
+    "adsorption_chiller": {"value": 0.3, "unit": "EUR/W"},
+}
+"""Factors the sample case does not hold, for kinds this plant uses: a test value, no source."""
 
 
 def sized_dict(doublets):
@@ -75,6 +84,9 @@ def case_of(folder, *constraints):
         "cooling": cooling | {"column": "cold_kw", "unit": "kW"},
     }
     data["constraints"] = [*LIMITS, *constraints]
+    finance = data["assumptions"]["finance"]
+    finance["capex"] |= PLACEHOLDERS
+    finance["opex"]["fixed"] = {kind: {"value": 2, "unit": "%/yr"} for kind in EQUIPMENT_KINDS}
     return gm.Case.from_dict(data, folder)
 
 
@@ -112,9 +124,10 @@ def results(plant, case):
 def worst(plant, case, results, on, quantity, **bounds):
     """Return the check of one constraint on the run, for each unit of the role."""
     limit = gm.case.Constraint(on=on, quantity=quantity, when="running", **bounds)
-    return gm.evaluate.constraints(
+    checks = gm.evaluate.constraints(
         plant, case.model_copy(update={"constraints": (limit,)}), results
     )
+    return [item for item in checks if (item["role"], item["quantity"]) == (on, quantity)]
 
 
 def test_heating_and_cooling_demand_come_from_a_file(case):

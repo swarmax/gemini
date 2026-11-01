@@ -5,6 +5,7 @@ from typing import Literal
 
 from gemini import ops
 from gemini.errors import PhysicsError, ValidationError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import heat_transfer, refrigeration
@@ -17,10 +18,9 @@ from gemini.types import (
     Temperature,
     TemperatureDifference,
 )
-from gemini.types.cost import scaled_cost
 
 
-class HeatPump(Module):
+class HeatPump(Equipment, Module):
     """Electric vapour-compression heat pump; in cooling mode it is an electric chiller.
 
     The evaporator cools the ``source_in`` circuit and the condenser heats the ``sink_in``
@@ -113,9 +113,14 @@ class HeatPump(Module):
         outlets = dict(source_out=source_out, sink_out=sink_out, power_in=values["electricity"])
         return outlets
 
-    def capex(self, assumptions):
-        """Return the cost of the heat pump from its capacity."""
-        return scaled_cost(assumptions, "heat_pump_cost", self.capacity)
+    @property
+    def equipment_kind(self):
+        """The kind of equipment: a ``heat_pump``, or a ``compression_chiller`` in cooling mode."""
+        return "compression_chiller" if self.mode == "cooling" else "heat_pump"
+
+    def capex(self, finance):
+        """Return the cost of the machine from its capacity."""
+        return self.capex_of(finance, self.capacity)
 
     def _performance(self, source_in, sink_in):
         """Return every output; the outlet temperatures [K] also define the outlets."""
