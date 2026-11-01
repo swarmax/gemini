@@ -1,9 +1,13 @@
 """Ranking and the Pareto front of several reports."""
 
+import json
+
 import pytest
 
 import gemini as gm
+from gemini.evaluate.compare import Comparison
 from gemini.types.shapes import measure
+from gemini.units import Quantity
 from tests.fixtures.errors import raises
 
 
@@ -25,7 +29,21 @@ def test_two_metrics_mark_the_pareto_front():
     found = gm.evaluate.compare(reports(), ["lcts", "co2"])
     assert [entry["pareto"] for entry in found] == [True, True, False, True]
     assert [entry["ranks"] for entry in found][2] == {"lcts": 3, "co2": 3}
-    assert found[0]["values"] == {"lcts": 10.0, "co2": 5.0}
+    assert found[0]["values"] == {"lcts": Quantity(10.0, "currency/J"), "co2": 5.0}
+
+
+def test_a_value_is_a_quantity_in_si_and_the_comparison_is_json():
+    """A report value in a display unit is stored in SI; to_dict dumps and from_dict restores."""
+    given = [{"lcts": Quantity(50.0, "EUR/MWh").to("EUR/MWh"), "co2": measure(2.0, "kg")}]
+    found = gm.evaluate.compare(given, ["lcts", "co2"])
+    lcts = found[0]["values"]["lcts"]
+    assert isinstance(lcts, Quantity) and str(lcts.unit) == "currency/J"
+    assert lcts.value == pytest.approx(50.0 / 3.6e9)
+    plain = found.to_dict()
+    assert json.loads(json.dumps(plain, allow_nan=False)) == plain
+    assert plain[0]["values"]["co2"] == {"value": 2.0, "unit": "kg"}
+    again = Comparison.from_dict(plain)
+    assert again[0]["values"] == found[0]["values"] and again[0]["ranks"] == found[0]["ranks"]
 
 
 def test_a_metric_can_be_preferred_larger():
