@@ -11,11 +11,8 @@ from gemini.modules.pumps import ESP
 from gemini.ops import kernels
 from gemini.types.flows import Stream
 from tests.fixtures.equivalence import assert_health_matches, assert_module_matches
-<<<<<<< HEAD
 from tests.fixtures.errors import raises
-=======
 from tests.fixtures.sample_cases import example_plant
->>>>>>> feature/study
 
 ESP_PARAMS = {
     "pump_type": "HC27000",
