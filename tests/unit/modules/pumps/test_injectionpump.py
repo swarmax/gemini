@@ -47,10 +47,29 @@ def test_curves_match_traced():
     assert_module_matches(module, rows)
 
 
-def test_setpoint_below_suction_raises():
-    """A setpoint below the suction pressure is a physics range error."""
+def test_a_setpoint_below_the_suction_needs_no_pumping():
+    """A negative required head is no pumping: zero power, the outlet pressure is the inlet's."""
+    pump = InjectionPump().set_params("", {"efficiency": 0.65})
+    result = pump(fluid_in=Stream(m_dot=1, T=300, p=2e6), pressure_setpoint=1e6)
+    assert result.outputs.power == 0
+    assert result.outputs.head == 0
+    assert result.outputs.is_pumping is False
+    assert result.outlets["fluid_out"].p == 2e6
+
+
+def test_a_positive_head_is_pumping():
+    """A setpoint above the suction pumps and says so."""
+    pump = InjectionPump().set_params("", {"efficiency": 0.65})
+    result = pump(fluid_in=Stream(m_dot=1, T=300, p=1e6), pressure_setpoint=2e6)
+    assert result.outputs.is_pumping is True
+    assert result.outputs.power > 0
+
+
+def test_a_curve_with_a_negative_head_is_still_an_error():
+    """The head of a curve below zero is the curve outside its range, not a setpoint."""
+    curves = {**CURVES, "head_coefficients": [-100, 0, 0, 0, 0, 0]}
     with pytest.raises(PhysicsError, match="below suction pressure"):
-        InjectionPump()(fluid_in=Stream(m_dot=1, T=300, p=2e6), pressure_setpoint=1e6)
+        InjectionPump().set_params("", curves)(fluid_in=Stream(m_dot=1, T=300, p=2e6), frequency=60)
 
 
 def test_a_stopped_pump_lets_the_pressure_through():

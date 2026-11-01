@@ -65,6 +65,7 @@ class InjectionPump(Equipment, Module):
         self.head = Output(PressureDifference, soft_sensor=True)
         self.power = Output(Power, soft_sensor=True)
         self.discharge_pressure = Output(Pressure, soft_sensor=True)
+        self.is_pumping = Output(bool)
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="brine")
@@ -90,6 +91,7 @@ class InjectionPump(Equipment, Module):
         self.head = discharge.p - suction.p
         self.power = power_in
         self.discharge_pressure = discharge.p
+        self.is_pumping = head > 0
 
         outlets = dict(fluid_out=discharge, power_in=power_in)
         return outlets
@@ -114,8 +116,9 @@ class InjectionPump(Equipment, Module):
         """Return the pressure rise [Pa] from the head curve, else from the pressure setpoint.
 
         A ``power_coefficients`` curve is used for power only together with a ``head_coefficients``
-        curve. A pump without flow cannot lower the pressure: a setpoint below its suction is then
-        no rise, not an error.
+        curve. A setpoint below the suction pressure needs no pumping: the rise is zero, so the power
+        is zero and the discharge pressure is the suction pressure (``is_pumping`` is false). A
+        head curve that falls below zero is still an error.
         """
         flow = suction.volumetric_flow()
         require_forward(self.path, "suction volume flow", flow, "m3/s")
@@ -128,7 +131,7 @@ class InjectionPump(Equipment, Module):
             return _physics.head(flow, self.frequency, self.stage_count, self.head_coefficients)
         if self.pressure_setpoint is not None:
             rise = self.pressure_setpoint - suction.p
-            return ops.where(flow > 0, rise, ops.maximum(rise, 0.0))
+            return ops.maximum(rise, 0.0)
         raise ValidationError(
             f"{self.path}: supply the pressure_setpoint control or head_coefficients and "
             "stage_count",
