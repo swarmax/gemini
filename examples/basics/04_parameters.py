@@ -21,10 +21,10 @@ def inputs(plant):
     """List the controls and persist one command; a boundary is set in the same way."""
     print(f"Controls:              {', '.join(sorted(plant.controls()))}")
     print(f"Boundaries:            {len(plant.boundaries())}")
-    plant.doublet.esp.frequency = "50 Hz"
+    plant.doublet.esp.frequency = {"value": 50, "unit": "Hz"}
     print(f"Pump frequency:        {plant.doublet.esp.frequency:.0f} Hz")
     substation = gm.plants.example("HeatingSubstation")
-    substation.consumer.heat_demand = "150 kW"
+    substation.consumer.heat_demand = {"value": 150, "unit": "kW"}
     print(f"Heat demand boundary:  {substation.consumer.heat_demand / 1e3:.0f} kW")
 
 

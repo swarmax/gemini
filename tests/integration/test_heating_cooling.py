@@ -8,10 +8,20 @@ from tests.fixtures.heating_cooling import HEAT, filled_dict, two_days
 pytestmark = pytest.mark.slow
 
 LIMITS = [
-    gm.Constraint("d*.reservoir.liquid_flow", min="50 m3/h", max="300 m3/h", when="running"),
-    gm.Constraint("d*.brine_cooling", max="40 K"),
+    gm.Constraint(
+        "d*.reservoir.liquid_flow",
+        min={"value": 50, "unit": "m3/h"},
+        max={"value": 300, "unit": "m3/h"},
+        when="running",
+    ),
+    gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}),
 ]
-ASSUMPTIONS = gm.Assumptions(prices={"electricity": "100 EUR/MWh", "gas": "40 EUR/MWh"})
+ASSUMPTIONS = gm.Assumptions(
+    prices={
+        "electricity": {"value": 100, "unit": "EUR/MWh"},
+        "gas": {"value": 40, "unit": "EUR/MWh"},
+    }
+)
 PLANTS = (
     "HeatingPlant",
     "HeatingAbsorptionCoolingPlant",

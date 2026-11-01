@@ -19,8 +19,8 @@ def test_nonnegative_judges_the_smallest_value():
     frame = ledger.columns(ok, lambda path, field: True)
     assert ledger.nonnegative("x", frame, 1e-9, "W", "none")["passed"] is True
     bad = ledger.columns(make_results({"a": {"fuel": [-2.0]}}), lambda path, field: True)
-    assert ledger.nonnegative("x", bad, 1e-9, "W", "none")["value"]["value"] == -2.0
+    assert ledger.nonnegative("x", bad, 1e-9, "W", "none")["value"].value == -2.0
     empty = ledger.columns(ok, lambda path, field: False)
-    assert ledger.nonnegative("x", empty, 1e-9, "W", "none")["value"]["reason"] == "none"
+    assert ledger.nonnegative("x", empty, 1e-9, "W", "none")["value"].reason == "none"
     missing = ledger.columns(make_results({"a": {"fuel": [math.nan]}}), lambda p, f: True)
     assert ledger.nonnegative("x", missing, 1e-9, "W", "none")["passed"] is None

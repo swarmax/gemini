@@ -128,9 +128,13 @@ def test_lorenz_heating_reproduces_the_upstream_gemini_case():
     """
     water = Fluid(kind="water", density=1000, specific_heat=4181)
     pump = heat_pump("heating", capacity=1e7, cop_model="lorenz")
-    source = Stream(flow="20 m3/h", T="40 C", p=3e5, fluid=water)
-    sink = Stream(flow="10 m3/h", T="30 C", p=3e5, fluid=water)
-    result = pump(source_in=source, sink_in=sink, temperature_setpoint="80 C")
+    source = Stream(
+        flow={"value": 20, "unit": "m3/h"}, T={"value": 40, "unit": "C"}, p=3e5, fluid=water
+    )
+    sink = Stream(
+        flow={"value": 10, "unit": "m3/h"}, T={"value": 30, "unit": "C"}, p=3e5, fluid=water
+    )
+    result = pump(source_in=source, sink_in=sink, temperature_setpoint={"value": 80, "unit": "C"})
     out = reading(result)
     assert out.cop == pytest.approx(6.5310, abs=1e-4)
     assert out.source_out_T - 273.15 == pytest.approx(18.8279, abs=1e-4)
@@ -259,7 +263,7 @@ def test_cooling_traced_call_matches_one_call_per_row(params):
 def test_a_stopped_heat_pump_has_no_cop_on_every_backend():
     """At zero flow the COP is ``None`` also when a backend gives it as a NaN of no dimension."""
     pump = HeatPump().set_params(
-        "", {"mode": "heating", "capacity": "2 MW", "carnot_fraction": 0.5}
+        "", {"mode": "heating", "capacity": {"value": 2, "unit": "MW"}, "carnot_fraction": 0.5}
     )
     stopped = Stream(m_dot=0.0, T=300.0, p=3e5)
     for backend in BACKENDS:

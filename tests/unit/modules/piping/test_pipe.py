@@ -81,7 +81,7 @@ def test_cold_fluid_absorbs_heat_and_long_pipes_approach_ambient():
 
 def test_zero_flow_keeps_only_the_static_head():
     """A stopped pipe has no friction or heat exchange; a descending one gains pressure."""
-    module = pipe(elevation_change="-10 ft")
+    module = pipe(elevation_change={"value": -10, "unit": "ft"})
     result = module(fluid_in=STREAM.with_(m_dot=0), air_in=air(283.15))
     assert result.outputs.pressure_drop == pytest.approx(-1000 * 9.81 * 3.048)
     assert result.outputs.velocity == 0 and reading(result).fluid_out_T == STREAM.T

@@ -107,7 +107,7 @@ def test_a_stopped_drive_circuit_has_no_driving_temperature():
     chiller = AdsorptionChiller().set_params(
         "",
         {
-            "capacity": "100 kW",
+            "capacity": {"value": 100, "unit": "kW"},
             "characteristic_slope": 2000,
             "minimum_driving_difference": 5,
             "rejection_coefficient": 2.0,

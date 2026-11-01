@@ -20,6 +20,7 @@ from .conversions import (  # noqa: F401
     PA_PER_FOOT_HEAD,
     PA_PER_KPA,
     PSI_PER_BAR,
+    QUANTITY_FORM,
     SECONDS_PER_DAY,
     SECONDS_PER_HOUR,
     SECONDS_PER_MINUTE,
@@ -28,6 +29,7 @@ from .conversions import (  # noqa: F401
     W_PER_BHP,
     ZERO_CELSIUS,
     Quantity,
+    Unit,
     array_convert,
     array_to_si,
     bar_to_pa,
@@ -75,15 +77,13 @@ from .conversions import (  # noqa: F401
     pa_to_bar,
     pa_to_ft_head,
     pa_to_gpa,
-    parse,
     pas_to_cp,
     rad_to_deg,
     si_conversion,
     si_unit,
-    split_quantity,
     to_si,
     value_in_si,
     w_to_bhp,
 )
 
-__all__ = ["Quantity", "names", "parse", "convert", "fits"]
+__all__ = ["Quantity", "Unit", "names", "convert", "fits"]

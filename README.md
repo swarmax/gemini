@@ -35,19 +35,19 @@ import gemini as gm
 plant = gm.plants.example("DoubletHeatPlant")
 design = {name: parameter.value for name, parameter in plant.doublet.esp.named_parameters()}
 esp = gm.modules.ESP().set_params("", design)
-stream = gm.Stream(flow="150 m3/h", T="80 C", p="20 bar")
-out = esp(fluid_in=stream, frequency="50 Hz")
-assert out.outputs.head == esp({"fluid_in": stream}, frequency="50 Hz").outputs.head
-assert out.outputs.head == esp(stream, frequency="50 Hz").outputs.head
+stream = gm.Stream(flow={"value": 150, "unit": "m3/h"}, T={"value": 80, "unit": "C"}, p={"value": 20, "unit": "bar"})
+out = esp(fluid_in=stream, frequency={"value": 50, "unit": "Hz"})
+assert out.outputs.head == esp({"fluid_in": stream}, frequency={"value": 50, "unit": "Hz"}).outputs.head
+assert out.outputs.head == esp(stream, frequency={"value": 50, "unit": "Hz"}).outputs.head
 print(out.outputs.get("head", unit="bar"), out.outlets.fluid_out)
 assert out.outlets.fluid_out is out.outlets["fluid_out"]
 
 with gm.modules.no_outputs():
-    fluid_only = esp(fluid_in=out.outlets.fluid_out, frequency="50 Hz")
+    fluid_only = esp(fluid_in=out.outlets.fluid_out, frequency={"value": 50, "unit": "Hz"})
 assert dict(fluid_only.outputs) == {}
 
 esp.frequency = 50.0
-plant.doublet.esp.frequency = "50 Hz"
+plant.doublet.esp.frequency = {"value": 50, "unit": "Hz"}
 
 frame = pd.read_csv("inputs/doublet_heat/doublet_2024_15min.csv", parse_dates=["time"])
 data = gm.Dataset.from_frame(frame, time_column="time")
@@ -91,14 +91,14 @@ runs on several sites. `gm.schedule` plans each step from the demand with no bin
 `gm.evaluate.constraints` judges the run:
 
 ```python
-plant.add("Doublet", name="d0", params={"depth": "2500 m", "well_diameter": "0.244 m"})
+plant.add("Doublet", name="d0", params={"depth": {"value": 2500, "unit": "m"}, "well_diameter": {"value": 0.244, "unit": "m"}})
 problem = gm.Problem(
     demand,
-    site={"d0.gradient": "30 K/km", "d0.surface_temperature": "12 degC",
-          "d0.permeability": "200 mD", "d0.thickness": "100 m"},
+    site={"d0.gradient": {"value": 30, "unit": "K/km"}, "d0.surface_temperature": {"value": 12, "unit": "degC"},
+          "d0.permeability": {"value": 200, "unit": "mD"}, "d0.thickness": {"value": 100, "unit": "m"}},
     constraints=[
-        gm.Constraint("d0.reservoir.liquid_flow", min="50 m3/h", max="300 m3/h", when="running"),
-        gm.Constraint("d0.brine_cooling", max="40 K"),
+        gm.Constraint("d0.reservoir.liquid_flow", min={"value": 50, "unit": "m3/h"}, max={"value": 300, "unit": "m3/h"}, when="running"),
+        gm.Constraint("d0.brine_cooling", max={"value": 40, "unit": "K"}),
     ],
 )
 results = gm.simulate(plant, problem)
@@ -108,7 +108,7 @@ checks = gm.evaluate.constraints(plant, problem, results)
 `examples/cases/challenge_year.py` and `examples/cases/hackathon.py` run that path on the sample
 problem of `inputs/examples/hackathon_2027/`, and `examples/cases/shallow_district.py` on a different
 one, an hourly demand on one shallow doublet, each with its own constraints. A stored design keeps its setpoints:
-`plant.set_inputs({"peak_boiler.temperature_setpoint": "100 degC"})` is part of `plant.to_dict()`, and
+`plant.set_inputs({"peak_boiler.temperature_setpoint": {"value": 100, "unit": "degC"}})` is part of `plant.to_dict()`, and
 a template plant takes its size, `gm.plants.HeatingCoolingPlant(doublets=2)`.
 
 Everything in the energy flow is a module and everything that crosses between modules goes through

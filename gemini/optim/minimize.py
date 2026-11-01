@@ -3,11 +3,17 @@
 import numpy as np
 from scipy.optimize import differential_evolution
 
-from gemini._utils.jsonable import to_plain
 from gemini._utils.strings import join_path
 from gemini.errors import ValidationError
-from gemini.optim._utils.trial import checked_metric, require_input, run_trial
-from gemini.types.shapes import value
+from gemini.optim._utils.trial import (
+    checked_metric,
+    limit_si,
+    parameter_si,
+    quantities,
+    require_input,
+    run_trial,
+)
+from gemini.types.shapes import Value, measure
 
 POPULATION_PER_VARIABLE = 5
 """Candidates of a generation per variable: a small budget still sees several generations."""
@@ -21,18 +27,25 @@ def _broken_constraint(metrics, constraints):
     """Return the reason of the first constraint a trial breaks, or ``None``."""
     for limit in constraints:
         name, lower, upper = limit["metric"], limit.get("minimum"), limit.get("maximum")
-        number = metrics[name]["value"]
+        number = metrics[name].value
         if number is None:
-            return f"{name} has no value: {metrics[name]['reason']}"
+            return f"{name} has no value: {metrics[name].reason}"
+        lower = None if lower is None else limit_si(lower, metrics[name], name)
+        upper = None if upper is None else limit_si(upper, metrics[name], name)
         if (lower is not None and number < lower) or (upper is not None and number > upper):
             return f"{name} = {number}; expected {lower} to {upper}"
     return None
 
 
 def _entry(parameters, metrics, name, reason):
-    """Return one line of the history: the parameters and the objective, with a failed reason."""
-    metric = metrics.get(name, value(None, "-", reason))
-    return {"parameters": parameters, **metric} | ({"reason": reason} if reason else {})
+    """Return one line of the history: the objective, with the parameters and a failed reason."""
+    metric = metrics.get(name, measure(None, "-", reason))
+    return Value(
+        metric.value,
+        metric.unit,
+        reason or metric.reason,
+        metric.parts | {"parameters": parameters},
+    )
 
 
 def _checked_variables(plant, variables):
@@ -44,15 +57,18 @@ def _checked_variables(plant, variables):
             code="missing_value",
         )
     names = [join_path(item["path"], item["parameter"]) for item in variables]
+    bounds = []
     for name, item in zip(names, variables):
         plant.get(name)
-        if not item["lower"] < item["upper"]:
+        lower, upper = (parameter_si(plant, name, item[end]) for end in ("lower", "upper"))
+        if not lower < upper:
             raise ValidationError(
                 f"optim.minimize: {name}: lower = {item['lower']}, upper = {item['upper']}; "
                 "expected lower below upper",
                 path=name,
             )
-    return names, [(item["lower"], item["upper"]) for item in variables]
+        bounds.append((lower, upper))
+    return names, bounds
 
 
 def _generations(evaluations, count):
@@ -69,10 +85,10 @@ def _generations(evaluations, count):
 
 def _best(history, sign):
     """Return the best trial without a reason, or ``None`` with the reason there is none."""
-    accepted = [item for item in history if "reason" not in item]
+    accepted = [item for item in history if item.reason is None]
     if not accepted:
-        return {"parameters": None, **value(None, "-", "every trial failed or broke a constraint")}
-    return min(accepted, key=lambda item: sign * item["value"])
+        return measure(None, "-", "every trial failed or broke a constraint", parameters=None)
+    return min(accepted, key=lambda item: sign * item.value)
 
 
 def minimize(
@@ -105,13 +121,15 @@ def minimize(
         nor a plan the call raises ``missing_value``.
     variables : list of dict
         The decision variables, each ``{path, parameter, lower, upper}``: the module path, the
-        parameter name and its closed bounds in the parameter's SI unit.
+        parameter name and its closed bounds, each a ``Quantity`` or its dict (a plain number only
+        for a parameter without a dimension).
     objective : str
         The metric to minimise, a KPI of ``gm.evaluate.totals`` or ``lcoh``, ``lcoc``, ``lcts``,
         ``annualised_cost`` or ``co2``; a metric to maximise is given with a leading ``"-"``.
     constraints : list of dict, optional
-        Limits on metrics, each ``{metric, minimum, maximum}`` in the unit of the metric, either
-        limit optional; a trial that breaks one is rejected.
+        Limits on metrics, each ``{metric, minimum, maximum}`` with ``Quantity`` limits (a plain
+        number only for a metric without a dimension), either limit optional; a trial that breaks
+        one is rejected.
     evaluations : int
         The largest number of simulations; at least five per variable, and at least five.
     plan : DataFrame, optional
@@ -121,11 +139,12 @@ def minimize(
     Returns
     -------
     dict
-        Plain JSON ``{best, history, evaluations}``: ``best`` is ``{parameters, value, unit}``
-        with ``parameters`` as ``{"path.parameter": value}`` in SI, ready for ``set_params``;
-        ``history`` lists every trial's parameters and objective, with a ``reason`` for a trial
-        that failed or broke a constraint, which is never ``best``; ``evaluations`` is the number
-        of simulations. Without an accepted trial, ``best`` has no value and gives a ``reason``.
+        ``{best, history, evaluations}``: ``best`` is the objective as a ``Value`` in SI, whose
+        ``parts["parameters"]`` are ``{"path.parameter": Quantity}``, ready for ``set_params``;
+        ``history`` lists the same for every trial, with a ``reason`` for a trial that failed or
+        broke a constraint, which is never ``best``; ``evaluations`` is the number of simulations.
+        Without an accepted trial, ``best`` has no value and gives a ``reason``. ``to_plain``
+        gives the JSON form.
     """
     name = checked_metric(objective.removeprefix("-"), problem)
     sign = -1.0 if objective.startswith("-") else 1.0
@@ -139,9 +158,9 @@ def minimize(
     def evaluated(point):
         parameters = dict(zip(keys, map(float, point)))
         metrics, reason = run_trial(plant, problem, plan, parameters, names)
-        reason = reason or metrics[name].get("reason") or _broken_constraint(metrics, constraints)
-        history.append(_entry(parameters, metrics, name, reason))
-        return np.inf if reason else sign * metrics[name]["value"]
+        reason = reason or metrics[name].reason or _broken_constraint(metrics, constraints)
+        history.append(_entry(quantities(plant, parameters), metrics, name, reason))
+        return np.inf if reason else sign * metrics[name].value
 
     differential_evolution(
         evaluated,
@@ -152,4 +171,4 @@ def minimize(
         polish=False,
         seed=SEED,
     )
-    return to_plain({"best": _best(history, sign), "history": history, "evaluations": len(history)})
+    return {"best": _best(history, sign), "history": history, "evaluations": len(history)}

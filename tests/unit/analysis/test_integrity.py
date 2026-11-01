@@ -12,8 +12,8 @@ from gemini.physics import corrosion
 MODEL = {
     "correlation": "DLM",
     "conditions": {
-        "temperature": "50 degC",
-        "pressure": "3 bar",
+        "temperature": {"value": 50, "unit": "degC"},
+        "pressure": {"value": 3, "unit": "bar"},
         "co2_fraction": 1,
         "water_flow_rate": math.pi * 0.1**2 / 4,
         "diameter": 0.1,

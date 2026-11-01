@@ -36,18 +36,18 @@ def print_year(plant, problem, results):
     boiler = boiler - frame["peak_boiler.fluid_in.enthalpy_flow"]
     cold = frame["cooling_consumer.supply_in.mass_flow"] > 0
     rows = (
-        ("heat delivered", totals["heat_delivered"]["value"] / GWH, "GWh"),
-        ("heat useful", totals["heat_useful"]["value"] / GWH, "GWh"),
-        ("heat surplus", totals["heat_surplus"]["value"] / GWH, "GWh"),
+        ("heat delivered", totals["heat_delivered"].value / GWH, "GWh"),
+        ("heat useful", totals["heat_useful"].value / GWH, "GWh"),
+        ("heat surplus", totals["heat_surplus"].value / GWH, "GWh"),
         ("heat unmet", frame["heating_consumer.unmet_demand"].sum() * 86400 / GWH, "GWh"),
-        ("cold delivered", totals["cold_delivered"]["value"] / GWH, "GWh"),
-        ("cold useful", totals["cold_useful"]["value"] / GWH, "GWh"),
-        ("cold surplus", totals["cold_surplus"]["value"] / GWH, "GWh"),
+        ("cold delivered", totals["cold_delivered"].value / GWH, "GWh"),
+        ("cold useful", totals["cold_useful"].value / GWH, "GWh"),
+        ("cold surplus", totals["cold_surplus"].value / GWH, "GWh"),
         ("cold unmet", frame["cooling_consumer.unmet_sensible"].sum() * 86400 / GWH, "GWh"),
         ("boiler", boiler.sum() * 86400 / GWH, "GWh"),
         ("boiler, peak", boiler.max() / 1e6, "MW"),
-        ("electricity", totals["electricity_bought"]["value"] / GWH, "GWh"),
-        ("gas bought", totals["gas_bought"]["value"] / GWH, "GWh"),
+        ("electricity", totals["electricity_bought"].value / GWH, "GWh"),
+        ("gas bought", totals["gas_bought"].value / GWH, "GWh"),
         (
             "heating supply",
             frame["heating_consumer.supply_in.temperature"].min() - 273.15,
@@ -69,7 +69,7 @@ def print_checks(checks):
     print("\nRequirements:")
     for item in checks:
         result = "ok" if item["passed"] else "VIOLATED"
-        worst, unit = item["value"]["value"], item["value"]["unit"]
+        worst, unit = item["value"].value, item["value"].unit
         if unit == "m3/s" and "flow" in item["name"]:
             worst, unit = gm.units.convert(worst, unit, "m3/h"), "m³/h"
         if unit == "K" and item["name"].endswith("temperature"):
@@ -89,7 +89,7 @@ def main():
     print_year(plant, problem, results)
     print_checks(gm.evaluate.constraints(plant, problem, results))
     lcts = gm.evaluate.lcts(plant, problem, results)
-    print(f"\nLCTS, on the placeholder prices above: {lcts['value'] * MWH:.2f} EUR/MWh")
+    print(f"\nLCTS, on the placeholder prices above: {lcts.value * MWH:.2f} EUR/MWh")
 
 
 if __name__ == "__main__":

@@ -36,8 +36,9 @@ SERIES_UNITS = {
 }
 """Stored SI unit and quantity of the result fields that ``ModuleSeries.get`` can convert.
 
-``Results.units`` states the unit of every field for the JSON views; ``ModuleSeries.get`` keeps
-converting only these six, because it needs the quantity of a difference, which is not stored.
+``Results.units`` maps every column to its unit and ``Results.declared`` holds them by path;
+``ModuleSeries.get`` keeps converting only these six, because it needs the quantity of a
+difference, which is not stored.
 """
 
 
@@ -119,7 +120,8 @@ class Results:
     """Collect finite timestep outputs, energy totals, health, errors and explicit skips.
 
     Results are columnar. ``commit(chunk)`` is the one way in: a ``ResultChunk`` of any length,
-    one tick included. Chunks concatenate lazily in ``to_frame``. ``units`` maps
+    one tick included. Chunks concatenate lazily in ``to_frame``. ``units`` maps each column,
+    ``"<path>.<field>"``, to its SI unit, as ``to_frame`` names the columns. ``declared`` maps
     ``{path: {field: unit}}`` to the SI unit of each output field, as the plant declares it
     (a field without an entry is dimensionless, ``"-"``), ``quantities`` likewise to its quantity
     (``None`` when it has none, and then ``units=`` leaves it alone), and ``end_state`` is the plain
@@ -127,7 +129,7 @@ class Results:
     view takes ``units``, a map from quantity to unit (``OutputUnits``): nothing stored changes.
     """
 
-    def __init__(self, units=None):
+    def __init__(self, declared=None):
         """Start an independent result table."""
         self._chunks, self._order = [], {}
         self._times, self._dt = [], []
@@ -136,9 +138,14 @@ class Results:
         self._skips = []
         self._frame = None
         self._series = None
-        self.units = dict(units or {})
+        self.declared = dict(declared or {})
         self.quantities = {}
         self.end_state = None
+
+    @property
+    def units(self):
+        """The SI unit of every column, ``{"<path>.<field>": unit}``, as ``to_frame`` names them."""
+        return {join_path(path, field): self.unit(path, field) for path, field in self._order}
 
     @property
     def failures(self):
@@ -262,7 +269,7 @@ class Results:
 
     def unit(self, path, field):
         """Return the SI unit of a field; a field the plant gives no unit is ``"-"``."""
-        return self.units.get(path, {}).get(field, "-")
+        return self.declared.get(path, {}).get(field, "-")
 
     def quantity(self, path, field):
         """Return the quantity of a field, or ``None`` for one the plant gives none."""
@@ -470,7 +477,7 @@ class Results:
             failures=self._failures,
             skips=self._skips,
             energy=sorted(self._energy),
-            units=self.units,
+            units=self.declared,
             quantities=self.quantities,
             end_state=self.end_state,
         )
@@ -522,14 +529,14 @@ class Results:
         result._failures = metadata["failures"]
         result._skips = metadata["skips"]
         result._energy = {tuple(key) for key in metadata["energy"]}
-        result.units = metadata["units"]
+        result.declared = metadata["units"]
         result.quantities = metadata["quantities"]
         result.end_state = metadata["end_state"]
         return result
 
     def slice(self, start):
         """Return the new rows of a live call, with matching durations and diagnostics."""
-        result = Results(self.units)
+        result = Results(self.declared)
         result.quantities = self.quantities
         result.end_state = self.end_state
         if self._chunks:

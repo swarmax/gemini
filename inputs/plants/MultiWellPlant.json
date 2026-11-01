@@ -1,14 +1,14 @@
 {
   "plant": "MultiWellPlant",
   "params": {
-    "producers.0.reservoir.pressure": "220 bar",
-    "producers.0.reservoir.temperature": "80 degC",
-    "producers.0.reservoir.permeability": "9.869233e-12 m2",
-    "producers.0.reservoir.aquifer_thickness": "45 m",
-    "producers.0.reservoir.drainage_radius": "1000 m",
-    "producers.0.reservoir.top_depth": "1800 m",
-    "producers.0.reservoir.productivity_index": "5.833333333333333e-08 m3/s/Pa",
-    "producers.0.reservoir.wellbore_radius": "0.0765 m",
+    "producers.0.reservoir.pressure": {"value": 220, "unit": "bar"},
+    "producers.0.reservoir.temperature": {"value": 80, "unit": "degC"},
+    "producers.0.reservoir.permeability": {"value": 9.869233e-12, "unit": "m2"},
+    "producers.0.reservoir.aquifer_thickness": {"value": 45, "unit": "m"},
+    "producers.0.reservoir.drainage_radius": {"value": 1000, "unit": "m"},
+    "producers.0.reservoir.top_depth": {"value": 1800, "unit": "m"},
+    "producers.0.reservoir.productivity_index": {"value": 5.833333333333333e-08, "unit": "m3/s/Pa"},
+    "producers.0.reservoir.wellbore_radius": {"value": 0.0765, "unit": "m"},
     "producers.0.well.pipe_path": {
       "sections": [
         {
@@ -79,9 +79,9 @@
         }
       ]
     },
-    "producers.0.well.soil_temperature": "15 degC",
+    "producers.0.well.soil_temperature": {"value": 15, "unit": "degC"},
     "producers.0.well.segment": "below_esp",
-    "producers.0.well.esp_depth": "600 m",
+    "producers.0.well.esp_depth": {"value": 600, "unit": "m"},
     "producers.0.esp.stage_count": 15,
     "producers.0.esp.head_coefficients": [
       125.518426,
@@ -100,11 +100,11 @@
       0.0
     ],
     "producers.0.esp.pump_type": "DEFAULT-PUMP",
-    "producers.0.esp.setting_depth": "600 m",
-    "producers.0.esp.minimum_flow": "82 m3/h",
-    "producers.0.esp.maximum_flow": "178 m3/h",
-    "producers.0.esp.best_efficiency_flow": "129.98 m3/h",
-    "producers.0.esp.tubing": "0.1778 m",
+    "producers.0.esp.setting_depth": {"value": 600, "unit": "m"},
+    "producers.0.esp.minimum_flow": {"value": 82, "unit": "m3/h"},
+    "producers.0.esp.maximum_flow": {"value": 178, "unit": "m3/h"},
+    "producers.0.esp.best_efficiency_flow": {"value": 129.98, "unit": "m3/h"},
+    "producers.0.esp.tubing": {"value": 0.1778, "unit": "m"},
     "producers.0.riser.pipe_path": {
       "sections": [
         {
@@ -175,17 +175,17 @@
         }
       ]
     },
-    "producers.0.riser.soil_temperature": "15 degC",
+    "producers.0.riser.soil_temperature": {"value": 15, "unit": "degC"},
     "producers.0.riser.segment": "above_esp",
-    "producers.0.riser.esp_depth": "600 m",
-    "producers.1.reservoir.pressure": "220 bar",
-    "producers.1.reservoir.temperature": "80 degC",
-    "producers.1.reservoir.permeability": "9.869233e-12 m2",
-    "producers.1.reservoir.aquifer_thickness": "45 m",
-    "producers.1.reservoir.drainage_radius": "1000 m",
-    "producers.1.reservoir.top_depth": "1800 m",
-    "producers.1.reservoir.productivity_index": "5.833333333333333e-08 m3/s/Pa",
-    "producers.1.reservoir.wellbore_radius": "0.0765 m",
+    "producers.0.riser.esp_depth": {"value": 600, "unit": "m"},
+    "producers.1.reservoir.pressure": {"value": 220, "unit": "bar"},
+    "producers.1.reservoir.temperature": {"value": 80, "unit": "degC"},
+    "producers.1.reservoir.permeability": {"value": 9.869233e-12, "unit": "m2"},
+    "producers.1.reservoir.aquifer_thickness": {"value": 45, "unit": "m"},
+    "producers.1.reservoir.drainage_radius": {"value": 1000, "unit": "m"},
+    "producers.1.reservoir.top_depth": {"value": 1800, "unit": "m"},
+    "producers.1.reservoir.productivity_index": {"value": 5.833333333333333e-08, "unit": "m3/s/Pa"},
+    "producers.1.reservoir.wellbore_radius": {"value": 0.0765, "unit": "m"},
     "producers.1.well.pipe_path": {
       "sections": [
         {
@@ -256,9 +256,9 @@
         }
       ]
     },
-    "producers.1.well.soil_temperature": "15 degC",
+    "producers.1.well.soil_temperature": {"value": 15, "unit": "degC"},
     "producers.1.well.segment": "below_esp",
-    "producers.1.well.esp_depth": "600 m",
+    "producers.1.well.esp_depth": {"value": 600, "unit": "m"},
     "producers.1.esp.stage_count": 15,
     "producers.1.esp.head_coefficients": [
       125.518426,
@@ -277,11 +277,11 @@
       0.0
     ],
     "producers.1.esp.pump_type": "DEFAULT-PUMP",
-    "producers.1.esp.setting_depth": "600 m",
-    "producers.1.esp.minimum_flow": "82 m3/h",
-    "producers.1.esp.maximum_flow": "178 m3/h",
-    "producers.1.esp.best_efficiency_flow": "129.98 m3/h",
-    "producers.1.esp.tubing": "0.1778 m",
+    "producers.1.esp.setting_depth": {"value": 600, "unit": "m"},
+    "producers.1.esp.minimum_flow": {"value": 82, "unit": "m3/h"},
+    "producers.1.esp.maximum_flow": {"value": 178, "unit": "m3/h"},
+    "producers.1.esp.best_efficiency_flow": {"value": 129.98, "unit": "m3/h"},
+    "producers.1.esp.tubing": {"value": 0.1778, "unit": "m"},
     "producers.1.riser.pipe_path": {
       "sections": [
         {
@@ -352,9 +352,9 @@
         }
       ]
     },
-    "producers.1.riser.soil_temperature": "15 degC",
+    "producers.1.riser.soil_temperature": {"value": 15, "unit": "degC"},
     "producers.1.riser.segment": "above_esp",
-    "producers.1.riser.esp_depth": "600 m",
+    "producers.1.riser.esp_depth": {"value": 600, "unit": "m"},
     "injectors.0.well.pipe_path": {
       "sections": [
         {
@@ -377,15 +377,15 @@
         }
       ]
     },
-    "injectors.0.well.soil_temperature": "15 degC",
-    "injectors.0.sink.pressure": "220 bar",
-    "injectors.0.sink.temperature": "80 degC",
-    "injectors.0.sink.permeability": "9.869233e-12 m2",
-    "injectors.0.sink.aquifer_thickness": "45 m",
-    "injectors.0.sink.drainage_radius": "0 m",
-    "injectors.0.sink.top_depth": "0 m",
-    "injectors.0.sink.injectivity_index": "5.5555555555555555e-08 m3/s/Pa",
-    "injectors.0.sink.wellbore_radius": "0.0765 m"
+    "injectors.0.well.soil_temperature": {"value": 15, "unit": "degC"},
+    "injectors.0.sink.pressure": {"value": 220, "unit": "bar"},
+    "injectors.0.sink.temperature": {"value": 80, "unit": "degC"},
+    "injectors.0.sink.permeability": {"value": 9.869233e-12, "unit": "m2"},
+    "injectors.0.sink.aquifer_thickness": {"value": 45, "unit": "m"},
+    "injectors.0.sink.drainage_radius": {"value": 0, "unit": "m"},
+    "injectors.0.sink.top_depth": {"value": 0, "unit": "m"},
+    "injectors.0.sink.injectivity_index": {"value": 5.5555555555555555e-08, "unit": "m3/s/Pa"},
+    "injectors.0.sink.wellbore_radius": {"value": 0.0765, "unit": "m"}
   },
   "fluids": {
     "producers.0.reservoir": {

@@ -13,13 +13,13 @@ from tests.fixtures.reading import reading
 
 CP = 4217.4
 SUPPLY = Stream(m_dot=2.0, T=280.15, p=3e5)
-INDOOR = dict(indoor_temperature="24 C", indoor_relative_humidity=0.5)
+INDOOR = dict(indoor_temperature={"value": 24, "unit": "C"}, indoor_relative_humidity=0.5)
 AVAILABLE = 2 * CP * 9
 
 
 def _consumer():
     return CoolingGrid().set_params(
-        "", {"maximum_return_temperature": "16 C", "dew_point_margin": 3}
+        "", {"maximum_return_temperature": {"value": 16, "unit": "C"}, "dew_point_margin": 3}
     )
 
 
@@ -78,7 +78,7 @@ def test_supply_above_the_dew_point_margin_leaves_the_latent_load_unmet():
 def test_indoor_temperature_limits_the_return():
     """The water cannot return warmer than the indoor air; a warm supply absorbs nothing."""
     consumer = _consumer()
-    out = reading(_call(consumer, sensible=1e6, indoor_temperature="12 C"))
+    out = reading(_call(consumer, sensible=1e6, indoor_temperature={"value": 12, "unit": "C"}))
     assert out.return_out_T == 285.15 and out.heat_absorbed == pytest.approx(2 * CP * 5)
     out = reading(_call(consumer, supply=SUPPLY.with_(T=300.0)))
     assert out.heat_absorbed == 0 and out.return_out_T == 300.0 and out.unmet_sensible == 5e4

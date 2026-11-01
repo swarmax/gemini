@@ -18,8 +18,13 @@ HOURS = 12
 HEAT_MW = 12.0
 COLD_MW = 5.0
 LIMITS = [
-    gm.Constraint("d*.reservoir.liquid_flow", min="60 m3/h", max="320 m3/h", when="running"),
-    gm.Constraint("d*.brine_cooling", max="45 K", when="running"),
+    gm.Constraint(
+        "d*.reservoir.liquid_flow",
+        min={"value": 60, "unit": "m3/h"},
+        max={"value": 320, "unit": "m3/h"},
+        when="running",
+    ),
+    gm.Constraint("d*.brine_cooling", max={"value": 45, "unit": "K"}, when="running"),
 ]
 
 
@@ -112,7 +117,10 @@ def test_a_plant_runs_on_one_to_three_doublets(demand, doublets):
 def test_a_chosen_depth_sets_the_reservoir():
     """The plant's ``depth`` reaches each doublet, whose geotherm gives its temperature."""
     shallow, deep = sized_dict(2), sized_dict(2)
-    shallow["params"]["depth"], deep["params"]["depth"] = "2000 m", "3000 m"
+    shallow["params"]["depth"], deep["params"]["depth"] = {"value": 2000, "unit": "m"}, {
+        "value": 3000,
+        "unit": "m",
+    }
     gradient = gm.units.convert(1, "K/km", "K/m") * 30
     sited = [sample_problem().apply_site(gm.Plant.from_dict(data)) for data in (deep, shallow)]
     lift = sited[0].d1.reservoir.temperature - sited[1].d1.reservoir.temperature
@@ -124,23 +132,30 @@ def test_co_produced_gas_goes_to_the_boiler_before_the_grid(plant, demand, resul
     produced = results.get("degasser", "gas_out.chemical_flow")["value"]
     assert min(produced) > 0
     fuel = gm.evaluate.totals(plant, problem_of(demand), results)
-    assert fuel["gas_bought"]["value"] == pytest.approx(0.0, abs=1e-6)
+    assert fuel["gas_bought"].value == pytest.approx(0.0, abs=1e-6)
     assert max(results.get("gas_grid", "gas_out.chemical_flow")["value"]) < max(produced)
 
 
 def test_a_limit_on_the_flow_range_of_each_doublet(plant, demand, results):
     """One check per doublet; a range the run leaves fails."""
     checks = worst(
-        plant, demand, results, "d*.reservoir.liquid_flow", min="60 m3/h", max="320 m3/h"
+        plant,
+        demand,
+        results,
+        "d*.reservoir.liquid_flow",
+        min={"value": 60, "unit": "m3/h"},
+        max={"value": 320, "unit": "m3/h"},
     )
     assert [item["passed"] for item in checks] == [True, True]
-    tight = worst(plant, demand, results, "d*.reservoir.liquid_flow", max="10 m3/h")
+    tight = worst(
+        plant, demand, results, "d*.reservoir.liquid_flow", max={"value": 10, "unit": "m3/h"}
+    )
     assert not all(item["passed"] for item in tight)
 
 
 def test_a_limit_on_the_brine_cooling(plant, demand, results):
     """The cooling of the brine from producer to injector, each doublet."""
-    checks = worst(plant, demand, results, "d*.brine_cooling", max="45 K")
+    checks = worst(plant, demand, results, "d*.brine_cooling", max={"value": 45, "unit": "K"})
     assert [item["passed"] for item in checks] == [True, True]
 
 
@@ -153,14 +168,33 @@ def test_a_limit_on_a_parameter(plant, demand, results):
 
 def test_a_limit_on_the_volume_balance(plant, demand, results):
     """What a doublet produces it injects again."""
-    checks = worst(plant, demand, results, "d*.volume_imbalance", min="-1e-6 m3/s", max="1e-6 m3/s")
+    checks = worst(
+        plant,
+        demand,
+        results,
+        "d*.volume_imbalance",
+        min={"value": -1e-6, "unit": "m3/s"},
+        max={"value": 1e-6, "unit": "m3/s"},
+    )
     assert [item["passed"] for item in checks] == [True, True]
 
 
 def test_limits_on_the_supply_temperatures(plant, demand, results):
     """The supply at the heat users and at the cold users."""
-    heat = worst(plant, demand, results, "heating_consumer.supply_in.temperature", min="95 degC")
-    cold = worst(plant, demand, results, "cooling_consumer.supply_in.temperature", max="21 degC")
+    heat = worst(
+        plant,
+        demand,
+        results,
+        "heating_consumer.supply_in.temperature",
+        min={"value": 95, "unit": "degC"},
+    )
+    cold = worst(
+        plant,
+        demand,
+        results,
+        "cooling_consumer.supply_in.temperature",
+        max={"value": 21, "unit": "degC"},
+    )
     assert heat[0]["passed"] and cold[0]["passed"]
 
 
@@ -172,14 +206,18 @@ def duration(**bound):
 def test_a_limit_on_the_operating_time(demand):
     """Each doublet runs the time of the rule, with its outages at whole steps."""
     plant = gm.Plant.from_dict(sized_dict(2))
-    results = run_on(plant, demand, duration(max="11 h"))
-    problem = gm.Problem(demand, sample_problem().site, [duration(equals="11 h")])
+    results = run_on(plant, demand, duration(max={"value": 11, "unit": "h"}))
+    problem = gm.Problem(
+        demand, sample_problem().site, [duration(equals={"value": 11, "unit": "h"})]
+    )
     checks = gm.evaluate.constraints(plant, problem, results)
     assert [item["passed"] for item in checks] == [True, True]
-    problem = gm.Problem(demand, sample_problem().site, [duration(equals="5 h")])
+    problem = gm.Problem(
+        demand, sample_problem().site, [duration(equals={"value": 5, "unit": "h"})]
+    )
     assert not gm.evaluate.constraints(plant, problem, results)[0]["passed"]
 
 
 def test_a_levelised_cost_of_heat_and_cold_together(plant, demand, results):
     """LCTS of the run on stated prices."""
-    assert gm.evaluate.lcts(plant, problem_of(demand), results)["value"] > 0
+    assert gm.evaluate.lcts(plant, problem_of(demand), results).value > 0

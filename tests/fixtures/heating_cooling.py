@@ -13,8 +13,13 @@ HEAT = 12e6
 COLD = 5e6
 """Cooling demand of the days [W]."""
 CONSTRAINTS = [
-    gm.Constraint("d*.reservoir.liquid_flow", min="50 m3/h", max="300 m3/h", when="running"),
-    gm.Constraint("d*.brine_cooling", max="40 K", when="running"),
+    gm.Constraint(
+        "d*.reservoir.liquid_flow",
+        min={"value": 50, "unit": "m3/h"},
+        max={"value": 300, "unit": "m3/h"},
+        when="running",
+    ),
+    gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}, when="running"),
 ]
 
 

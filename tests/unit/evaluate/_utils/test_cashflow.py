@@ -8,7 +8,12 @@ from gemini.units import SECONDS_PER_YEAR
 from tests.fixtures.costed_plants import day, heating_plant
 from tests.fixtures.result_tables import make_problem
 
-PRICES = gm.Assumptions(prices={"electricity": 2e-8, "heat": 5e-8})
+PRICES = gm.Assumptions(
+    prices={
+        "electricity": gm.units.Quantity(2e-8, "currency/J"),
+        "heat": gm.units.Quantity(5e-8, "currency/J"),
+    }
+)
 
 
 def test_the_net_cash_flow_is_the_revenue_less_the_yearly_cost():
@@ -17,7 +22,7 @@ def test_the_net_cash_flow_is_the_revenue_less_the_yearly_cost():
     capex, flow, unit, reason = net_cash_flow(heating_plant(), problem, day(), "raise")
     heat = 1000.0 * SECONDS_PER_YEAR
     opex = 10.0 + 1e-9 * heat + 2e-8 * 100.0 * SECONDS_PER_YEAR
-    assert (capex, unit, reason) == (1000.0, "EUR", None)
+    assert (capex, unit, reason) == (1000.0, "currency", None)
     assert flow == pytest.approx(5e-8 * heat - opex, rel=1e-12)
 
 

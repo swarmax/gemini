@@ -630,15 +630,15 @@
   "bindings": {},
   "param_history": {},
   "inputs": {
-    "heat_pump.temperature_setpoint": "100 degC",
-    "boiler.temperature_setpoint": "100 degC",
-    "chiller.temperature_setpoint": "20 degC",
-    "cool_users.indoor_temperature": "26 degC",
+    "heat_pump.temperature_setpoint": {"value": 100, "unit": "degC"},
+    "boiler.temperature_setpoint": {"value": 100, "unit": "degC"},
+    "chiller.temperature_setpoint": {"value": 20, "unit": "degC"},
+    "cool_users.indoor_temperature": {"value": 26, "unit": "degC"},
     "cool_users.indoor_relative_humidity": 0.5,
-    "chiller_cooler.temperature_setpoint": "15 degC",
-    "chiller_cooler.flow": "800 kg/s",
-    "air.temperature": "10 degC",
-    "desander.sand_concentration": "20 mg/l",
-    "dosing.dose": "10 ppm"
+    "chiller_cooler.temperature_setpoint": {"value": 15, "unit": "degC"},
+    "chiller_cooler.flow": {"value": 800, "unit": "kg/s"},
+    "air.temperature": {"value": 10, "unit": "degC"},
+    "desander.sand_concentration": {"value": 20, "unit": "mg/l"},
+    "dosing.dose": {"value": 10, "unit": "ppm"}
   }
 }

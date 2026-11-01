@@ -18,7 +18,7 @@ def spec():
         "modules": {
             "degasser": {"type": "Degasser", "params": {}},
             "filters": {"type": "ModuleDict", "modules": {"hot": {"type": "Filter", "params": {}}}},
-            "pipe": {"type": "Pipe", "params": {"length": "100 ft"}},
+            "pipe": {"type": "Pipe", "params": {"length": {"value": 100, "unit": "ft"}}},
         },
         "connections": [{"source": "degasser.liquid_out", "target": "filters.hot.fluid_in"}],
         "inlets": {"feed": "degasser.fluid_in", "pipe_in": "pipe.fluid_in", "air": "pipe.air_in"},
@@ -64,7 +64,11 @@ def test_a_valid_spec_has_no_problems(spec):
 def test_every_problem_is_reported_at_once_with_its_path(spec):
     """Several mistakes give several problems, none raised."""
     spec["modules"]["degasser"]["type"] = "Degaser"
-    spec["modules"]["pipe"]["params"] = {"length": "2 bar", "lenght": 1, "diameter": -1}
+    spec["modules"]["pipe"]["params"] = {
+        "length": {"value": 2, "unit": "bar"},
+        "lenght": 1,
+        "diameter": -1,
+    }
     codes = {item["path"]: item["code"] for item in gm.plants.validate(spec, on_error="record")}
     assert codes["modules.degasser.type"] == "unknown_name"
     assert codes["modules.pipe.params.length"] == "invalid_unit"

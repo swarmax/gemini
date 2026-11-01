@@ -15,30 +15,44 @@ import gemini as gm
 
 DEMAND = Path(__file__).resolve().parents[2] / "inputs/examples/hackathon_2027"
 
-BRINE = gm.Fluid(density="1030 kg/m3", viscosity="0.4 mPa*s", specific_heat="4000 J/kg/K")
+BRINE = gm.Fluid(
+    density={"value": 1030, "unit": "kg/m3"},
+    viscosity={"value": 0.4, "unit": "mPa*s"},
+    specific_heat={"value": 4000, "unit": "J/kg/K"},
+)
 DOUBLET = {
-    "depth": "2500 m",
-    "gradient": "30 K/km",
-    "surface_temperature": "12 degC",
-    "permeability": "200 mD",
-    "thickness": "100 m",
-    "well_diameter": "0.244 m",
-    "nominal_flow": "300 m3/h",
+    "depth": {"value": 2500, "unit": "m"},
+    "gradient": {"value": 30, "unit": "K/km"},
+    "surface_temperature": {"value": 12, "unit": "degC"},
+    "permeability": {"value": 200, "unit": "mD"},
+    "thickness": {"value": 100, "unit": "m"},
+    "well_diameter": {"value": 0.244, "unit": "m"},
+    "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
-    "nominal_wellhead_pressure": "10 bar",
+    "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
 }
 EXCHANGER = {
-    "thermal_conductance": "2000000 W/K",
-    "hot_nominal_pressure_drop": "0 bar",
-    "cold_nominal_pressure_drop": "0 bar",
-    "hot_nominal_mass_flow": "85 kg/s",
-    "cold_nominal_mass_flow": "85 kg/s",
+    "thermal_conductance": {"value": 2000000, "unit": "W/K"},
+    "hot_nominal_pressure_drop": {"value": 0, "unit": "bar"},
+    "cold_nominal_pressure_drop": {"value": 0, "unit": "bar"},
+    "hot_nominal_mass_flow": {"value": 85, "unit": "kg/s"},
+    "cold_nominal_mass_flow": {"value": 85, "unit": "kg/s"},
 }
 CONSTRAINTS = [
-    gm.Constraint("d*.reservoir.liquid_flow", min="50 m3/h", max="300 m3/h", when="running"),
-    gm.Constraint("d*.brine_cooling", max="40 K", when="running"),
+    gm.Constraint(
+        "d*.reservoir.liquid_flow",
+        min={"value": 50, "unit": "m3/h"},
+        max={"value": 300, "unit": "m3/h"},
+        when="running",
+    ),
+    gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}, when="running"),
 ]
-PRICES = gm.Assumptions(prices={"electricity": "100 EUR/MWh", "gas": "40 EUR/MWh"})
+PRICES = gm.Assumptions(
+    prices={
+        "electricity": {"value": 100, "unit": "EUR/MWh"},
+        "gas": {"value": 40, "unit": "EUR/MWh"},
+    }
+)
 
 
 def build():
@@ -47,8 +61,13 @@ def build():
     plant.add("Doublet", name="d0", params=DOUBLET)
     plant.d0.fluid = BRINE
     plant.add("HeatExchanger", name="hx", params=EXCHANGER)
-    plant.add("Boiler", name="boiler", params={"capacity": "40 MW", "efficiency": 0.9})
-    users = {"return_temperature": "60 degC", "return_pressure": "6 bar"}
+    plant.add(
+        "Boiler", name="boiler", params={"capacity": {"value": 40, "unit": "MW"}, "efficiency": 0.9}
+    )
+    users = {
+        "return_temperature": {"value": 60, "unit": "degC"},
+        "return_pressure": {"value": 6, "unit": "bar"},
+    }
     plant.add("HeatingGrid", name="users", params=users)
     plant.users.fluid = gm.WATER
     plant.add("GasGrid", name="gas")
@@ -63,8 +82,8 @@ def build():
     plant.connect("grid.power_out", "d0.power_in")
     plant.connect("boiler.flue_out", "air.gas_in")
     plant.connect("boiler.loss_out", "air.heat_in")
-    plant.boiler.temperature_setpoint = "100 degC"
-    plant.air.temperature = "10 degC"
+    plant.boiler.temperature_setpoint = {"value": 100, "unit": "degC"}
+    plant.air.temperature = {"value": 10, "unit": "degC"}
     return plant
 
 
@@ -84,9 +103,9 @@ def main():
     print(f"Boiler, peak:     {plan['boiler_duty'].max() / 1e6:.2f} MW")
     results = gm.simulate(plant, problem, plan=plan)
     totals = gm.evaluate.totals(plant, problem, results)
-    print(f"Heat delivered:   {totals['heat_delivered']['value'] / 3.6e12:.2f} GWh")
-    print(f"Gas bought:       {totals['gas_bought']['value'] / 3.6e12:.2f} GWh")
-    print(f"Electricity:      {totals['electricity_bought']['value'] / 3.6e12:.2f} GWh")
+    print(f"Heat delivered:   {totals['heat_delivered'].value / 3.6e12:.2f} GWh")
+    print(f"Gas bought:       {totals['gas_bought'].value / 3.6e12:.2f} GWh")
+    print(f"Electricity:      {totals['electricity_bought'].value / 3.6e12:.2f} GWh")
 
 
 if __name__ == "__main__":

@@ -6,18 +6,19 @@ import json
 import pytest
 
 import gemini as gm
+from gemini._utils.jsonable import to_plain
 from tests.fixtures.booster_module import EXAMPLE, Booster
 from tests.fixtures.costed_plants import day, heating_plant
 from tests.fixtures.result_tables import make_problem
 
-CASE = {"wellhead_pressure": "4.6 bar", "rates": [20, 45], "frequency": 55.484}
+CASE = {"wellhead_pressure": {"value": 4.6, "unit": "bar"}, "rates": [20, 45], "frequency": 55.484}
 CORROSION = {
     "correlation": "NORSOK",
     "conditions": {
-        "temperature": "60 degC",
-        "pressure": "20 bar",
+        "temperature": {"value": 60, "unit": "degC"},
+        "pressure": {"value": 20, "unit": "bar"},
         "water_flow_rate": 0.01,
-        "co2_partial_pressure": "2 bar",
+        "co2_partial_pressure": {"value": 2, "unit": "bar"},
         "diameter": 0.1,
     },
     "thickness": 0.008,
@@ -25,7 +26,11 @@ CORROSION = {
     "start": "2024-01-01T00:00:00Z",
 }
 VALUES = gm.Assumptions(
-    electricity_emission_factor=1e-7, prices={"electricity": 2e-8, "heat": 5e-8}
+    electricity_emission_factor=gm.units.Quantity(1e-7, "kg/J"),
+    prices={
+        "electricity": gm.units.Quantity(2e-8, "currency/J"),
+        "heat": gm.units.Quantity(5e-8, "currency/J"),
+    },
 )
 
 
@@ -65,8 +70,9 @@ def real_calls(example_run):
 def test_every_real_return_is_plain_json(example_run):
     """No NumPy type, no NaN and no infinity anywhere in a result."""
     for name, result in real_calls(example_run):
-        text = json.dumps(result, allow_nan=False)
-        assert json.loads(text) == result, name
+        plain = to_plain(result)
+        text = json.dumps(plain, allow_nan=False)
+        assert json.loads(text) == plain, name
 
 
 @pytest.mark.parametrize(

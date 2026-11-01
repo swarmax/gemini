@@ -20,7 +20,7 @@ PRODUCT = ChemicalGrid()._offered()["chemical_out"]
 def test_hand_computed_dose_in_ppm():
     """A 20 ppm product dose on 50 kg/s at 40 % active strength."""
     dosing = InhibitorDosing().set_params("", {"product_concentration": 0.4})
-    result = dosing(fluid_in=INLET, chemical_in=PRODUCT, dose="20 ppm")
+    result = dosing(fluid_in=INLET, chemical_in=PRODUCT, dose={"value": 20, "unit": "ppm"})
     assert reading(result).product_mass_flow == pytest.approx(1e-3)
     assert result.outputs.active_mass_flow == pytest.approx(4e-4)
     assert result.outlets.fluid_out == INLET.with_(m_dot=INLET.m_dot + 1e-3)

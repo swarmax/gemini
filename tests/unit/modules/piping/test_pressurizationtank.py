@@ -33,7 +33,9 @@ class Network(Module):
                 "heat_transfer_coefficient": 2.0,
             },
         )
-        self.valve = Valve().set_params("", {"flow_coefficient": "40 m3/h/bar^0.5"})
+        self.valve = Valve().set_params(
+            "", {"flow_coefficient": {"value": 40, "unit": "m3/h/bar^0.5"}}
+        )
         self.mixer = Mixer()
         self.tank = PressurizationTank()
 
@@ -59,7 +61,9 @@ class Network(Module):
         mixed = self.mixer(
             branch1_in=piped.outlets.fluid_out, branch2_in=throttled.outlets.fluid_out
         )
-        held = self.tank(fluid_in=mixed.outlets.fluid_out, pressure_setpoint="3 bar")
+        held = self.tank(
+            fluid_in=mixed.outlets.fluid_out, pressure_setpoint={"value": 3, "unit": "bar"}
+        )
 
         # Outputs
         self.pressure_correction = held.outputs.pressure_correction
@@ -73,11 +77,13 @@ class Network(Module):
 
 def test_outlet_leaves_at_the_setpoint():
     """The tank sets the pressure and reports the correction; flow and temperature pass."""
-    result = PressurizationTank()(fluid_in=RETURN, pressure_setpoint="2 bar")
+    result = PressurizationTank()(fluid_in=RETURN, pressure_setpoint={"value": 2, "unit": "bar"})
     outlet = result.outlets.fluid_out
     assert outlet.p == 2e5 and (outlet.m_dot, outlet.T) == (10, 323.15)
     assert result.outputs.pressure_correction == pytest.approx(0.8e5)
-    relieved = reading(PressurizationTank()(fluid_in=RETURN, pressure_setpoint="1 bar"))
+    relieved = reading(
+        PressurizationTank()(fluid_in=RETURN, pressure_setpoint={"value": 1, "unit": "bar"})
+    )
     assert relieved.pressure_correction == pytest.approx(-0.2e5)
     reverse = PressurizationTank()(fluid_in=RETURN.with_(m_dot=-1), pressure_setpoint=2e5)
     assert reverse.outlets.fluid_out.m_dot == -1

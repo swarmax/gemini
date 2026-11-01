@@ -11,7 +11,11 @@ import gemini as gm
 from gemini.modules import Inlet, Outlet, Output, Parameter
 from gemini.types import Pressure, PressureDifference, Stream
 
-STREAM = gm.Stream(flow="40 kg/s", T="80 degC", p="6 bar")
+STREAM = gm.Stream(
+    flow={"value": 40, "unit": "kg/s"},
+    T={"value": 80, "unit": "degC"},
+    p={"value": 6, "unit": "bar"},
+)
 
 
 class Orifice(gm.modules.Module):
@@ -50,16 +54,21 @@ class Orifice(gm.modules.Module):
 
 def main():
     """Check the class, call it alone and run it behind a filter in a plant."""
-    example = {"parameters": {"pressure_drop": "1 bar"}, "inlets": {"fluid_in": STREAM}}
+    example = {
+        "parameters": {"pressure_drop": {"value": 1, "unit": "bar"}},
+        "inlets": {"fluid_in": STREAM},
+    }
     report = gm.modules.check(Orifice, example=example)
     print(f"Module checks passed: {report['passed']}")
 
-    alone = Orifice().set_params("", {"pressure_drop": "1 bar"})(fluid_in=STREAM)
+    alone = Orifice().set_params("", {"pressure_drop": {"value": 1, "unit": "bar"}})(
+        fluid_in=STREAM
+    )
     print(f"Alone:                {alone.outputs.get('outlet_pressure', unit='bar'):.3f} bar")
 
     plant = gm.Plant("Throttled")
     plant.add("Filter", name="filter")
-    plant.add("Orifice", name="orifice", params={"pressure_drop": "1 bar"})
+    plant.add("Orifice", name="orifice", params={"pressure_drop": {"value": 1, "unit": "bar"}})
     plant.connect("fluid_in", "filter.fluid_in")
     plant.connect("filter.fluid_out", "orifice.fluid_in")
     plant.connect("orifice.fluid_out", "fluid_out")

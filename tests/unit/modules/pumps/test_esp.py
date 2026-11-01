@@ -116,20 +116,28 @@ def _design():
 
 def test_keyword_mapping_and_positional_calls_agree():
     """Every way to pass the inlet gives one head, and a persisted command is that of the call."""
-    esp, stream = _design(), Stream(flow="150 m3/h", T="80 degC", p="20 bar")
-    head = esp(fluid_in=stream, frequency="50 Hz").outputs.head
-    assert head == esp({"fluid_in": stream}, frequency="50 Hz").outputs.head
-    assert head == esp(stream, frequency="50 Hz").outputs.head
+    esp, stream = _design(), Stream(
+        flow={"value": 150, "unit": "m3/h"},
+        T={"value": 80, "unit": "degC"},
+        p={"value": 20, "unit": "bar"},
+    )
+    head = esp(fluid_in=stream, frequency={"value": 50, "unit": "Hz"}).outputs.head
+    assert head == esp({"fluid_in": stream}, frequency={"value": 50, "unit": "Hz"}).outputs.head
+    assert head == esp(stream, frequency={"value": 50, "unit": "Hz"}).outputs.head
     esp.frequency = 50.0
     assert head == esp(fluid_in=stream).outputs.head
 
 
 def test_no_outputs_keeps_the_outlet_of_a_full_call():
     """Skipping the outputs leaves the outlet stream as it was."""
-    esp, stream = _design(), Stream(flow="150 m3/h", T="80 degC", p="20 bar")
-    full = esp(fluid_in=stream, frequency="50 Hz")
+    esp, stream = _design(), Stream(
+        flow={"value": 150, "unit": "m3/h"},
+        T={"value": 80, "unit": "degC"},
+        p={"value": 20, "unit": "bar"},
+    )
+    full = esp(fluid_in=stream, frequency={"value": 50, "unit": "Hz"})
     with gm.modules.no_outputs():
-        fast = esp(fluid_in=stream, frequency="50 Hz")
+        fast = esp(fluid_in=stream, frequency={"value": 50, "unit": "Hz"})
     assert dict(fast.outputs) == {}
     assert fast.outlets.fluid_out == full.outlets.fluid_out
 

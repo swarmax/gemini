@@ -13,7 +13,12 @@ def test_the_rock_receives_the_heat_of_the_wells():
 def test_a_doublet_passes_it_the_values_of_its_design():
     """The gradient and the surface temperature are those the wells get."""
     doublet = gm.plants.Doublet().set_params(
-        "", {"depth": "2500 m", "gradient": "30 K/km", "surface_temperature": "12 degC"}
+        "",
+        {
+            "depth": {"value": 2500, "unit": "m"},
+            "gradient": {"value": 30, "unit": "K/km"},
+            "surface_temperature": {"value": 12, "unit": "degC"},
+        },
     )
     assert doublet.formation.geothermal_gradient == 0.03
     assert doublet.formation.surface_temperature == 285.15

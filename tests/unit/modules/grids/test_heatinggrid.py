@@ -15,13 +15,13 @@ SUPPLY = Stream(m_dot=2.0, T=343.15, p=3e5)
 
 
 def _consumer():
-    return HeatingGrid().set_params("", {"minimum_return_temperature": "40 C"})
+    return HeatingGrid().set_params("", {"minimum_return_temperature": {"value": 40, "unit": "C"}})
 
 
 def test_met_demand_sets_the_return_temperature():
     """A demand below the available heat is met and cools the stream by Q / (m_dot cp)."""
     consumer = _consumer()
-    result = consumer(supply_in=SUPPLY, heat_demand="100 kW")
+    result = consumer(supply_in=SUPPLY, heat_demand={"value": 100, "unit": "kW"})
     out, return_out = reading(result), result.outlets.return_out
     assert out.heat_supplied == pytest.approx(100e3)
     assert out.unmet_demand == 0 and not out.is_unmet

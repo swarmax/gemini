@@ -29,8 +29,10 @@ def opex(plant, problem, results, on_error="raise"):
 
     Returns
     -------
-    dict
-        ``{value, unit, components}`` with ``unit`` the cost currency per year and ``components``
+    Value
+        A ``gm.units.Quantity`` in SI, with the parts of the result in ``parts`` (``to_plain``
+        gives the JSON). ``{value, unit, components}`` with ``unit`` the cost currency per
+        year and ``components``
         ``{fixed, variable, electricity, fuel, waste, chemical}`` and ``co2`` with a price for it,
         each a value in that unit. With no declared cost and ``on_error="record"``, ``value`` is
         ``None`` with a ``reason``, and only the bills are given. A currency in the assumptions
@@ -38,6 +40,6 @@ def opex(plant, problem, results, on_error="raise"):
     """
     return reported(
         on_error,
-        f"{problem.assumptions.currency}/year",
+        "currency/yr",
         lambda: yearly_cost(problem.apply_site(plant), problem, results, on_error),
     )

@@ -1,6 +1,7 @@
 """One limit of a problem: on a result field or a parameter, each match checked on its own."""
 
-from dataclasses import asdict, dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass
 
 from gemini import units
 from gemini._utils.strings import close_matches, did_you_mean, join_names
@@ -21,15 +22,17 @@ class Constraint:
     ``over`` is ``each`` (every step), ``sum``, ``mean``, ``max``, ``min`` (one figure of the run)
     or ``duration`` (the total time of the steps where ``when`` holds, ``min`` and ``max`` then
     being durations). ``when`` is ``None`` or ``"running"``, the steps where the module of the
-    path carries flow. A bound is a number in SI or a text with its unit. A parameter path takes
+    path carries flow. A bound is a ``Quantity`` or its dict ``{"value": 150, "unit": "m3/h"}``; a
+    plain number is accepted only for a field without a dimension, such as an efficiency, and
+    anything else raises when the constraint is judged. A parameter path takes
     only ``over="each"``, which needs the plant, so ``gm.evaluate.constraints`` and ``gm.schedule``
     check it. At least one of ``min``, ``max`` and ``equals``.
     """
 
     path: str
-    min: float | str | None = None
-    max: float | str | None = None
-    equals: float | str | None = None
+    min: float | units.Quantity | None = None
+    max: float | units.Quantity | None = None
+    equals: float | units.Quantity | None = None
     over: str = "each"
     when: str | None = None
 
@@ -50,7 +53,7 @@ class Constraint:
         _checked_choice(self.path, "over", self.over, OVERS)
         _checked_choice(self.path, "when", self.when, WHEN)
         for name in BOUNDS:
-            _checked_bound(self.path, name, getattr(self, name))
+            object.__setattr__(self, name, _checked_bound(self.path, name, getattr(self, name)))
 
     @classmethod
     def from_dict(cls, data):
@@ -71,12 +74,30 @@ class Constraint:
 
     def to_dict(self):
         """Return the constraint as plain data."""
-        return asdict(self)
+        data = {"path": self.path, "over": self.over, "when": self.when}
+        return data | {
+            name: None if getattr(self, name) is None else _plain(getattr(self, name))
+            for name in BOUNDS
+        }
 
     @classmethod
     def schema(cls):
         """Return the JSON Schema (draft 2020-12) of ``to_dict``."""
-        bound = {"type": ["number", "string", "null"]}
+        bound = {
+            "anyOf": [
+                {"type": "number"},
+                {"type": "null"},
+                {
+                    "type": "object",
+                    "required": ["value", "unit"],
+                    "additionalProperties": False,
+                    "properties": {
+                        "value": {"type": "number"},
+                        "unit": {"enum": units.names()},
+                    },
+                },
+            ]
+        }
         return {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "title": "Constraint",
@@ -105,14 +126,22 @@ def _checked_choice(path, name, chosen, choices):
         )
 
 
+def _plain(bound):
+    """Return a bound as plain data."""
+    return bound.to_dict() if isinstance(bound, units.Quantity) else bound
+
+
 def _checked_bound(path, name, bound):
-    """Raise unless a bound is ``None``, a number, or a number with a known unit."""
-    if bound is None or (isinstance(bound, (int, float)) and not isinstance(bound, bool)):
-        return
-    if not isinstance(bound, str):
-        raise ValidationError(
-            f"constraint {path}: {name} = {bound!r}; expected a number or a text with its unit",
-            path=path,
-            code="invalid_value",
-        )
-    units.si_unit(units.parse(bound)[1])
+    """Return a bound as ``None``, a number or a ``Quantity``; text and other values raise."""
+    if isinstance(bound, Mapping):
+        return units.Quantity.from_dict(bound)
+    if bound is None or isinstance(bound, units.Quantity):
+        return bound
+    if isinstance(bound, (int, float)) and not isinstance(bound, bool):
+        return bound
+    raise ValidationError(
+        f"constraint {path}: {name} = {bound!r}; expected {units.QUANTITY_FORM}, or a number for "
+        "a field without a dimension",
+        path=path,
+        code="invalid_value",
+    )

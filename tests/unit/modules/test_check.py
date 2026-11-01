@@ -127,9 +127,15 @@ def test_the_report_never_raises():
 def test_a_shipped_module_with_example_values_passes():
     """The heat consumer meets the rules when given its parameter, boundary and inlet."""
     example = {
-        "parameters": {"minimum_return_temperature": "30 degC"},
-        "inlets": {"supply_in": {"m_dot": "2 kg/s", "T": "70 degC", "p": "3 bar"}},
-        "controls": {"heat_demand": "100 kW"},
+        "parameters": {"minimum_return_temperature": {"value": 30, "unit": "degC"}},
+        "inlets": {
+            "supply_in": {
+                "m_dot": {"value": 2, "unit": "kg/s"},
+                "T": {"value": 70, "unit": "degC"},
+                "p": {"value": 3, "unit": "bar"},
+            }
+        },
+        "controls": {"heat_demand": {"value": 100, "unit": "kW"}},
     }
     report = gm.modules.check(gm.modules.HeatingGrid, example)
     assert report["passed"] is True and verdicts(report)["call"] is True

@@ -33,7 +33,7 @@ GEMINI_EXAMPLE_DATASET=inputs/doublet_heat/doublet_2024_15min.csv python example
 
 | File | What it shows | Main names |
 | --- | --- | --- |
-| [01_streams_and_fluids.py](basics/01_streams_and_fluids.py) | Streams, fluids and unit strings | `gm.Stream`, `gm.Fluid`, `gm.units` |
+| [01_streams_and_fluids.py](basics/01_streams_and_fluids.py) | Streams, fluids and quantities | `gm.Stream`, `gm.Fluid`, `gm.units` |
 | [02_modules.py](basics/02_modules.py) | Call one module and read its outlets, outputs and port quantities | `gm.modules.ESP`, `describe`, `Stream.quantities`, `gm.modules.no_outputs` |
 | [03_build_a_plant.py](basics/03_build_a_plant.py) | A plant class and the builder; validate and fix an `unconnected_port` | a `gm.Plant` subclass, `add`, `connect`, `validate` |
 | [04_parameters.py](basics/04_parameters.py) | Dated parameters, controls, boundaries and bindings | `set_params`, `params_at`, attribute assignment, `set_bindings` |

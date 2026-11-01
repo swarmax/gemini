@@ -21,9 +21,14 @@ INPUTS = {
 def build():
     """Return a boiler on a heating grid, with its gas from a grid and its flue to the air."""
     plant = gm.Plant("BoilerPlant")
-    users = {"return_temperature": "60 degC", "return_pressure": "6 bar"}
+    users = {
+        "return_temperature": {"value": 60, "unit": "degC"},
+        "return_pressure": {"value": 6, "unit": "bar"},
+    }
     plant.add("HeatingGrid", name="users", params=users)
-    plant.add("Boiler", name="boiler", params={"capacity": "1 MW", "efficiency": 0.9})
+    plant.add(
+        "Boiler", name="boiler", params={"capacity": {"value": 1, "unit": "MW"}, "efficiency": 0.9}
+    )
     plant.add("GasGrid", name="gas")
     plant.add("Atmosphere", name="air")
     plant.connect("users.return_out", "boiler.fluid_in")
@@ -31,17 +36,23 @@ def build():
     plant.connect("gas.gas_out", "boiler.fuel_in")
     plant.connect("boiler.flue_out", "air.gas_in")
     plant.connect("boiler.loss_out", "air.heat_in")
-    plant.air.temperature = "10 degC"
+    plant.air.temperature = {"value": 10, "unit": "degC"}
     return plant
 
 
 def module_balance():
     """Call one boiler and audit that call."""
-    boiler = gm.modules.Boiler().set_params("", {"capacity": "1 MW", "efficiency": 0.9})
+    boiler = gm.modules.Boiler().set_params(
+        "", {"capacity": {"value": 1, "unit": "MW"}, "efficiency": 0.9}
+    )
     result = boiler(
-        fluid_in=gm.Stream(flow="10 kg/s", T="60 degC", p="3 bar"),
+        fluid_in=gm.Stream(
+            flow={"value": 10, "unit": "kg/s"},
+            T={"value": 60, "unit": "degC"},
+            p={"value": 3, "unit": "bar"},
+        ),
         fuel_in=gm.modules.GasGrid()._offered()["gas_out"],
-        temperature_setpoint="80 degC",
+        temperature_setpoint={"value": 80, "unit": "degC"},
     )
     audit = gm.modules.energy_balance(boiler, result)
     print(f"Boiler energy in:    {audit['in'] / 1e6:.3f} MW")
@@ -64,9 +75,9 @@ def main():
     closed = sum(check["passed"] is True for check in checks)
     print(f"Balances that close: {closed} of {len(checks)}")
     totals = gm.evaluate.totals(plant, None, results)
-    print(f"Heat delivered:      {totals['heat_delivered']['value'] / 3.6e9:.2f} MWh")
-    print(f"CO2 emitted:         {totals['co2_emitted']['value']:.0f} kg")
-    print(f"Losses:              {totals['losses']['value'] / 3.6e9:.2f} MWh")
+    print(f"Heat delivered:      {totals['heat_delivered'].value / 3.6e9:.2f} MWh")
+    print(f"CO2 emitted:         {totals['co2_emitted'].value:.0f} kg")
+    print(f"Losses:              {totals['losses'].value / 3.6e9:.2f} MWh")
 
 
 if __name__ == "__main__":

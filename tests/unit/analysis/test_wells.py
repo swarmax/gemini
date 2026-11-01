@@ -13,7 +13,7 @@ from gemini.types.flows import Stream
 from tests.fixtures.errors import raises
 
 BAR = 1e5
-CASE = {"wellhead_pressure": "4.6 bar", "rates": [20, 45], "frequency": 55.484}
+CASE = {"wellhead_pressure": {"value": 4.6, "unit": "bar"}, "rates": [20, 45], "frequency": 55.484}
 
 
 @pytest.fixture(scope="module")
@@ -110,13 +110,18 @@ def injector():
     plant._add_module("limb", limb)
     path = vertical_path(DEPTH, WIDE, 2e-5).model_dump()
     limb["well"].set_params(
-        "", {"pipe_path": path, "soil_temperature": "50 degC", "heat_transfer_coefficient": 0.0}
+        "",
+        {
+            "pipe_path": path,
+            "soil_temperature": {"value": 50, "unit": "degC"},
+            "heat_transfer_coefficient": 0.0,
+        },
     )
     limb["sink"].set_params(
         "",
         {
-            "pressure": "280 bar",
-            "temperature": "87 degC",
+            "pressure": {"value": 280, "unit": "bar"},
+            "temperature": {"value": 87, "unit": "degC"},
             "permeability": 2e-13,
             "aquifer_thickness": 100.0,
             "drainage_radius": 1000.0,
@@ -137,7 +142,7 @@ def needed(rate):
 
 def test_an_injection_well_gives_the_wellhead_pressure_a_rate_needs():
     """The operating point of a rate is the column of brine below the aquifer's pressure."""
-    case = {"rate": RATE, "rates": [10.0, 100.0], "temperature": "40 degC"}
+    case = {"rate": RATE, "rates": [10.0, 100.0], "temperature": {"value": 40, "unit": "degC"}}
     found = wells.nodal(injector(), "limb.well", case)
     point = found["cases"][0]["operating_point"]
     assert point["rate"]["value"] == RATE
@@ -147,14 +152,22 @@ def test_an_injection_well_gives_the_wellhead_pressure_a_rate_needs():
 
 def test_an_injection_well_gives_the_rate_of_a_wellhead_pressure():
     """The other way round: the same balance, solved for the rate."""
-    case = {"wellhead_pressure": needed(RATE), "rates": [10.0, 100.0], "temperature": "40 degC"}
+    case = {
+        "wellhead_pressure": needed(RATE),
+        "rates": [10.0, 100.0],
+        "temperature": {"value": 40, "unit": "degC"},
+    }
     found = wells.nodal(injector(), "limb.sink", case)
     assert found["cases"][0]["operating_point"]["rate"]["value"] == pytest.approx(RATE, rel=1e-3)
 
 
 def test_injection_curves_have_the_shape_of_production():
     """21 points of the pressure the aquifer needs and the wellhead pressure that gives it."""
-    case = {"rate": RATE, "rates": ["36 t/h", 100.0], "temperature": "40 degC"}
+    case = {
+        "rate": RATE,
+        "rates": [{"value": 36, "unit": "t/h"}, 100.0],
+        "temperature": {"value": 40, "unit": "degC"},
+    }
     found = wells.nodal(injector(), "limb.well", case, units={"pressure": "bar"})["cases"][0]
     assert set(found) == {"conditions", "ipr", "vlp", "operating_point", "error"}
     assert len(found["ipr"]["pressure"]["value"]) == wells.CURVE_POINTS
@@ -169,8 +182,8 @@ def test_injection_curves_have_the_shape_of_production():
 def test_a_column_that_is_enough_needs_no_wellhead_pressure():
     """Below the lowest pressure a well can hold, no pump is needed: the value says so."""
     plant = injector()
-    plant.get_submodule("limb.sink").pressure = "200 bar"
-    case = {"rate": RATE, "rates": [10.0, 100.0], "temperature": "40 degC"}
+    plant.get_submodule("limb.sink").pressure = {"value": 200, "unit": "bar"}
+    case = {"rate": RATE, "rates": [10.0, 100.0], "temperature": {"value": 40, "unit": "degC"}}
     point = wells.nodal(plant, "limb.well", case)["cases"][0]["operating_point"]
     assert point["wellhead_pressure"]["value"] is None
     assert "no pump" in point["wellhead_pressure"]["reason"]
@@ -178,7 +191,7 @@ def test_a_column_that_is_enough_needs_no_wellhead_pressure():
 
 def test_an_injection_case_needs_a_rate_or_a_pressure():
     """One of them says which way to solve."""
-    case = {"rates": [10.0, 100.0], "temperature": "40 degC"}
+    case = {"rates": [10.0, 100.0], "temperature": {"value": 40, "unit": "degC"}}
     with raises(gm.errors.ValidationError, "missing_value", match="wellhead_pressure"):
         wells.nodal(injector(), "limb.well", case)
 
@@ -187,7 +200,7 @@ def test_a_failed_injection_case_is_recorded():
     """As in production, the other cases still run."""
     cases = [
         {"rate": RATE, "rates": [10.0, 100.0]},
-        {"rate": RATE, "rates": [10.0, 100.0], "temperature": "40 degC"},
+        {"rate": RATE, "rates": [10.0, 100.0], "temperature": {"value": 40, "unit": "degC"}},
     ]
     found = wells.nodal(injector(), "limb.well", cases, on_error="record")["cases"]
     assert found[0]["error"]["code"] == "missing_value" and found[1]["error"] is None
@@ -225,7 +238,11 @@ def test_pump_curve_recovers_a_known_correction(shared_plant):
 
 def test_pump_curve_with_one_point_has_no_correction_and_says_why(shared_plant):
     """One point cannot fix a line; unit strings are read."""
-    point = {"flow": "150 m3/h", "frequency": "55 Hz", "head": "20 bar"}
+    point = {
+        "flow": {"value": 150, "unit": "m3/h"},
+        "frequency": {"value": 55, "unit": "Hz"},
+        "head": {"value": 20, "unit": "bar"},
+    }
     curve = wells.pump_curve(shared_plant, "doublet.esp", [point])
     assert curve["correction"]["value"] is None
     assert "two or more" in curve["correction"]["reason"]

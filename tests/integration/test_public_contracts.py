@@ -5,6 +5,7 @@ import json
 import pytest
 
 import gemini as gm
+from gemini._utils.jsonable import to_plain
 from tests.fixtures.result_tables import make_problem
 
 
@@ -26,7 +27,7 @@ CALLS = {
     "modules.categories": lambda plant, results: gm.modules.categories(),
     "streams.names": lambda plant, results: gm.types.streams.names(),
     "units.names": lambda plant, results: gm.units.names("pressure"),
-    "units.parse": lambda plant, results: gm.units.parse("150 m3/h"),
+    "quantity.to_dict": lambda plant, results: gm.units.Quantity(150, "m3/h").to_dict(),
     "describe": lambda plant, results: plant.describe(),
     "class.describe": lambda plant, results: gm.modules.ESP().describe(),
     "parameter_schema": lambda plant, results: gm.modules.ESP().parameter_schema(),
@@ -63,6 +64,9 @@ CALLS = {
 
 @pytest.mark.parametrize("name", CALLS)
 def test_returns_are_plain_json(name, plant, results):
-    """``json.dumps`` without NaN accepts the return, whose types are JSON's own."""
-    result = CALLS[name](plant, results)
+    """``json.dumps`` without NaN accepts the return, whose types are JSON's own.
+
+    A ``Value`` of ``gm.evaluate`` is a ``Quantity``: its JSON form is ``to_plain`` of it.
+    """
+    result = to_plain(CALLS[name](plant, results))
     assert json.loads(json.dumps(result, allow_nan=False)) == json.loads(json.dumps(result))

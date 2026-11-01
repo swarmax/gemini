@@ -84,14 +84,14 @@ it was, so its rows are processed again by the next call.
 ```python
 problem = gm.Problem(
     demand,
-    site={"d*.gradient": "30 K/km", "d*.surface_temperature": "12 degC"},
+    site={"d*.gradient": {"value": 30, "unit": "K/km"}, "d*.surface_temperature": {"value": 12, "unit": "degC"}},
     constraints=[
-        gm.Constraint("d*.reservoir.liquid_flow", min="50 m3/h", max="300 m3/h",
+        gm.Constraint("d*.reservoir.liquid_flow", min={"value": 50, "unit": "m3/h"}, max={"value": 300, "unit": "m3/h"},
                       over="each", when="running"),
-        gm.Constraint("d*.brine_cooling", max="40 K"),
-        gm.Constraint("d*.reservoir.liquid_flow", max="330 d", over="duration", when="running"),
+        gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}),
+        gm.Constraint("d*.reservoir.liquid_flow", max={"value": 330, "unit": "d"}, over="duration", when="running"),
     ],
-    assumptions=gm.Assumptions(prices={"electricity": "100 EUR/MWh", "gas": "40 EUR/MWh"}),
+    assumptions=gm.Assumptions(prices={"electricity": {"value": 100, "unit": "EUR/MWh"}, "gas": {"value": 40, "unit": "EUR/MWh"}}),
 )
 plan = gm.schedule(plant, problem)
 results = gm.simulate(plant, problem, plan)
@@ -131,7 +131,7 @@ bounds choose the form. Per doublet:
   `max`;
 - a maximum brine cooling: path `<doublet>.brine_cooling`, `over="each"`, `max`;
 - an operating duration: path `<doublet>.reservoir.liquid_flow`, `over="duration"`,
-  `when="running"`, `max` or `equals` a duration (`"330 d"`, `"7920 h"`).
+  `when="running"`, `max` or `equals` a duration (`{"value": 330, "unit": "d"}`, `{"value": 7920, "unit": "h"}`).
 
 The flow range and the brine cooling have no default: a doublet without one raises
 `ValidationError` code `missing_value`. Each doublet, in plant order, runs at the flow that gives

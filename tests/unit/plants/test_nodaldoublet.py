@@ -25,18 +25,32 @@ INJECTOR_SURVEY = [
     (2327, 1883, 0.0995668),
 ]
 RESERVOIR = dict(
-    temperature="80 degC",
+    temperature={"value": 80, "unit": "degC"},
     permeability=1e-12,
     aquifer_thickness=100,
     drainage_radius=0,
     wellbore_radius=0.1,
 )
-RETURNED = gm.Stream(flow="125.1 m3/h", T="40 degC", p="3 bar")
+RETURNED = gm.Stream(
+    flow={"value": 125.1, "unit": "m3/h"},
+    T={"value": 40, "unit": "degC"},
+    p={"value": 3, "unit": "bar"},
+)
 
 
 def path_of(stations):
     """Return the well path of survey stations with 2e-5 m roughness."""
     return build_path([dict(MD=md, TVD=tvd, ID=bore, roughness=2e-5) for md, tvd, bore in stations])
+
+
+HEAD_COEFFICIENTS = [
+    125.518426,
+    -0.0020852856,
+    2.28955651e-07,
+    -1.45640214e-11,
+    2.37859645e-16,
+    -1.18258356e-21,
+]
 
 
 @pytest.fixture
@@ -45,32 +59,39 @@ def deviated():
     doublet = gm.plants.example("NodalDoublet")
     doublet.reservoir.set_params(
         "",
-        {"pressure": "216 bar", "productivity_index": 1.76 / 3.6e8, "top_depth": 1900, **RESERVOIR},
+        {
+            "pressure": {"value": 216, "unit": "bar"},
+            "productivity_index": 1.76 / 3.6e8,
+            "top_depth": 1900,
+            **RESERVOIR,
+        },
     )
-    producer = dict(pipe_path=path_of(PRODUCER_SURVEY), soil_temperature="20 degC", esp_depth=550)
+    producer = dict(
+        pipe_path=path_of(PRODUCER_SURVEY),
+        soil_temperature={"value": 20, "unit": "degC"},
+        esp_depth=550,
+    )
     doublet.well.set_params("", {"segment": "below_esp", **producer})
     doublet.riser.set_params("", {"segment": "above_esp", **producer})
     doublet.esp.set_params(
         "",
         {
             "stage_count": 18,
-            "head_coefficients": [
-                125.518426,
-                -0.0020852856,
-                2.28955651e-07,
-                -1.45640214e-11,
-                2.37859645e-16,
-                -1.18258356e-21,
-            ],
+            "head_coefficients": HEAD_COEFFICIENTS,
         },
     )
     doublet.injector.set_params("", {"pipe_path": path_of(INJECTOR_SURVEY)})
     doublet.sink.set_params(
         "",
-        {"pressure": "180 bar", "injectivity_index": 2.3 / 3.6e8, "top_depth": 1883, **RESERVOIR},
+        {
+            "pressure": {"value": 180, "unit": "bar"},
+            "injectivity_index": 2.3 / 3.6e8,
+            "top_depth": 1883,
+            **RESERVOIR,
+        },
     )
-    doublet.esp.frequency = "60 Hz"
-    doublet.wellhead_pressure = "10 bar"
+    doublet.esp.frequency = {"value": 60, "unit": "Hz"}
+    doublet.wellhead_pressure = {"value": 10, "unit": "bar"}
     return doublet
 
 
@@ -78,8 +99,8 @@ def deviated():
 def vertical():
     """Return the example doublet of the boiler and CHP case at 65 Hz and 3 bar."""
     doublet = gm.plants.example("NodalDoublet")
-    doublet.esp.frequency = "65 Hz"
-    doublet.wellhead_pressure = "3 bar"
+    doublet.esp.frequency = {"value": 65, "unit": "Hz"}
+    doublet.wellhead_pressure = {"value": 3, "unit": "bar"}
     return doublet
 
 

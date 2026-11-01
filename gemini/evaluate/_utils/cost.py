@@ -5,7 +5,7 @@ from gemini.evaluate._utils.flows import Flows
 from gemini.evaluate._utils.outcome import unavailable
 from gemini.evaluate.co2 import co2
 from gemini.types.cost import total_cost
-from gemini.types.shapes import value
+from gemini.types.shapes import measure
 from gemini.units import SECONDS_PER_YEAR
 
 NO_COST = (
@@ -38,14 +38,14 @@ def investment(plant, assumptions, on_error):
     """Return the investment as ``capex`` does, for a plant that already has its site."""
     cost = total_cost(plant, assumptions)
     if cost is None:
-        return unavailable(assumptions.currency, NO_COST, on_error)
-    year = value(cost.price_year, "year")
-    return value(cost.capex, cost.currency, price_year=year, source=cost.source)
+        return unavailable("currency", NO_COST, on_error)
+    year = measure(cost.price_year, "-")
+    return measure(cost.capex, "currency", price_year=year, source=cost.source)
 
 
 def _components(amounts, unit):
     """Return each amount of a cost as a value."""
-    return {name: value(amount, unit) for name, amount in amounts.items()}
+    return {name: measure(amount, unit) for name, amount in amounts.items()}
 
 
 def _bills(flows, problem, results, plant):
@@ -54,7 +54,7 @@ def _bills(flows, problem, results, plant):
     price = problem.assumptions.co2_cost()
     if price is not None:
         emitted = co2(plant, problem, results)
-        bills["co2"] = emitted["value"] * price * SECONDS_PER_YEAR / emitted["window"]["value"]
+        bills["co2"] = emitted.value * price * SECONDS_PER_YEAR / emitted.parts["window"].value
     return bills
 
 
@@ -65,7 +65,7 @@ def yearly_cost(plant, problem, results, on_error):
     flows = Flows(plant, results)
     bills = _bills(flows, problem, results, plant)
     if cost is None:
-        unit = f"{assumptions.currency}/year"
+        unit = "currency/yr"
         return unavailable(unit, NO_COST, on_error, components=_components(bills, unit))
     if cost.currency != assumptions.currency:
         raise ValidationError(
@@ -78,5 +78,5 @@ def yearly_cost(plant, problem, results, on_error):
         "variable": cost.opex_variable * (flows.energy("heat") + flows.energy("cold")),
         **bills,
     }
-    unit = f"{cost.currency}/year"
-    return value(sum(components.values()), unit, components=_components(components, unit))
+    unit = "currency/yr"
+    return measure(sum(components.values()), unit, components=_components(components, unit))

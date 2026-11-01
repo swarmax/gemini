@@ -36,9 +36,9 @@ def print_run(plant, problem, results):
     boiler = frame["boiler.fluid_out.enthalpy_flow"] - frame["boiler.fluid_in.enthalpy_flow"]
     sink = frame["heat_pump.sink_out.enthalpy_flow"] - frame["heat_pump.sink_in.enthalpy_flow"]
     rows = (
-        ("heat delivered", totals["heat_delivered"]["value"] / GWH, "GWh"),
+        ("heat delivered", totals["heat_delivered"].value / GWH, "GWh"),
         ("heat unmet", frame["heat_users.unmet_demand"].sum() * gwh, "GWh"),
-        ("cold delivered", totals["cold_delivered"]["value"] / GWH, "GWh"),
+        ("cold delivered", totals["cold_delivered"].value / GWH, "GWh"),
         ("cold unmet", frame["cool_users.unmet_sensible"].sum() * gwh, "GWh"),
         ("boiler, peak", boiler.max() / 1e6, "MW"),
         ("heat pump, peak", sink.max() / 1e6, "MW"),
@@ -55,7 +55,7 @@ def print_constraints(checks):
     """Print each constraint of the sample problem, in its units."""
     print("\nConstraints:")
     for item in checks:
-        value, unit = item["value"]["value"], item["value"]["unit"]
+        value, unit = item["value"].value, item["value"].unit
         if unit == "m3/s":
             value, unit = gm.units.convert(value, unit, "m3/h"), "m³/h"
         if item["name"].endswith("temperature"):
@@ -71,7 +71,7 @@ def print_balance(checks):
     print(f"\nBalance:\n  modules that close {closed} of {len(modules)}")
     for item in checks[-2:]:
         result = "ok" if item["passed"] else "OPEN"
-        print(f"  {item['name']:<18} {result:<5} worst {item['value']['value']:.3g}")
+        print(f"  {item['name']:<18} {result:<5} worst {item['value'].value:.3g}")
 
 
 def print_totals(plant, problem, results):
@@ -79,33 +79,33 @@ def print_totals(plant, problem, results):
     print("\nAt the plant's edge:")
     totals = gm.evaluate.totals(plant, problem, results)
     for name, item in totals.items():
-        if item["unit"] in ("J", "kg"):
-            scale, unit = (GWH, "GWh") if item["unit"] == "J" else (1e6, "kt")
-            print(f"  {name:<20} {item['value'] / scale:10.3f} {unit}")
+        if item.unit in ("J", "kg"):
+            scale, unit = (GWH, "GWh") if item.unit == "J" else (1e6, "kt")
+            print(f"  {name:<20} {item.value / scale:10.3f} {unit}")
     print("\nKPIs:")
     for name, item in totals.items():
-        if item["unit"] not in ("J", "kg"):
-            scale, unit = (1e6, "MW") if item["unit"] == "W" else (1, "")
-            print(f"  {name:<18} {item['value'] / scale:.4g} {unit}".rstrip())
+        if item.unit not in ("J", "kg"):
+            scale, unit = (1e6, "MW") if item.unit == "W" else (1, "")
+            print(f"  {name:<18} {item.value / scale:.4g} {unit}".rstrip())
 
 
 def print_economics(plant, problem, results):
     """Print the economics in the units people read; every price is a placeholder."""
     totals = gm.evaluate.totals(plant, problem, results)
-    heat, cold = totals["heat_delivered"]["value"], totals["cold_delivered"]["value"]
+    heat, cold = totals["heat_delivered"].value, totals["cold_delivered"].value
     assumptions = problem.assumptions.to_dict() | {"heat_cost_share": heat / (heat + cold)}
     shared = gm.Problem(
         problem.demand, problem.site, problem.constraints, gm.Assumptions(**assumptions)
     )
     capex = gm.evaluate.capex(plant, shared)
     rows = (
-        ("capex", capex["value"] / 1e6, f"MEUR ({capex['price_year']['value']})"),
-        ("opex", gm.evaluate.opex(plant, shared, results)["value"] / 1e6, "MEUR/year"),
-        ("CO2-eq", gm.evaluate.co2(plant, shared, results)["value"] / 1e6, "kt/year"),
-        ("LCOH", gm.evaluate.lcoh(plant, shared, results)["value"] * MWH, "EUR/MWh"),
-        ("LCOC", gm.evaluate.lcoc(plant, shared, results)["value"] * MWH, "EUR/MWh"),
-        ("NPV", gm.evaluate.npv(plant, shared, results)["value"] / 1e6, "MEUR"),
-        ("payback", gm.evaluate.payback(plant, shared, results)["value"], "years"),
+        ("capex", capex.value / 1e6, f"MEUR ({capex.parts['price_year'].value})"),
+        ("opex", gm.evaluate.opex(plant, shared, results).value / 1e6, "MEUR/year"),
+        ("CO2-eq", gm.evaluate.co2(plant, shared, results).value / 1e6, "kt/year"),
+        ("LCOH", gm.evaluate.lcoh(plant, shared, results).value * MWH, "EUR/MWh"),
+        ("LCOC", gm.evaluate.lcoc(plant, shared, results).value * MWH, "EUR/MWh"),
+        ("NPV", gm.evaluate.npv(plant, shared, results).value / 1e6, "MEUR"),
+        ("payback", gm.evaluate.payback(plant, shared, results).value, "years"),
     )
     print("\nEconomics, on the placeholder prices above:")
     for label, value, unit in rows:

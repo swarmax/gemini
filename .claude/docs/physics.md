@@ -35,14 +35,16 @@ correlation boundaries; historical factors retained.
   density is known.
 - `array_to_si(values, unit, quantity)`: convert an array-like of `unit` values to SI, element for
   element as `to_si` does.
-- `split_quantity(value)`: `(number, unit)` for a `Quantity` or `"<number> <unit>"` text.
-- `value_in_si(value, expected_unit, path, quantity)`: convert a unit string or `Quantity` to a
-  declaration's SI unit.
+- `value_in_si(value, expected_unit, path, quantity)`: convert a `Quantity` or its dict to a
+  declaration's SI unit; text for a field with a unit raises `invalid_value`, a unit of another
+  dimension `invalid_unit`, and a plain number passes as SI.
+- `Unit`: the `str` enum of the unit table, one member per unit (`Unit.M3_PER_H == "m3/h"`).
+- `Quantity(value, unit)`: a number or array with its `Unit`; `.si`, `.to(unit, quantity=None)`,
+  `to_dict()`, `from_dict(d)`; equality compares SI values.
 - `convert(value, from_unit, to_unit, quantity)`: convert a scalar between units of the same
   dimension through SI.
 - `define_quantity(name, unit)`: record that the quantity `name` is stored in the SI unit `unit`.
 - `names(quantity)`: sorted unit names, or those of one quantity such as `"pressure"`.
-- `parse(text)`: `(value, unit)` of `"<number> <unit>"` text such as `"150 m3/h"`.
 - `fits(unit, quantity)`: whether `unit` is a known unit of the named `quantity` (`"pressure"`,
   `"power"`).
 - `bar_to_pa(x)`: convert [bar] to [Pa]: `x * 1e5`.
@@ -572,7 +574,7 @@ Health-scoring relations shared by the modules: drift, bounded score, margin, li
 - State dimensions, reference formulas and assumptions in docstrings.
 - Keep correlation-specific US or laboratory bases explicit at the formula boundary.
 - `gemini.units._UNITS` is the single table of public data units (SI unit, scale, offset). A declared
-  difference quantity converts by scale only, so `"5 degC"` as a temperature difference is 5 K.
+  difference quantity converts by scale only, so `{"value": 5, "unit": "degC"}` as a temperature difference is 5 K.
 - Do not perform database I/O, logging or mutate global state during calculations.
 - `Fluid` definitions in `gemini.types.fluid` own immutable overrides and cache their
   `FluidProperties` snapshot; physics must not import types at runtime (`hydraulics` imports
@@ -1157,7 +1159,7 @@ modules score alike.
   the exact definitions (bar, inch, foot, psi, hour, degree Celsius); the millidarcy, barrel per
   day, foot of head, brake horsepower, lbm/ft3 and psi factors are retained numbers of the
   original GEMINI, kept bit for bit.
-- `to_si`, `convert`, `value_in_si`, `si_unit`, `names`, `parse`, `fits` and the unit sets of
+- `to_si`, `convert`, `value_in_si`, `si_unit`, `names`, `fits` and the unit sets of
   `Profile` and `Stream` all read `_UNITS`; `define_quantity` records the SI unit of each named
   quantity.
 

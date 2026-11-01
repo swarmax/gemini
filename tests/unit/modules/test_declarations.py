@@ -81,13 +81,13 @@ def _declared(**params):
 
 def test_parameter_units_shape_and_metadata():
     """Parameters validate units and vector shape once assigned."""
-    module = _declared(length="1200 m", coefficients=[1, 2])
+    module = _declared(length={"value": 1200, "unit": "m"}, coefficients=[1, 2])
     assert module.length == 1200
     assert module.get("length").unit == "m"
     with pytest.raises(ValidationError, match="shape"):
         _declared(length=1, coefficients=[1])
     with pytest.raises(ValidationError, match="expected m"):
-        _declared(length="12 bar", coefficients=[1, 2])
+        _declared(length={"value": 12, "unit": "bar"}, coefficients=[1, 2])
 
 
 def test_parameter_history_projects_module_snapshots():
@@ -134,9 +134,9 @@ def test_unset_keeps_its_identity_through_copy_and_pickle():
 
 def test_difference_parameters_ignore_unit_offsets():
     """A temperature difference given in degC is the same number of kelvin."""
-    assert Parameter(TemperatureDifference).validate("5 degC") == 5
-    assert Parameter(PressureDifference).validate("2 barg") == 2e5
-    assert Parameter(Temperature).validate("5 degC") == 278.15
+    assert Parameter(TemperatureDifference).validate({"value": 5, "unit": "degC"}) == 5
+    assert Parameter(PressureDifference).validate({"value": 2, "unit": "barg"}) == 2e5
+    assert Parameter(Temperature).validate({"value": 5, "unit": "degC"}) == 278.15
 
 
 def test_unitless_declarations_keep_text_values():
@@ -148,8 +148,8 @@ def test_unitless_declarations_keep_text_values():
 def test_invalid_values_raise_declaration_errors():
     """Wrong units and wrong shapes name the declaration path, value and expectation."""
     parameter = Parameter(Length).bind(None, "length")
-    with pytest.raises(ValidationError, match="length: invalid parameter value '12 bar'.*m"):
-        parameter.validate("12 bar")
+    with pytest.raises(ValidationError, match="length: invalid parameter value.*bar.*expected m"):
+        parameter.validate({"value": 12, "unit": "bar"})
     with pytest.raises(ValidationError, match="coefficients: shape = \\(1,\\); expected \\(2,\\)"):
         Parameter(list[float], shape=(2,)).bind(None, "coefficients").validate([1])
 
@@ -181,11 +181,11 @@ SAMPLES = [
     np.float64(2.0),
     np.float32(2.0),
     np.int64(2),
-    "5 bar",
-    "300 K",
+    {"value": 5, "unit": "bar"},
+    {"value": 300, "unit": "K"},
     "2.0",
     "text",
-    "50 Hz",
+    {"value": 50, "unit": "Hz"},
     None,
     [1.0, 2.0],
     [1.0, -1.0],
@@ -238,7 +238,7 @@ def test_the_quick_check_gives_the_result_or_error_of_the_full_path(module_class
 
 def test_a_default_is_validated_once_and_mutable_defaults_stay_fresh():
     """``default_value`` converts once, and no caller can change the next caller's default."""
-    scalar = Control(Pressure, default="2 bar")
+    scalar = Control(Pressure, default={"value": 2, "unit": "bar"})
     assert scalar.default_value() == 2e5 == scalar.default_value()
     series = Control(list[float], default=[1, 2])
     first = series.default_value()

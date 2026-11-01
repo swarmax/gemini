@@ -10,7 +10,7 @@ from tests.fixtures.capture_public_api import SNAPSHOT, capture, fingerprint
 
 SNAPSHOTS = {
     "0.1.0": "f19ae90f18bb5a5a85e1b1f730276c9a50fdba0d46108c4bcd56488b48178a8b",
-    "0.2.0": "76f9c41276d93261e7ddabb80399d14d4585813375a0bc067f2b0e9882a4ac71",
+    "0.2.0": "51684fed141bab76219243b3bfd32ea90cf5d9d2c52ce87b81dd575cad75928b",
 }
 """Hash of the snapshot per ``gm.__version__``: a released entry never changes."""
 

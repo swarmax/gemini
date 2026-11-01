@@ -1,19 +1,19 @@
 {
   "plant": "HeatingSubstation",
   "params": {
-    "pump.flow": "3 kg/s",
-    "pump.pressure_rise": "0.5 bar",
-    "pump.loop_pressure": "3 bar",
-    "valve.flow_coefficient": "1.756820922315766e-05 m3/s/Pa^0.5",
+    "pump.flow": {"value": 3, "unit": "kg/s"},
+    "pump.pressure_rise": {"value": 0.5, "unit": "bar"},
+    "pump.loop_pressure": {"value": 3, "unit": "bar"},
+    "valve.flow_coefficient": {"value": 1.756820922315766e-05, "unit": "m3/s/Pa^0.5"},
     "valve.characteristic": "equal_percentage",
     "valve.rangeability": 50.0,
-    "heat_exchanger.thermal_conductance": "20000 W/K",
+    "heat_exchanger.thermal_conductance": {"value": 20000, "unit": "W/K"},
     "heat_exchanger.arrangement": "counterflow",
-    "heat_exchanger.hot_nominal_pressure_drop": "0.2 bar",
-    "heat_exchanger.cold_nominal_pressure_drop": "0.2 bar",
-    "heat_exchanger.hot_nominal_mass_flow": "2 kg/s",
-    "heat_exchanger.cold_nominal_mass_flow": "3 kg/s",
+    "heat_exchanger.hot_nominal_pressure_drop": {"value": 0.2, "unit": "bar"},
+    "heat_exchanger.cold_nominal_pressure_drop": {"value": 0.2, "unit": "bar"},
+    "heat_exchanger.hot_nominal_mass_flow": {"value": 2, "unit": "kg/s"},
+    "heat_exchanger.cold_nominal_mass_flow": {"value": 3, "unit": "kg/s"},
     "heat_exchanger.fouling_threshold": 0.15,
-    "consumer.minimum_return_temperature": "30 degC"
+    "consumer.minimum_return_temperature": {"value": 30, "unit": "degC"}
   }
 }

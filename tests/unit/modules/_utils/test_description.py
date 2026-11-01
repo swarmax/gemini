@@ -53,6 +53,9 @@ SCHEMA_KEYWORDS = {
     "minItems",
     "maxItems",
     "title",
+    "required",
+    "properties",
+    "additionalProperties",
 }
 SCHEMA_TYPES = {"number", "integer", "string", "boolean", "array", "null", "object"}
 
@@ -178,13 +181,17 @@ def test_every_module_serialises_and_has_a_valid_schema(module_class):
         assert all(set(entry) == ENTRY_KEYS for entry in description[section].values())
 
 
-def test_schema_accepts_unit_strings_and_keeps_units():
-    """A number with a unit is a number or a string; the unit stays on the property."""
+def test_schema_accepts_quantities_and_keeps_units():
+    """A number with a unit is a number or a quantity object; the unit stays on the property."""
     properties = gm.modules.ESP().parameter_schema()["properties"]
     depth = properties["setting_depth"]
     assert depth["unit"] == "m" and depth["quantity"] == "length"
-    assert [variant["type"] for variant in depth["anyOf"]] == ["number", "string"]
+    assert [variant["type"] for variant in depth["anyOf"]] == ["number", "object"]
     assert depth["anyOf"][0]["minimum"] == 0
+    quantity = depth["anyOf"][1]
+    assert quantity["required"] == ["value", "unit"]
+    assert quantity["properties"]["value"] == {"type": "number"}
+    assert quantity["properties"]["unit"]["enum"] == ["ft", "in", "km", "m", "mm"]
     assert "stage_count" in gm.modules.ESP().parameter_schema()["required"]
 
 
@@ -199,13 +206,23 @@ def test_validate_params_raises_every_problem_by_default():
 
 def test_validate_params_accepts_valid_values_and_unit_strings():
     """Numbers and unit strings in the right dimension raise nothing."""
-    assert gm.modules.ESP().validate_params({"stage_count": 12, "setting_depth": "1000 ft"}) == []
+    assert (
+        gm.modules.ESP().validate_params(
+            {"stage_count": 12, "setting_depth": {"value": 1000, "unit": "ft"}}
+        )
+        == []
+    )
 
 
 def test_validate_params_reports_every_problem():
     """Unknown names, units and bounds are all reported at once."""
     problems = gm.modules.ESP().validate_params(
-        {"stage_coun": 3, "setting_depth": "5 bar", "motor_efficiency": 1.5, "tubing": "x"},
+        {
+            "stage_coun": 3,
+            "setting_depth": {"value": 5, "unit": "bar"},
+            "motor_efficiency": 1.5,
+            "tubing": "x",
+        },
         on_error="record",
     )
     by_path = {problem["path"]: problem for problem in problems}

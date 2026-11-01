@@ -6,6 +6,7 @@ its public methods only.
 
 from copy import deepcopy
 
+from gemini import units
 from gemini._utils.jsonable import to_plain
 from gemini._utils.strings import close_matches, did_you_mean, first_paragraph
 from gemini.errors import ValidationError
@@ -210,11 +211,22 @@ def _item_schema(declaration):
     return item
 
 
+def _quantity_schema(declaration):
+    """Return the schema of ``{"value", "unit"}`` with the units of the declaration's quantity."""
+    allowed = units.names(declaration.quantity) if declaration.quantity else [declaration.unit]
+    return {
+        "type": "object",
+        "required": ["value", "unit"],
+        "additionalProperties": False,
+        "properties": {"value": {"type": "number"}, "unit": {"enum": allowed}},
+    }
+
+
 def _value_variants(declaration):
-    """Return the ``anyOf`` variants of a value: a number may also be a unit string."""
+    """Return the ``anyOf`` variants of a value: a number with a unit may also be a quantity."""
     variants = [_item_schema(declaration)]
     if declaration.unit and declaration.value_type() in _NUMBER_TYPES and not _is_list(declaration):
-        variants.append({"type": "string"})
+        variants.append(_quantity_schema(declaration))
     if declaration.accepts_none():
         variants.append({"type": "null"})
     return variants
@@ -250,8 +262,8 @@ def parameter_schema(module):
     One property per parameter, the parameters of children under their dotted path. A property
     carries the standard keywords (``type``, ``anyOf``, ``minimum``, ``maximum``,
     ``exclusiveMinimum``, ``exclusiveMaximum``, ``enum``, ``default``, ``description``) and, besides
-    them, ``unit`` and ``quantity``. A number with a unit also accepts a unit string such as
-    ``"150 m3/h"``. ``required`` lists the parameters that have no default.
+    them, ``unit`` and ``quantity``. A number with a unit also accepts a quantity object such
+    as ``{"value": 150, "unit": "m3/h"}``. ``required`` lists the parameters that have no default.
     """
     declarations = dict(module.named_parameters())
     return {

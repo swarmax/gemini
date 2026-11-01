@@ -6,25 +6,25 @@ import gemini as gm
 
 COOLING = "cooling.substations.0"
 INPUTS = {
-    "heating.pump.frequency": "50 Hz",
+    "heating.pump.frequency": {"value": 50, "unit": "Hz"},
     "heating.splitters.0.split_fraction": 0.5,
     "heating.substations.0.valve.opening": 0.9,
     "heating.substations.1.valve.opening": 0.9,
-    "heating.substations.0.consumer.heat_demand": "150 kW",
-    "heating.substations.1.consumer.heat_demand": "100 kW",
-    "cooling.pump.frequency": "50 Hz",
+    "heating.substations.0.consumer.heat_demand": {"value": 150, "unit": "kW"},
+    "heating.substations.1.consumer.heat_demand": {"value": 100, "unit": "kW"},
+    "cooling.pump.frequency": {"value": 50, "unit": "Hz"},
     f"{COOLING}.valve.opening": 0.9,
-    f"{COOLING}.consumer.sensible_cooling_demand": "150 kW",
-    f"{COOLING}.consumer.latent_cooling_demand": "0 kW",
-    f"{COOLING}.consumer.indoor_temperature": "24 degC",
+    f"{COOLING}.consumer.sensible_cooling_demand": {"value": 150, "unit": "kW"},
+    f"{COOLING}.consumer.latent_cooling_demand": {"value": 0, "unit": "kW"},
+    f"{COOLING}.consumer.indoor_temperature": {"value": 24, "unit": "degC"},
     f"{COOLING}.consumer.indoor_relative_humidity": 0.5,
-    "ates.storage.groundwater_flow": "36 t/h",
+    "ates.storage.groundwater_flow": {"value": 36, "unit": "t/h"},
     "ates.storage.mode": "charge",
     "ates.source_valve.split_fraction": 0.0,
     "ates.load_valve.split_fraction": 0.0,
-    "ates.pump.frequency": "50 Hz",
-    "ates.heat_pump.temperature_setpoint": "40 degC",
-    "air.temperature": "10 degC",
+    "ates.pump.frequency": {"value": 50, "unit": "Hz"},
+    "ates.heat_pump.temperature_setpoint": {"value": 40, "unit": "degC"},
+    "air.temperature": {"value": 10, "unit": "degC"},
 }
 
 
@@ -34,9 +34,17 @@ def run():
     plant = gm.plants.example("DistrictEnergyPlant")
     plant._set_inputs(INPUTS)
     inlets = {
-        "hot_in": gm.Stream(flow="18 t/h", T="75 degC", p="6 bar"),
-        "cold_in": gm.Stream(flow="36 t/h", T="17 degC", p="3 bar"),
-        "air_in": gm.modules.Atmosphere.ambient_air("10 degC"),
+        "hot_in": gm.Stream(
+            flow={"value": 18, "unit": "t/h"},
+            T={"value": 75, "unit": "degC"},
+            p={"value": 6, "unit": "bar"},
+        ),
+        "cold_in": gm.Stream(
+            flow={"value": 36, "unit": "t/h"},
+            T={"value": 17, "unit": "degC"},
+            p={"value": 3, "unit": "bar"},
+        ),
+        "air_in": gm.modules.Atmosphere.ambient_air({"value": 10, "unit": "degC"}),
     }
     state, first = plant.step(None, 3600, inlets)
     state, second = plant.step(state, 3600, inlets | {"cold_in": first.outlets.cold_out})

@@ -9,7 +9,7 @@ CP = 4217.4
 def configure_heating_substation(substation, demand=1.5e5):
     """Fill a heating substation: 3 kg/s building loop, 20 kW/K exchanger, 30 degC floor."""
     substation.pump.set_params("", {"flow": 3.0, "pressure_rise": 5e4, "loop_pressure": 3e5})
-    substation.valve.set_params("", {"flow_coefficient": "20 m3/h/bar^0.5"})
+    substation.valve.set_params("", {"flow_coefficient": {"value": 20, "unit": "m3/h/bar^0.5"}})
     substation.valve.opening = 0.8
     substation.heat_exchanger.set_params(
         "",
@@ -29,7 +29,7 @@ def configure_heating_substation(substation, demand=1.5e5):
 def configure_cooling_substation(substation, sensible=6e4, latent=1e4):
     """Fill a cooling substation: 4 kg/s building loop, 30 kW/K exchanger, 18 degC return limit."""
     substation.pump.set_params("", {"flow": 4.0, "pressure_rise": 5e4, "loop_pressure": 3e5})
-    substation.valve.set_params("", {"flow_coefficient": "20 m3/h/bar^0.5"})
+    substation.valve.set_params("", {"flow_coefficient": {"value": 20, "unit": "m3/h/bar^0.5"}})
     substation.valve.opening = 1.0
     substation.heat_exchanger.set_params(
         "",

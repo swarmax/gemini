@@ -12,7 +12,7 @@ from gemini.evaluate._utils.columns import (
     parameter_values,
     series,
 )
-from gemini.types.shapes import check, value
+from gemini.types.shapes import check, measure
 
 TOLERANCE = 1e-9
 """Relative margin of a limit: a value on the limit passes through its rounding; numerical."""
@@ -78,19 +78,29 @@ def constraints(plant, problem, results):
     return checks
 
 
-def _in_unit(bound, unit, quantity):
-    """Return a bound in the unit of its field; a number already is."""
-    if bound is None or not isinstance(bound, str):
+def _in_unit(bound, name, unit, quantity, path):
+    """Return a bound in the SI unit of its field; a number is accepted for a field of no unit."""
+    if bound is None:
         return bound
-    number, given = units.parse(bound)
-    return units.convert(number, given, unit, quantity)
+    if isinstance(bound, units.Quantity):
+        return units.value_in_si(bound, unit, path, quantity)
+    if unit != "-":
+        raise ValidationError(
+            f"constraint {path}: {name} = {bound!r}; expected {units.QUANTITY_FORM}, because the "
+            f"field has the unit {unit!r}",
+            path=path,
+            code="invalid_value",
+        )
+    return bound
 
 
 def _bounds(constraint, unit, quantity):
     """Return ``(lower, upper)`` of a constraint in ``unit``; ``equals`` sets both."""
     given = {name: getattr(constraint, name) for name in ("min", "max", "equals")}
     bound = {
-        name: _in_unit(item, unit, quantity) for name, item in given.items() if item is not None
+        name: _in_unit(item, name, unit, quantity, constraint.path)
+        for name, item in given.items()
+        if item is not None
     }
     lower = [bound[name] for name in ("min", "equals") if name in bound]
     upper = [bound[name] for name in ("max", "equals") if name in bound]
@@ -162,16 +172,16 @@ def _check(plant, frame, durations, constraint, path, name):
     label = join_path(path, name)
     reason = _no_reason(values, keep, constraint.over)
     if reason:
-        limit = value(bounds[0] if bounds[0] is not None else bounds[1], unit)
-        return check(label, None, value(None, unit, reason), limit) | _where(constraint, None)
+        limit = measure(bounds[0] if bounds[0] is not None else bounds[1], unit)
+        return check(label, None, measure(None, unit, reason), limit) | _where(constraint, None)
     measured, margin, position = _measure(constraint, values, keep, durations, bounds)
     lower, upper = bounds
     passed = (lower is None or measured >= lower - margin) and (
         upper is None or measured <= upper + margin
     )
     step = None if position is None or is_parameter(plant, path, name) else frame.index[position]
-    limit = value(_nearest(measured, lower, upper), unit)
-    return check(label, bool(passed), value(measured, unit), limit) | _where(constraint, step)
+    limit = measure(_nearest(measured, lower, upper), unit)
+    return check(label, bool(passed), measure(measured, unit), limit) | _where(constraint, step)
 
 
 def _where(constraint, step):

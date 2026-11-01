@@ -22,8 +22,10 @@ def problem(frame):
     """Return a problem with one constraint that holds and one that does not."""
     demand = gm.data.from_values([1.0] * len(frame), "W", "2024-07-01", "15 min", "heating_demand")
     constraints = [
-        gm.Constraint("injection_pump.discharge_pressure", max="60 bar", when="running"),
-        gm.Constraint("heat_exchanger.duty", min="3.5 MW", when="running"),
+        gm.Constraint(
+            "injection_pump.discharge_pressure", max={"value": 60, "unit": "bar"}, when="running"
+        ),
+        gm.Constraint("heat_exchanger.duty", min={"value": 3.5, "unit": "MW"}, when="running"),
     ]
     return gm.Problem(demand, constraints=constraints)
 
@@ -37,7 +39,7 @@ def main():
     checks = gm.evaluate.constraints(plant, problem(frame), results)
     for check, unit in zip(checks, ("bar", "MW")):
         verdict = "ok" if check["passed"] else "VIOLATED"
-        worst = gm.units.convert(check["value"]["value"], check["value"]["unit"], unit)
+        worst = gm.units.convert(check["value"].value, check["value"].unit, unit)
         print(f"{check['name']:<34} {verdict:<9} worst {worst:.2f} {unit}")
 
 

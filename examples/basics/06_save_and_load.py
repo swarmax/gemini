@@ -16,7 +16,7 @@ import gemini as gm
 def main():
     """Round-trip a plant through a dictionary and through a file."""
     plant = gm.plants.example("DoubletHeatPlant")
-    plant.set_params("heat_exchanger", {"thermal_conductance": "3500000 W/K"})
+    plant.set_params("heat_exchanger", {"thermal_conductance": {"value": 3500000, "unit": "W/K"}})
     data = plant.to_dict()
     print(f"Stored class:            {data['type']}")
     print(f"Stored values:           {len(data['params'])}")

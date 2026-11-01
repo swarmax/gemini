@@ -243,13 +243,9 @@ def mass_flow(volume_flow, fluid, pressure, temperature):
 
 def _mass_flow(flow, fluid, pressure, temperature):
     """Return a public ``flow`` value as mass flow [kg/s], using density for volume units."""
-    number, unit = units.split_quantity(flow)
-    if isinstance(number, str):
-        raise ValidationError(
-            f"Stream.flow: value = {flow!r}; expected a number [kg/s] or '<number> <unit>'",
-            code="invalid_unit",
-        )
-    if units.si_unit(unit) == "m3/s":
+    if isinstance(flow, Mapping):
+        flow = units.Quantity.from_dict(flow)
+    if isinstance(flow, units.Quantity) and units.si_unit(flow.unit) == "m3/s":
         volume = units.value_in_si(flow, "m3/s", "Stream.flow")
         return mass_flow(volume, fluid, pressure, temperature)
     return units.value_in_si(flow, "kg/s", "Stream.flow")

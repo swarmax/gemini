@@ -29,7 +29,7 @@ from gemini.modules.grids import (
     HeatingGrid,
     WasteGrid,
 )
-from gemini.types.shapes import value
+from gemini.types.shapes import measure
 
 
 @dataclass(frozen=True)
@@ -128,7 +128,7 @@ def _kpis(plant, results):
     values = {}
     for name, (unit, compute) in _KPIS.items():
         number, reason = compute(series)
-        values[name] = value(number, unit, reason)
+        values[name] = measure(number, unit, reason)
     return values
 
 
@@ -147,8 +147,8 @@ _EDGE_TOTALS = {
 def _integral(series, seconds, unit):
     """Return the integral of ``series`` over a run, or ``None`` with what it needs."""
     if series is None:
-        return value(None, unit, "the plant has no module at its edge that shows it")
-    return value(energy(series, seconds), unit)
+        return measure(None, unit, "the plant has no module at its edge that shows it")
+    return measure(energy(series, seconds), unit)
 
 
 def totals(plant, problem, results):
@@ -166,7 +166,8 @@ def totals(plant, problem, results):
     Returns
     -------
     dict
-        ``{name: value}``, plain JSON: ``heat_delivered``, ``cold_delivered``, what the water
+        ``{name: Value}``, each a ``gm.units.Quantity`` in SI (``to_plain`` gives the JSON):
+        ``heat_delivered``, ``cold_delivered``, what the water
         gave the users; ``heat_useful``, ``cold_useful``, the part of it up to their demand;
         ``heat_surplus``, ``cold_surplus``, the rest; ``electricity_bought``,
         ``electricity_sold``, ``gas_bought`` (lower heating value) and ``losses`` in J,

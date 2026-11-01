@@ -3,6 +3,7 @@
 import pytest
 
 import gemini as gm
+from gemini._utils.jsonable import to_plain
 from gemini.modules import Module, Pipe
 from gemini.modules.declarations import Inlet, Outlet
 from gemini.runtime import settings
@@ -67,10 +68,10 @@ def test_a_leak_fails_its_module_and_the_plant():
     found = by_name(gm.evaluate.plant_balance(plant, None, plant(fluid_in=HOT)))
     assert list(found) == ["child mass", "child energy", "plant mass", "plant energy"]
     assert found["child mass"]["passed"] is False
-    assert found["child mass"]["value"]["value"] == pytest.approx(0.1)
+    assert found["child mass"]["value"].value == pytest.approx(0.1)
     assert found["child energy"]["passed"] is False
-    assert found["plant mass"]["value"]["value"] == pytest.approx(0.1)
-    assert found["plant mass"]["limit"] == {"value": 1e-6, "unit": "-"}
+    assert found["plant mass"]["value"].value == pytest.approx(0.1)
+    assert to_plain(found["plant mass"]["limit"]) == {"value": 1e-6, "unit": "-"}
 
 
 def test_a_loss_that_reaches_no_edge_module_fails_the_plant_only():

@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 import gemini as gm
+from gemini._utils.jsonable import to_plain
 from gemini.evaluate._utils.flows import Flows
 from gemini.evaluate.totals import KPI_NAMES
 from tests.fixtures.result_tables import cold_ports, heat_ports, make_results
@@ -43,11 +44,11 @@ def test_names_are_fixed():
 def test_values_equal_the_hand_computed_ratios(plant, results):
     """Heating 300/500, cooling 60/80, COP 300/150 and the two peaks."""
     kpis = gm.evaluate.totals(plant, None, results)
-    assert kpis["heating_coverage"] == {"value": 0.6, "unit": "-"}
-    assert kpis["cooling_coverage"]["value"] == 0.75
-    assert kpis["cop"]["value"] == 2.0
-    assert kpis["peak_heat"] == {"value": 200.0, "unit": "W"}
-    assert kpis["peak_cold"]["value"] == 30.0
+    assert to_plain(kpis["heating_coverage"]) == {"value": 0.6, "unit": "-"}
+    assert kpis["cooling_coverage"].value == 0.75
+    assert kpis["cop"].value == 2.0
+    assert to_plain(kpis["peak_heat"]) == {"value": 200.0, "unit": "W"}
+    assert kpis["peak_cold"].value == 30.0
 
 
 def test_a_plant_without_consumers_gives_none_with_a_reason(fresh_plant, fast_dataset):
@@ -55,8 +56,8 @@ def test_a_plant_without_consumers_gives_none_with_a_reason(fresh_plant, fast_da
     window = fast_dataset.window(None, "2024-07-01T01:00:00Z")
     replay = gm.replay(fresh_plant, window)
     kpis = gm.evaluate.totals(fresh_plant, None, replay)
-    assert all(kpis[name]["value"] is None and kpis[name]["reason"] for name in KPI_NAMES)
-    json.dumps(kpis, allow_nan=False)
+    assert all(kpis[name].value is None and kpis[name].reason for name in KPI_NAMES)
+    json.dumps(to_plain(kpis), allow_nan=False)
 
 
 def test_zero_demand_and_zero_electricity_have_reasons(plant):
@@ -68,9 +69,9 @@ def test_zero_demand_and_zero_electricity_have_reasons(plant):
         }
     )
     kpis = gm.evaluate.totals(plant, None, idle)
-    assert kpis["heating_coverage"]["reason"] == "the demand is zero over the window"
-    assert kpis["cop"]["reason"] == "no electricity is consumed over the window"
-    assert kpis["cooling_coverage"]["reason"] == "the plant has no CoolingGrid"
+    assert kpis["heating_coverage"].reason == "the demand is zero over the window"
+    assert kpis["cop"].reason == "no electricity is consumed over the window"
+    assert kpis["cooling_coverage"].reason == "the plant has no CoolingGrid"
 
 
 def test_skipped_ticks_leave_the_ratios_alone(plant):
@@ -81,16 +82,16 @@ def test_skipped_ticks_leave_the_ratios_alone(plant):
             "grid": {"power_out": [50, 50]},
         }
     )
-    assert gm.evaluate.totals(plant, None, gap)["heating_coverage"]["value"] == 0.5
+    assert gm.evaluate.totals(plant, None, gap)["heating_coverage"].value == 0.5
 
 
 def test_totals_integrate_the_ports_of_the_edge_modules(plant, results):
     """Each total is the hand sum of one edge column; a module the plant lacks says so."""
     totals = gm.evaluate.totals(plant, None, results)
-    assert totals["heat_delivered"] == {"value": 300 * 3600.0, "unit": "J"}
-    assert totals["cold_delivered"]["value"] == 60 * 3600.0
-    assert totals["gas_bought"]["value"] is None and totals["gas_bought"]["reason"]
-    json.dumps(totals, allow_nan=False)
+    assert to_plain(totals["heat_delivered"]) == {"value": 300 * 3600.0, "unit": "J"}
+    assert totals["cold_delivered"].value == 60 * 3600.0
+    assert totals["gas_bought"].value is None and totals["gas_bought"].reason
+    json.dumps(to_plain(totals), allow_nan=False)
 
 
 def test_totals_of_a_run_with_every_edge_module():
@@ -113,7 +114,7 @@ def test_totals_of_a_run_with_every_edge_module():
             "chemicals": {"chemical_out.mass_flow": [4.0]},
         }
     )
-    totals = {name: item["value"] for name, item in gm.evaluate.totals(plant, None, run).items()}
+    totals = {name: item.value for name, item in gm.evaluate.totals(plant, None, run).items()}
     assert {name: number for name, number in totals.items() if name not in KPI_NAMES} == {
         "heat_delivered": None,
         "heat_useful": None,
@@ -136,11 +137,16 @@ def overflowing():
     """Return a boiler plant and two days of a flow that brings twice the demand."""
     plant = gm.Plant("Boiler")
     plant.add("GasGrid", name="grid")
-    plant.add("Boiler", name="boiler", params={"capacity": "20 MW", "efficiency": 0.9})
+    plant.add(
+        "Boiler", name="boiler", params={"capacity": {"value": 20, "unit": "MW"}, "efficiency": 0.9}
+    )
     plant.add(
         "HeatingGrid",
         name="users",
-        params={"return_temperature": "60 degC", "return_pressure": "6 bar"},
+        params={
+            "return_temperature": {"value": 60, "unit": "degC"},
+            "return_pressure": {"value": 6, "unit": "bar"},
+        },
     )
     plant.connect("grid.gas_out", "boiler.fuel_in")
     plant.connect("users.return_out", "boiler.fluid_in")
@@ -162,14 +168,14 @@ def test_totals_tell_the_useful_heat_from_the_surplus():
     plant, results = overflowing()
     totals = gm.evaluate.totals(plant, None, results)
     days = 2 * 86400
-    assert totals["heat_delivered"]["value"] == pytest.approx(2e6 * days)
-    assert totals["heat_useful"]["value"] == pytest.approx(1e6 * days)
-    assert totals["heat_surplus"]["value"] == pytest.approx(1e6 * days)
-    assert totals["cold_useful"]["value"] is None
+    assert totals["heat_delivered"].value == pytest.approx(2e6 * days)
+    assert totals["heat_useful"].value == pytest.approx(1e6 * days)
+    assert totals["heat_surplus"].value == pytest.approx(1e6 * days)
+    assert totals["cold_useful"].value is None
 
 
 def test_the_kpis_and_the_levelised_cost_read_the_useful_heat():
     """A surplus covers nothing and earns nothing."""
     plant, results = overflowing()
-    assert gm.evaluate.totals(plant, None, results)["peak_heat"]["value"] == pytest.approx(1e6)
+    assert gm.evaluate.totals(plant, None, results)["peak_heat"].value == pytest.approx(1e6)
     assert Flows(plant, results).energy("heat") == pytest.approx(1e6 * 365.25 * 86400)

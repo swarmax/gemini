@@ -3,7 +3,9 @@
 import pytest
 
 import gemini as gm
+from gemini._utils.jsonable import to_plain
 from gemini.evaluate._utils import outcome
+from gemini.types.shapes import measure
 from tests.fixtures.errors import raises
 
 
@@ -15,9 +17,14 @@ def test_an_unavailable_value_raises_by_default():
 
 def test_recorded_it_is_none_with_the_reason_and_its_details():
     """Nothing is raised and the parts that are known stay."""
-    detail = {"value": 1.0, "unit": "EUR"}
+    detail = measure(1.0, "EUR")
     result = outcome.unavailable("EUR", "no heat", "record", capex=detail)
-    assert result == {"value": None, "unit": "EUR", "reason": "no heat", "capex": detail}
+    assert to_plain(result) == {
+        "value": None,
+        "unit": "EUR",
+        "reason": "no heat",
+        "capex": {"value": 1.0, "unit": "EUR"},
+    }
 
 
 def _fails():
@@ -29,7 +36,7 @@ def test_reported_raises_or_records_a_failure():
     with raises(gm.errors.ValidationError, "missing_value"):
         outcome.reported("raise", "EUR", _fails)
     recorded = outcome.reported("record", "EUR", _fails)
-    assert recorded == {"value": None, "unit": "EUR", "reason": "no price"}
+    assert to_plain(recorded) == {"value": None, "unit": "EUR", "reason": "no price"}
 
 
 def test_reported_refuses_another_policy():

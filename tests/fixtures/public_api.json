@@ -861,6 +861,7 @@
   },
   "units": {
    "Quantity": "class",
+   "Unit": "class",
    "convert": [
     "value",
     "from_unit",
@@ -873,9 +874,6 @@
    ],
    "names": [
     "quantity"
-   ],
-   "parse": [
-    "text"
    ]
   }
  },

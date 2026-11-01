@@ -16,30 +16,38 @@ Run with ``python examples/cases/district_heating_cooling.py``.
 import gemini as gm
 
 HOUR = gm.units.convert(1, "h", "s")
-GEOTHERMAL_SUPPLY = gm.Stream(flow="18 t/h", T="75 degC", p="6 bar")
-FIRST_COOLING_RETURN = gm.Stream(flow="36 t/h", T="17 degC", p="3 bar")
-AIR = "10 degC"
+GEOTHERMAL_SUPPLY = gm.Stream(
+    flow={"value": 18, "unit": "t/h"},
+    T={"value": 75, "unit": "degC"},
+    p={"value": 6, "unit": "bar"},
+)
+FIRST_COOLING_RETURN = gm.Stream(
+    flow={"value": 36, "unit": "t/h"},
+    T={"value": 17, "unit": "degC"},
+    p={"value": 3, "unit": "bar"},
+)
+AIR = {"value": 10, "unit": "degC"}
 COOLING_BUILDING = {
-    "consumer.sensible_cooling_demand": "150 kW",
-    "consumer.latent_cooling_demand": "0 kW",
-    "consumer.indoor_temperature": "24 degC",
+    "consumer.sensible_cooling_demand": {"value": 150, "unit": "kW"},
+    "consumer.latent_cooling_demand": {"value": 0, "unit": "kW"},
+    "consumer.indoor_temperature": {"value": 24, "unit": "degC"},
     "consumer.indoor_relative_humidity": 0.5,
     "valve.opening": 0.9,
 }
 INPUTS = {
-    "heating.pump.frequency": "50 Hz",
+    "heating.pump.frequency": {"value": 50, "unit": "Hz"},
     "heating.splitters.0.split_fraction": 0.5,
     "heating.substations.0.valve.opening": 0.9,
     "heating.substations.1.valve.opening": 0.9,
-    "heating.substations.0.consumer.heat_demand": "150 kW",
-    "heating.substations.1.consumer.heat_demand": "100 kW",
-    "cooling.pump.frequency": "50 Hz",
-    "ates.storage.groundwater_flow": "36 t/h",
+    "heating.substations.0.consumer.heat_demand": {"value": 150, "unit": "kW"},
+    "heating.substations.1.consumer.heat_demand": {"value": 100, "unit": "kW"},
+    "cooling.pump.frequency": {"value": 50, "unit": "Hz"},
+    "ates.storage.groundwater_flow": {"value": 36, "unit": "t/h"},
     "ates.storage.mode": "charge",
     "ates.source_valve.split_fraction": 0.0,
     "ates.load_valve.split_fraction": 0.0,
-    "ates.pump.frequency": "50 Hz",
-    "ates.heat_pump.temperature_setpoint": "40 degC",
+    "ates.pump.frequency": {"value": 50, "unit": "Hz"},
+    "ates.heat_pump.temperature_setpoint": {"value": 40, "unit": "degC"},
     "air.temperature": AIR,
 } | {f"cooling.substations.0.{name}": value for name, value in COOLING_BUILDING.items()}
 

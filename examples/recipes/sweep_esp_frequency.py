@@ -10,16 +10,17 @@ Run with ``python examples/recipes/sweep_esp_frequency.py``.
 
 import gemini as gm
 
-FREQUENCIES = ("55 Hz", "60 Hz", "65 Hz")
+FREQUENCIES = tuple(gm.units.Quantity(hertz, "Hz") for hertz in (55, 60, 65))
 DAY = gm.engine.Clock.days(2027, 1, 1, days=1)
 
 
 def inputs(frequency):
     """Return a day of constant production at one pump frequency."""
-    value, unit = gm.units.parse(frequency)
     profiles = {
         "doublet.reservoir.production_rate": gm.types.Profile.constant(150, unit="m3/h", clock=DAY),
-        "doublet.esp.frequency": gm.types.Profile.constant(value, unit=unit, clock=DAY),
+        "doublet.esp.frequency": gm.types.Profile.constant(
+            frequency.value, unit=frequency.unit, clock=DAY
+        ),
         "injection_pump.pressure_setpoint": gm.types.Profile.constant(51.5, unit="bar", clock=DAY),
     }
     return gm.Dataset.from_profiles(profiles)
@@ -31,7 +32,8 @@ def main():
     for frequency in FREQUENCIES:
         results = gm.simulate(plant, plan=inputs(frequency), clock=DAY)
         closed = all(check["passed"] for check in gm.evaluate.plant_balance(plant, None, results))
-        print(f"{frequency}: {len(results.errors())} failed rows, balance closes: {closed}")
+        label = f"{frequency.value:g} {frequency.unit}"
+        print(f"{label}: {len(results.errors())} failed rows, balance closes: {closed}")
         for (module, port), row in results.to_frame(table="energy").iterrows():
             if row["energy_MWh"] > 0:
                 print(f"  {module + ' ' + port:<26} {row['energy_MWh']:8.3f} MWh")

@@ -28,7 +28,9 @@ def test_the_constraints_of_the_problem_join_the_checks():
     results = make_results(
         {"heat": {"unmet_demand": [7.0], "return_out.temperature": [300.0], "operating": [1.0]}}
     )
-    problem = make_problem(count=1, constraints=[gm.Constraint("heat.unmet_demand", max=5.0)])
+    problem = make_problem(
+        count=1, constraints=[gm.Constraint("heat.unmet_demand", max=gm.units.Quantity(5.0, "W"))]
+    )
     report = gm.evaluate.run_all(heating_plant(), problem, results)
     assert report["checks"][-1]["name"] == "heat.unmet_demand"
     assert report["checks"][-1]["passed"] is False and report["passed"] is False

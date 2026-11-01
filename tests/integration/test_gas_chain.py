@@ -7,13 +7,23 @@ from gemini.modules import energy_balance, mass_balance
 from gemini.physics import combustion, gas
 
 BRINE = gm.Fluid(
-    density="1030 kg/m3",
-    viscosity="0.4 mPa*s",
-    gas_liquid_ratio="0.8 Nm3/m3",
+    density={"value": 1030, "unit": "kg/m3"},
+    viscosity={"value": 0.4, "unit": "mPa*s"},
+    gas_liquid_ratio={"value": 0.8, "unit": "Nm3/m3"},
     gas_composition={"CH4": 0.8, "CO2": 0.2},
 )
-PRODUCED = gm.Stream(flow="300 m3/h", T="80 degC", p="10 bar", fluid=BRINE)
-WATER = gm.Stream(flow="20 kg/s", T="60 degC", p="5 bar", fluid=gm.WATER)
+PRODUCED = gm.Stream(
+    flow={"value": 300, "unit": "m3/h"},
+    T={"value": 80, "unit": "degC"},
+    p={"value": 10, "unit": "bar"},
+    fluid=BRINE,
+)
+WATER = gm.Stream(
+    flow={"value": 20, "unit": "kg/s"},
+    T={"value": 60, "unit": "degC"},
+    p={"value": 5, "unit": "bar"},
+    fluid=gm.WATER,
+)
 
 
 def chain():
@@ -22,7 +32,9 @@ def chain():
     plant.add("Degasser", name="degasser", params={"separation_efficiency": 1.0})
     plant.add("GasGrid", name="grid")
     plant.add("GasMakeup", name="makeup")
-    plant.add("Boiler", name="boiler", params={"capacity": "30 MW", "efficiency": 0.9})
+    plant.add(
+        "Boiler", name="boiler", params={"capacity": {"value": 30, "unit": "MW"}, "efficiency": 0.9}
+    )
     plant.add("Flare", name="flare")
     plant.add("Atmosphere", name="air")
     plant.connect("boiler.flue_out", "air.gas_in")
@@ -45,13 +57,13 @@ def run(setpoint):
     """Return the plant and one call at a boiler setpoint."""
     plant = chain()
     plant.boiler.temperature_setpoint = setpoint
-    plant.air.temperature = "15 degC"
+    plant.air.temperature = {"value": 15, "unit": "degC"}
     return plant, plant(produced=PRODUCED, water_in=WATER)
 
 
 def test_a_boiler_with_enough_gas_buys_nothing_and_the_surplus_reaches_the_flare():
     """The gas of 300 m3/h of brine covers a small duty; the rest is burned at the flare."""
-    _, result = run("65 degC")
+    _, result = run({"value": 65, "unit": "degC"})
     leaves = result.leaves()
     burned = leaves["flare"].outputs.burned_mass_flow
     assert leaves["makeup"].inlets.grid_in.m_dot == 0
@@ -62,7 +74,7 @@ def test_a_boiler_with_enough_gas_buys_nothing_and_the_surplus_reaches_the_flare
 
 def test_a_boiler_short_of_gas_buys_the_rest_and_nothing_reaches_the_flare():
     """A large duty burns all the gas and buys what is left."""
-    _, result = run("95 degC")
+    _, result = run({"value": 95, "unit": "degC"})
     leaves = result.leaves()
     gas_in, grid_in = leaves["makeup"].inlets.gas_in, leaves["makeup"].inlets.grid_in
     assert grid_in.m_dot > 0
@@ -76,15 +88,17 @@ def test_without_co_produced_gas_the_grid_covers_everything():
     """``grid.gas_out`` to ``boiler.fuel_in``, the other wiring of the chain."""
     plant = gm.Plant("Grid")
     plant.add("GasGrid", name="grid")
-    plant.add("Boiler", name="boiler", params={"capacity": "30 MW", "efficiency": 0.9})
+    plant.add(
+        "Boiler", name="boiler", params={"capacity": {"value": 30, "unit": "MW"}, "efficiency": 0.9}
+    )
     plant.add("Atmosphere", name="air")
     plant.connect("boiler.flue_out", "air.gas_in")
     plant.connect("boiler.loss_out", "air.heat_in")
     plant.connect("grid.gas_out", "boiler.fuel_in")
     plant.connect("water_in", "boiler.fluid_in")
     plant.connect("boiler.fluid_out", "water_out")
-    plant.boiler.temperature_setpoint = "70 degC"
-    plant.air.temperature = "15 degC"
+    plant.boiler.temperature_setpoint = {"value": 70, "unit": "degC"}
+    plant.air.temperature = {"value": 15, "unit": "degC"}
     leaves = plant(water_in=WATER).leaves()
     outputs = leaves["boiler"].outputs
     bought = leaves["grid"].outlets.gas_out.m_dot
@@ -94,7 +108,11 @@ def test_without_co_produced_gas_the_grid_covers_everything():
     )
 
 
-@pytest.mark.parametrize("setpoint", ["65 degC", "95 degC"], ids=["surplus", "short"])
+@pytest.mark.parametrize(
+    "setpoint",
+    [{"value": 65, "unit": "degC"}, {"value": 95, "unit": "degC"}],
+    ids=["surplus", "short"],
+)
 def test_the_chain_closes_its_mass_and_energy_balance(setpoint):
     """Every kilogram that enters leaves or burns, and every watt is accounted for."""
     plant, result = run(setpoint)
@@ -104,7 +122,7 @@ def test_the_chain_closes_its_mass_and_energy_balance(setpoint):
 
 def test_the_chain_conserves_the_carbon_it_reports():
     """The CO2 of boiler and flare is what the gas gives, with the flare's efficiency."""
-    _, result = run("65 degC")
+    _, result = run({"value": 65, "unit": "degC"})
     gas_flow = result.leaves()["degasser"].outlets.gas_out.m_dot
     composition = BRINE.gas_composition
     boiler_burnt = result.leaves()["boiler"].inlets.fuel_in.m_dot

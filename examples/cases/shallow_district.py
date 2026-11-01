@@ -35,13 +35,13 @@ def print_run(plant, problem, results):
     boiler = boiler - frame["peak_boiler.fluid_in.enthalpy_flow"]
     cold = frame["cooling_consumer.supply_in.mass_flow"] > 0
     rows = (
-        ("heat delivered", totals["heat_delivered"]["value"] / KWH, "kWh"),
+        ("heat delivered", totals["heat_delivered"].value / KWH, "kWh"),
         ("heat unmet", frame["heating_consumer.unmet_demand"].sum() * HOUR / KWH, "kWh"),
-        ("cold delivered", totals["cold_delivered"]["value"] / KWH, "kWh"),
+        ("cold delivered", totals["cold_delivered"].value / KWH, "kWh"),
         ("cold unmet", frame["cooling_consumer.unmet_sensible"].sum() * HOUR / KWH, "kWh"),
         ("boiler", boiler.sum() * HOUR / KWH, "kWh"),
         ("boiler, peak", boiler.max() / 1e3, "kW"),
-        ("electricity", totals["electricity_bought"]["value"] / KWH, "kWh"),
+        ("electricity", totals["electricity_bought"].value / KWH, "kWh"),
         (
             "heating supply",
             frame["heating_consumer.supply_in.temperature"].min() - 273.15,
@@ -63,7 +63,7 @@ def print_checks(checks):
     print("\nConstraints:")
     for item in checks:
         result = "ok" if item["passed"] else "VIOLATED"
-        worst, unit = item["value"]["value"], item["value"]["unit"]
+        worst, unit = item["value"].value, item["value"].unit
         if unit == "m3/s" and "flow" in item["name"]:
             worst, unit = gm.units.convert(worst, unit, "m3/h"), "m³/h"
         if unit == "s":

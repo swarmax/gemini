@@ -5,5 +5,5 @@ Pressure:            20.0 bar
 After cooling:       40.0 °C
 Same volume, water:  41.67 kg/s
 Default brine:       1000 kg/m3
-Parsed text:         150 m3/h
+A quantity in SI:    0.04167 m3/s
 Is m3/h a flow?      True

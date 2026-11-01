@@ -258,11 +258,13 @@ def test_a_standalone_plant_path_is_its_snake_case_name():
 def test_add_takes_one_dict_of_parameters_the_dict_of_set_params():
     """Unit strings and dotted names, no keyword parameters."""
     plant = gm.Plant("Params")
-    pipe = plant.add("Pipe", name="pipe", params={"length": "100 ft"})
+    pipe = plant.add("Pipe", name="pipe", params={"length": {"value": 100, "unit": "ft"}})
     assert pipe.length == pytest.approx(30.48)
-    doublet = plant.add("Doublet", name="d0", params={"reservoir.temperature": "87 degC"})
+    doublet = plant.add(
+        "Doublet", name="d0", params={"reservoir.temperature": {"value": 87, "unit": "degC"}}
+    )
     assert doublet.reservoir.temperature == pytest.approx(360.15)
-    plant.set_params("pipe", {"length": "200 ft"})
+    plant.set_params("pipe", {"length": {"value": 200, "unit": "ft"}})
     assert pipe.length == pytest.approx(60.96)
     with pytest.raises(TypeError, match="length"):
         plant.add("Pipe", name="other", length=5.0)

@@ -13,7 +13,8 @@ def to_plain(value):
     """Return ``value`` as plain JSON: NumPy to Python, NaN and infinity to ``None``.
 
     A Pydantic model becomes its JSON fields; mappings get text keys; lists, tuples, arrays and
-    pandas series become lists; a time becomes ISO 8601 text. The result passes
+    pandas series become lists; a time becomes ISO 8601 text; an object with a ``to_dict`` method,
+    such as a ``Quantity``, becomes its dict. The result passes
     ``json.dumps(result, allow_nan=False)``. Anything else raises ``TypeError``.
     """
     if value is None or isinstance(value, (bool, str)):
@@ -32,4 +33,6 @@ def to_plain(value):
         return [to_plain(item) for item in value]
     if isinstance(value, (datetime, date)):
         return value.isoformat()
+    if callable(getattr(value, "to_dict", None)):
+        return to_plain(value.to_dict())
     raise TypeError(f"to_plain: value = {value!r}; expected a JSON-like value")

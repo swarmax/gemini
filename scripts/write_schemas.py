@@ -14,6 +14,7 @@ import pandas as pd
 
 import gemini as gm
 from gemini._utils import paths
+from gemini._utils.jsonable import to_plain
 from gemini.types import shapes
 
 ROOT = Path(__file__).parents[1]
@@ -74,7 +75,7 @@ def documents():
         "profile.sample.json": _profile_sample(),
         "value.sample.json": results.summary()["heat_exchanger"]["duty"]["mean"],
         "problem.sample.json": _problem_sample(),
-        "check.sample.json": gm.evaluate.energy_balance(plant, _problem(), results),
+        "check.sample.json": to_plain(gm.evaluate.energy_balance(plant, _problem(), results)),
     }
 
 

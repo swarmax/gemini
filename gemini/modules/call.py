@@ -22,9 +22,9 @@ def evaluate(module, parameters, inlets, controls, on_error="raise", units=None)
     """Return ``{outlets, outputs, errors}`` of one call of a registered module or class.
 
     ``module`` is a registry name or a ``Module`` class. ``parameters`` maps parameter names to
-    numbers or unit strings (``"150 m3/h"``). ``inlets`` maps each inlet port to its stream
-    fields, ``{"m_dot": "10 kg/s", "T": "80 degC", "p": "5 bar"}``, or ``flow`` in place of
-    ``m_dot`` for a volume flow (``"150 m3/h"``), which converts with the density of the inlet's
+    numbers in SI or quantities (``{"value": 150, "unit": "m3/h"}``). ``inlets`` maps each inlet
+    port to its stream fields, ``{"m_dot": {"value": 10, "unit": "kg/s"}, "T": ...}``, or ``flow``
+    in place of ``m_dot`` for a volume flow, which converts with the density of the inlet's
     fluid, and an optional ``fluid``. ``m_dot`` refuses a volume unit and suggests ``flow``.
     ``controls`` maps control and boundary names to values for this call only.
 
@@ -55,8 +55,8 @@ def _check_mass_flows(inlets):
     """Refuse a volume flow given as ``m_dot``, pointing to ``flow``."""
     for port, fields in inlets.items():
         flow = fields.get("m_dot") if isinstance(fields, Mapping) else None
-        *_, unit = str(flow).rpartition(" ")
-        if unit_table.fits(unit, "volume_flow"):
+        unit = flow.get("unit") if isinstance(flow, Mapping) else getattr(flow, "unit", None)
+        if unit is not None and unit_table.fits(unit, "volume_flow"):
             raise ValidationError(
                 f"evaluate: {port}.m_dot = {flow!r}; expected a mass flow; give it as 'flow'",
                 path=f"{port}.m_dot",

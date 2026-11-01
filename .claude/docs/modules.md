@@ -149,7 +149,7 @@ measured, state, inlets, outlets, outputs, children, connections, values}`:
 parameters appear under their dotted path. Each property has the standard keywords (`type` or
 `anyOf`, `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `enum`, `default`,
 `description`) plus `unit` and `quantity`. A number with a unit is `anyOf` number and string,
-because inputs accept `"150 m3/h"`.
+because inputs accept `{"value": 150, "unit": "m3/h"}`.
 
 `validate_params(params, on_error="raise")` checks every entry and raises one `ValidationError` that
 carries every problem; with `on_error="record"` it returns them, each
@@ -282,7 +282,7 @@ class Column(Plant):
 of this call, in SI, so a dated call derives from the design of its date. A value that has not been
 given yet derives nothing: the values may arrive one call at a time. `_keep_derived(derived, params)`
 does the bookkeeping: an explicit child value in the call wins, now and in later calls
-(`{"depth": "3000 m", "well.pipe_path": [...]}` keeps the given pipe path), and it records the names
+(`{"depth": {"value": 3000, "unit": "m"}, "well.pipe_path": [...]}` keeps the given pipe path), and it records the names
 it keeps.
 
 Every route that sets parameters reaches this method: `add(..., params=)`, `from_dict`,
@@ -317,7 +317,7 @@ curve = [1, 0, 0, 0, 0, 0]
 pump = Pump().set_params(
     "", {"stage_count": 10, "head_coefficients": curve, "power_coefficients": curve}
 )
-pump.frequency = "50 Hz"
+pump.frequency = {"value": 50, "unit": "Hz"}
 ```
 
 ## Calling modules and `Ports`
@@ -329,10 +329,10 @@ only. Do not combine an inlet mapping with inlet keywords.
 ```python
 import gemini as gm
 
-stream = gm.Stream(flow="150 m3/h", T="80 C", p="20 bar")
-a = pump(fluid_in=stream, frequency="50 Hz")
-b = pump({"fluid_in": stream}, frequency="50 Hz")
-c = pump(stream, frequency="50 Hz")
+stream = gm.Stream(flow={"value": 150, "unit": "m3/h"}, T={"value": 80, "unit": "C"}, p={"value": 20, "unit": "bar"})
+a = pump(fluid_in=stream, frequency={"value": 50, "unit": "Hz"})
+b = pump({"fluid_in": stream}, frequency={"value": 50, "unit": "Hz"})
+c = pump(stream, frequency={"value": 50, "unit": "Hz"})
 assert a.outputs.head == b.outputs.head == c.outputs.head
 assert a.outputs.get("head", unit="bar") == a.outputs.head / 1e5
 ```
@@ -431,7 +431,7 @@ what `forward` assigns, the combinations of a plant, forward hooks and output co
 
 ```python
 with gm.modules.no_outputs():
-    fast = pump(fluid_in=stream, frequency="50 Hz")
+    fast = pump(fluid_in=stream, frequency={"value": 50, "unit": "Hz"})
 
 assert dict(fast.outputs) == {}
 assert fast.outlets.fluid_out == a.outlets.fluid_out

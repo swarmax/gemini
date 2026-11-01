@@ -32,11 +32,16 @@ def test_doublet_heat_replay_is_identical_on_both_backends(shared_plant, fast_fr
 def port_free_plant():
     """Return a root plant with no plant port, which every root plant must be."""
     plant = gm.Plant("Closed")
-    plant.add("Valve", name="valve", params={"flow_coefficient": "60 m3/h/bar^0.5"})
+    plant.add(
+        "Valve", name="valve", params={"flow_coefficient": {"value": 60, "unit": "m3/h/bar^0.5"}}
+    )
     plant.add(
         "HeatingGrid",
         name="users",
-        params={"return_temperature": "60 degC", "return_pressure": "6 bar"},
+        params={
+            "return_temperature": {"value": 60, "unit": "degC"},
+            "return_pressure": {"value": 6, "unit": "bar"},
+        },
     )
     plant.connect("users.return_out", "valve.fluid_in")
     plant.connect("valve.fluid_out", "users.supply_in")

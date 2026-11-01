@@ -66,7 +66,7 @@ def test_convert_between_units_of_one_dimension():
 
 def test_convert_identity_for_every_declared_unit():
     """Every unit a quantity alias declares converts to itself."""
-    for unit in ("W/K", "Hz", "kg/m3", "Pa.s", "m2", "m/s", "currency", "currency/year"):
+    for unit in ("W/K", "Hz", "kg/m3", "Pa.s", "m2", "m/s", "currency", "currency/yr"):
         assert units.convert(5.0, unit, unit) == 5.0
     assert units.convert(36.0, "currency/h", "currency/s") == pytest.approx(0.01)
     assert units.convert(5.0, "stages", "stages") == 5.0
@@ -76,20 +76,47 @@ def test_difference_quantities_ignore_offsets():
     """A temperature or pressure difference converts by scale only (10 K is 10 degC)."""
     assert units.convert(10.0, "K", "degC", quantity="temperature_difference") == 10.0
     assert units.convert(1e5, "Pa", "barg", quantity="pressure_difference") == 1.0
-    assert units.value_in_si("5 degC", "K", "dT", quantity="temperature_difference") == 5.0
-    assert units.value_in_si("2 barg", "Pa", "dp", quantity="pressure_difference") == 2e5
-    assert units.value_in_si("5 degC", "K", "T", quantity="temperature") == 278.15
+    assert (
+        units.value_in_si(
+            {"value": 5, "unit": "degC"}, "K", "dT", quantity="temperature_difference"
+        )
+        == 5.0
+    )
+    assert (
+        units.value_in_si({"value": 2, "unit": "barg"}, "Pa", "dp", quantity="pressure_difference")
+        == 2e5
+    )
+    assert (
+        units.value_in_si({"value": 5, "unit": "degC"}, "K", "T", quantity="temperature") == 278.15
+    )
 
 
-def test_value_in_si_parses_strings_and_quantities():
-    """Unit strings and Quantity values convert; other values pass through unchanged."""
-    assert units.value_in_si("1.5e3 bar", "Pa") == 1.5e8
+def test_value_in_si_converts_quantities_and_their_dicts():
+    """A Quantity and its dict convert; a plain number or another value passes unchanged."""
+    assert units.value_in_si({"value": 1.5e3, "unit": "bar"}, "Pa") == 1.5e8
     assert units.value_in_si(units.Quantity(3, "ft"), "m") == pytest.approx(0.9144)
-    assert units.value_in_si("12", "m") == "12"
+    assert units.value_in_si(12.0, "m") == 12.0
+    assert units.value_in_si(units.Quantity([1, 2], "km"), "m").tolist() == [1000.0, 2000.0]
     with raises(
-        ValidationError, "invalid_unit", match="plant.length: unit = 'bar'; expected a unit of 'm'"
+        ValidationError, "invalid_unit", match="plant.length: unit = 'bar'; expected one of"
     ):
-        units.value_in_si("12 bar", "m", "plant.length")
+        units.value_in_si({"value": 12, "unit": "bar"}, "m", "plant.length")
+
+
+@pytest.mark.parametrize("text", ["12", "12 m", "abc", " "])
+def test_unit_text_is_refused_and_shows_the_dict_form(text):
+    """A text for a field with a unit is no quantity, whatever it says."""
+    with raises(
+        ValidationError, "invalid_value", match="plant.length.*'value': 150, 'unit': 'm3/h'"
+    ):
+        units.value_in_si(text, "m", "plant.length")
+
+
+def test_a_wrong_dimension_lists_the_units_of_the_field():
+    """The message names the field and the units it accepts."""
+    with raises(ValidationError, "invalid_unit", match="reservoir.flow.*m3/h.*m3/s") as caught:
+        units.value_in_si(units.Quantity(300, "m"), "m3/s", "reservoir.flow", "volume_flow")
+    assert "'m'" in str(caught.value)
 
 
 def test_value_in_si_without_declared_unit_keeps_the_value():
@@ -163,52 +190,61 @@ def test_names_list_every_unit_or_those_of_one_quantity():
     assert caught.value.suggestions[0] == "pressure"
 
 
-def test_parse_splits_a_number_and_a_known_unit():
-    """Text gives its value in the unit it states; unknown units and bare numbers raise."""
-    assert units.parse("150 m3/h") == (150.0, "m3/h")
-    assert units.parse("-2.5e3 bar(g)") == (-2500.0, "bar(g)")
+def test_unit_is_generated_from_the_table():
+    """Every unit of the table is a member, and a member is its string."""
+    assert {str(member) for member in units.Unit} == set(units.names())
+    assert units.Unit.M3_PER_H == "m3/h" and units.Unit.DEG_C == "degC"
+    assert units.Unit.EUR_PER_MWH == "EUR/MWh" and units.Unit.PERCENT_PER_YR == "%/yr"
+    assert units.Unit.G_PER_KWH == "g/kWh" and units.Unit.EUR_PER_W_PER_K == "EUR/(W/K)"
+
+
+def test_a_quantity_round_trips_through_its_dict():
+    """``to_dict`` and ``from_dict`` give the same quantity, for a number and an array."""
+    for quantity in (units.Quantity(2500, "m"), units.Quantity(np.array([1.0, 2.5]), "m3/h")):
+        assert units.Quantity.from_dict(quantity.to_dict()) == quantity
+    assert units.Quantity(3, "ft").to_dict() == {"value": 3, "unit": "ft"}
+    assert isinstance(units.Quantity(3, "ft").unit, units.Unit)
+
+
+def test_a_quantity_compares_si_values():
+    """100 bar equals 1e7 Pa."""
+    assert units.Quantity(100, "bar") == units.Quantity(1e7, "Pa")
+    assert units.Quantity(100, "bar") != units.Quantity(100, "Pa")
+    assert units.Quantity(1, "d").si == 86400.0
+
+
+def test_to_converts_across_offset_units_and_differences():
+    """A degC or a barg value carries an offset, a difference does not."""
+    assert units.Quantity(20, "degC").to("K").value == pytest.approx(293.15)
+    assert units.Quantity(293.15, "K").to("degC").value == pytest.approx(20.0)
+    assert units.Quantity(1, "barg").to("bar").value == pytest.approx(2.01325)
+    assert units.Quantity(10, "K").to("degC", "temperature_difference").value == 10.0
+    assert units.Quantity(36, "m3/h").to("m3/s").value == pytest.approx(0.01)
+    assert units.Quantity(300, "g/kWh").to("kg/J").value == pytest.approx(300e-3 / 3.6e6)
+    assert units.Quantity(60, "EUR/MWh").to("EUR/kWh").value == pytest.approx(0.06)
+    with raises(ValidationError, "invalid_unit", match="'K'.*'Pa'"):
+        units.Quantity(1, "bar").to("K")
+
+
+def test_an_unknown_unit_or_a_wrong_dict_is_refused():
+    """A unit that is not in the table, or a dict that is not a quantity."""
     with raises(ValidationError, "invalid_unit", match="'furlong'"):
-        units.parse("3 furlong")
-    with raises(ValidationError, "invalid_unit", match="expected '<number> <unit>'"):
-        units.parse("150")
+        units.Quantity(3, "furlong")
+    for data in ({"value": 3}, {"value": 3, "unit": "m", "extra": 1}, "3 m", [3, "m"]):
+        with raises(ValidationError, "invalid_value", match="'value': 150"):
+            units.Quantity.from_dict(data)
 
 
-def test_fits_checks_a_unit_against_a_quantity():
-    """A unit fits a quantity when it converts to the quantity's SI unit."""
-    assert units.fits("MPa", "pressure") and units.fits("barg", "pressure_difference")
-    assert units.fits("rpm", "frequency") and units.fits("degC", "temperature")
-    assert not units.fits("kW", "pressure") and not units.fits("furlong", "pressure")
-    with raises(ValidationError, "unknown_name"):
-        units.fits("bar", "pressur")
+def test_no_text_parser_is_left():
+    """Unit text is read nowhere: ``parse`` and ``split_quantity`` are gone."""
+    assert not hasattr(units, "parse") and not hasattr(units, "split_quantity")
 
 
-def test_a_quantity_keeps_one_unit():
-    """Defining a known quantity again with the same unit is fine; another unit raises."""
-    units.define_quantity("pressure", "Pa")
-    with raises(ValidationError, "invalid_unit", match="already 'Pa'"):
-        units.define_quantity("pressure", "K")
-
-
-def test_table_and_converters_share_one_factor():
-    """The table scale and the converter of a unit read the same constant."""
-    assert units.to_si(2.0, "bar") == units.bar_to_pa(2.0)
-    assert units.to_si(7.0, "m3/h") == units.m3h_to_m3s(7.0)
-    assert units.to_si(7.0, "m3/h/bar") == units.index_to_si(7.0)
-    assert units.kgh_to_kgs is units.m3h_to_m3s and units.dyne_cm_to_nm is units.cp_to_pas
-    assert units.c_to_k(0.0) == units.ZERO_CELSIUS == units.to_si(0.0, "degC")
-
-
-def test_a_family_is_led_by_the_first_quantity_of_its_si_unit():
-    """The quantities of the public ``units`` argument."""
-    assert units.family("duty") == units.family("electricity") == "power"
-    assert units.family("pressure_difference") == "pressure"
-    assert units.family("temperature_difference") == "temperature"
-    assert units.family("elevation") == "length"
-
-
-def test_array_convert_gives_the_bits_of_the_scalar_conversion():
-    """One column at once, element for element."""
-    values = [1.5, 300.0, 1e-3]
-    for source, target, quantity in (("K", "degC", None), ("Pa", "barg", "pressure_difference")):
-        expected = [units.convert(value, source, target, quantity) for value in values]
-        assert units.array_convert(values, source, target, quantity).tolist() == expected
+def test_reports_print_in_their_own_units():
+    """Energy, mass and per-year units a report prints with convert from the SI of a result."""
+    assert units.Quantity(3.6e12, "J").to("GWh").value == pytest.approx(1.0)
+    assert units.Quantity(2e6, "kWh").to("MWh").value == pytest.approx(2000.0)
+    assert units.Quantity(5e6, "kg").to("kt").value == pytest.approx(5.0)
+    assert units.Quantity(2e6, "kg/yr").to("t/yr").value == pytest.approx(2000.0)
+    assert units.Quantity(7.2e12, "J/yr").to("GWh/yr").value == pytest.approx(2.0)
+    assert units.Unit.GWH == "GWh" and units.Unit.T_PER_YR == "t/yr"

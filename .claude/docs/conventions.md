@@ -158,7 +158,7 @@ Examples live in `examples/`: `quickstart.py`, numbered `basics/`, then `recipes
 that says what it shows, the names it uses and how to run it, then constants, small functions and
 `main()` under the `__main__` guard. It runs alone from any folder, with paths from `__file__`;
 it uses the public API (`gemini`, and `gemini.types` for the declarations of a new module); values
-are unit strings, prints are labelled in MW, kW, °C, bar and m³/h, and an assumption that is not
+are quantities, prints are labelled in MW, kW, °C, bar and m³/h, and an assumption that is not
 source data is printed as one. A case stays within about 150 lines: plant building beyond that
 belongs in gemini, as a registered plant. `GEMINI_EXAMPLE_DATASET` is the one way to change the
 dataset, the fast month by default. `tests/unit/test_code_quality.py` checks what can be checked.

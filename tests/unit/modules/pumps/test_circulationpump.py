@@ -10,7 +10,12 @@ from tests.fixtures.equivalence import assert_module_matches
 def pump():
     """Return a pump of 4 kg/s and 0.5 bar on a circuit held at 3 bar."""
     return CirculationPump().set_params(
-        "", {"flow": 4.0, "pressure_rise": "0.5 bar", "loop_pressure": "3 bar"}
+        "",
+        {
+            "flow": 4.0,
+            "pressure_rise": {"value": 0.5, "unit": "bar"},
+            "loop_pressure": {"value": 3, "unit": "bar"},
+        },
     )
 
 

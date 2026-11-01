@@ -4,10 +4,15 @@ import pytest
 
 import gemini as gm
 
-SECONDARY = gm.Stream(flow="125.1 m3/h", T="20 degC", p="3 bar", fluid=gm.Fluid(kind="water"))
+SECONDARY = gm.Stream(
+    flow={"value": 125.1, "unit": "m3/h"},
+    T={"value": 20, "unit": "degC"},
+    p={"value": 3, "unit": "bar"},
+    fluid=gm.Fluid(kind="water"),
+)
 INPUTS = {
-    "doublet.esp.frequency": "60 Hz",
-    "doublet.wellhead_pressure": "10 bar",
+    "doublet.esp.frequency": {"value": 60, "unit": "Hz"},
+    "doublet.wellhead_pressure": {"value": 10, "unit": "bar"},
     "primary_splitters.0.split_fraction": 0.5,
     "primary_splitters.1.split_fraction": 0.6,
     "secondary_splitters.0.split_fraction": 0.5,

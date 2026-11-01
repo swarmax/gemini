@@ -101,8 +101,8 @@ print(plant.validate())
 ```
 
 `add(type, name=None, params=None)` takes a registry name or a class and one dict of parameters,
-the dict `set_params` takes: unit strings accepted, dotted names for a composite
-(`params={"reservoir.temperature": "87 degC"}`). `connect` takes a handle, `"path.port"` or a module
+the dict `set_params` takes: a `Quantity` or its dict accepted for a value with a unit, a plain number being SI, dotted names for a composite
+(`params={"reservoir.temperature": {"value": 87, "unit": "degC"}}`). `connect` takes a handle, `"path.port"` or a module
 path. A module path picks the only free port of a fitting kind; a port without a kind fits anything.
 If several pairs fit, a `ValidationError` with code `ambiguous_port` lists them. A bare word that
 names no module is a plant port, as in `return_in` above. Only `connect` wires modules; there is no
@@ -129,7 +129,7 @@ derived value. `size` is the one key of every structural argument, next to `type
 
 ```json
 {"format": 2, "type": "MultiWellPlant", "size": {"producers": 3, "injectors": 2},
- "params": {"producers.0.reservoir.temperature": "87 degC"},
+ "params": {"producers.0.reservoir.temperature": {"value": 87, "unit": "degC"}},
  "bindings": {}, "param_history": {}}
 ```
 
@@ -173,7 +173,7 @@ assert plant.to_dict() == data
 | `constraints` | structure | `[{target, equals or at_least, by, bounds}]`; see [constraints](#constraints) |
 | `bindings`, `param_history` | both, always | `{path: {name: column}}`; `{path: [{valid_from, params}]}`; see [bindings](#parameters-by-date-and-bindings) |
 | `fluids`, `boundary` | both | `{path: {...}}`, the fluid and the stored assumptions of a module |
-| `inputs` | both | `{path: value}`, what `plant.set_inputs` was given: controls and boundaries by dotted path, plant inlet fields as `port.field` (`m_dot`, `T`, `p`, `fluid`), numbers in SI or unit strings; left out when empty |
+| `inputs` | both | `{path: value}`, what `plant.set_inputs` was given: controls and boundaries by dotted path, plant inlet fields as `port.field` (`m_dot`, `T`, `p`, `fluid`), numbers in SI or quantities; left out when empty |
 
 - `type` of a module is a registry name. It may name a plant class, whose parameters are then dotted
   (`"esp.stage_count"`), so a plant can contain plants.
@@ -187,7 +187,7 @@ assert plant.to_dict() == data
   what a float sum over the ports depends on. The key order of a dictionary carries no meaning for
   numbers.
 - The round trip `from_dict(p.to_dict())` rebuilds the same plant with the same numbers, for every
-  shipped plant, unit strings included: a stated value stays as written while it equals the current
+  shipped plant, quantity dicts included: a stated value stays as written while it equals the current
   one. The backend digests sorted-key JSON.
 - A `fluids` entry passes to the modules below it, unless the section names one of them: then it
   speaks for each. The fluid of a plant set in code passes to every child.
@@ -313,8 +313,8 @@ grid, and its setpoints as `inputs`:
 | `DistrictEnergyPlant`, `BoilerChpPlant`, `ParallelExchangerPlant` | cases: their examples set their inputs |
 
 Example values live in `inputs/plants/<Name>.json`, in a source checkout only:
-`{"plant": "<Name>", "size": {...}, "params": {"<dotted path>": <value>, ...}}`, numbers as unit
-strings where the text parses to the same float, plus `fluids`, `boundary`, `bindings`,
+`{"plant": "<Name>", "size": {...}, "params": {"<dotted path>": <value>, ...}}`, numbers as
+quantity dicts where the quantity converts to the same float, plus `fluids`, `boundary`, `bindings`,
 `param_history` and `inputs` under the names of the plant dict. `example(name)` builds the plant of
 that `size`, then `set_params` with `params` and these sections, and `to_dict()` writes the values in
 SI. The five template plants have no values of their own: a design is its plant dict. A plant with no file raises `NotImplementedYet`

@@ -313,7 +313,7 @@ def test_compile_false_reaches_the_engine(monkeypatch):
 def _no_geotherm():
     """Return a plant whose doublet has a depth and neither value of its geotherm."""
     plant = gm.Plant("Waiting")
-    plant.add("Doublet", "d0").set_params("", {"depth": "2500 m"})
+    plant.add("Doublet", "d0").set_params("", {"depth": {"value": 2500, "unit": "m"}})
     return plant
 
 
@@ -333,7 +333,7 @@ def test_a_run_without_the_geotherm_of_a_doublet_names_the_path(on_error):
 def test_a_gradient_alone_leaves_the_surface_temperature_missing():
     """Each value that is still missing is named on its own."""
     plant = _no_geotherm()
-    plant.set_params("d0", {"gradient": "30 K/km"})
+    plant.set_params("d0", {"gradient": {"value": 30, "unit": "K/km"}})
     index = pd.date_range("2027-01-01", periods=2, freq="h", tz="UTC", name="time")
     with raises(ValidationError, "missing_value") as caught:
         gm.Engine(plant).simulate(pd.DataFrame(index=index))

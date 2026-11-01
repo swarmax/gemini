@@ -22,7 +22,7 @@ def desander():
 def test_hand_computed_removal_and_loss():
     """Quadratic loss and removal from the liquid volume flow, with mg/l accepted."""
     module = desander()
-    result = module(fluid_in=INLET, sand_concentration="50 mg/l")
+    result = module(fluid_in=INLET, sand_concentration={"value": 50, "unit": "mg/l"})
     out = result.outputs
     assert out.pressure_drop == 25000
     removed = result.outlets.waste_out.m_dot

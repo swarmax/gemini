@@ -43,7 +43,7 @@ class Costs:
 
     def electric(self, path, efficiency):
         """Return the cost of heat or cold made from grid electricity at ``efficiency``."""
-        factor = self.assumptions.electricity_emission_factor or 0.0
+        factor = self.assumptions.emission_factor() or 0.0
         return self._cost("electricity", path, efficiency, factor)
 
     def gas(self, path, efficiency):

@@ -120,8 +120,17 @@ def test_slice_and_lossless_files(tmp_path):
 def with_units():
     """Return the two-row pump results with the units a plant would declare."""
     rows = results()
-    rows.units = {"pump": {"head": "Pa", "power_in": "W"}}
+    rows.declared = {"pump": {"head": "Pa", "power_in": "W"}}
     return rows
+
+
+def test_units_maps_every_column_to_its_unit():
+    """``units[column]`` is the unit ``to_frame`` states for the column, ``-`` when undeclared."""
+    rows = with_units()
+    frame = rows.to_frame()
+    assert rows.units == dict(frame.attrs["units"])
+    assert rows.units["pump.head"] == "Pa" and rows.units["pump.power_in"] == "W"
+    assert rows.units["pump.health_score"] == "-" and Results().units == {}
 
 
 def test_names_lists_every_readable_field_by_path():
@@ -220,7 +229,7 @@ def test_files_and_bytes_keep_units_end_state_and_every_cell(tmp_path):
         Results.from_bytes(rows.to_bytes()),
     ):
         pd.testing.assert_frame_equal(loaded.to_frame(), rows.to_frame())
-        assert loaded.units == rows.units and loaded.end_state == rows.end_state
+        assert loaded.declared == rows.declared and loaded.end_state == rows.end_state
         assert loaded.errors() == rows.errors() and loaded.skip_counts == rows.skip_counts
         assert loaded.get("pump", "head") == rows.get("pump", "head")
     assert (tmp_path / "plain.npz").exists()
@@ -246,7 +255,7 @@ def test_slices_keep_units_and_end_state():
     rows = with_units()
     rows.end_state = {"position": None, "module_states": {}}
     tail = rows.slice(1)
-    assert tail.units == rows.units and tail.end_state == rows.end_state
+    assert tail.declared == rows.declared and tail.end_state == rows.end_state
     assert tail.get("pump", "head")["unit"] == "Pa" and len(tail.errors()) == 1
 
 

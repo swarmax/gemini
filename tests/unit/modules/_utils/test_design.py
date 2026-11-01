@@ -25,7 +25,7 @@ def exchanger():
 
 def test_an_undated_set_changes_the_base_and_the_current_value(exchanger):
     """Unit strings are converted, and the value is in force at once."""
-    exchanger.set_params("", {"hot_nominal_pressure_drop": "2 bar"})
+    exchanger.set_params("", {"hot_nominal_pressure_drop": {"value": 2, "unit": "bar"}})
     assert exchanger.hot_nominal_pressure_drop == 2e5
     assert exchanger.params_at("")["hot_nominal_pressure_drop"] == 2e5
     history = exchanger.param_history("")

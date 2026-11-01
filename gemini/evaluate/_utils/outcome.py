@@ -7,14 +7,14 @@ one that finds no value; the functions call each other with ``"record"`` and rea
 
 from gemini.errors import GeminiError, ValidationError
 from gemini.errors.base import check_on_error
-from gemini.types.shapes import value
+from gemini.types.shapes import measure
 
 
 def unavailable(unit, reason, on_error, **details):
     """Raise that the inputs cannot give a value, or return it as ``None`` with the ``reason``."""
     if on_error == "raise":
         raise ValidationError(reason, code="no_value")
-    return value(None, unit, reason, **details)
+    return measure(None, unit, reason, **details)
 
 
 def reported(on_error, unit, compute):
@@ -25,4 +25,4 @@ def reported(on_error, unit, compute):
     except GeminiError as error:
         if on_error == "raise":
             raise
-        return value(None, unit, str(error))
+        return measure(None, unit, str(error))

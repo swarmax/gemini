@@ -38,7 +38,9 @@ def test_a_trial_sets_the_values_on_a_copy_and_runs_it(monkeypatch):
 
     monkeypatch.setattr(trial, "simulate", fake)
     plant = gm.Plant("Boiler")
-    plant.add("Boiler", name="boiler", params={"capacity": "2 MW", "efficiency": 0.9})
+    plant.add(
+        "Boiler", name="boiler", params={"capacity": {"value": 2, "unit": "MW"}, "efficiency": 0.9}
+    )
     metrics, reason = trial.run_trial(plant, None, None, {"boiler.capacity": 1e6}, ["peak_heat"])
     assert reason is None and list(metrics) == ["peak_heat"]
     assert seen[0].params_at("boiler", None)["capacity"] == 1e6

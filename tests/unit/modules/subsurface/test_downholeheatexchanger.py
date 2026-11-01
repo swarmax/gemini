@@ -23,9 +23,9 @@ def exchanger():
     return DownholeHeatExchanger().set_params(
         "",
         {
-            "borehole_depth": "2500 m",
-            "surface_temperature": "10 degC",
-            "geothermal_gradient": "30 K/km",
+            "borehole_depth": {"value": 2500, "unit": "m"},
+            "surface_temperature": {"value": 10, "unit": "degC"},
+            "geothermal_gradient": {"value": 30, "unit": "K/km"},
             "ground_conductivity": 2.5,
             "ground_diffusivity": 1e-6,
             "borehole_radius": 0.1,

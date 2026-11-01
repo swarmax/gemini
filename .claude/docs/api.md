@@ -11,7 +11,7 @@ is final and the call raises `gm.errors.NotImplementedYet`.
 Conventions on every entry:
 
 - Results are deterministic: the same input gives the same numbers on every backend.
-- Inputs take a number in SI or a string such as `"150 m3/h"`. Outputs are in SI by default.
+- Inputs take a number in SI or a string such as `{"value": 150, "unit": "m3/h"}`. Outputs are in SI by default.
 - A plant and an engine are not shared across threads: each worker loads its own.
 - Readers are `from_<format>` and writers `to_<format>`: `from_csv`, `from_json`, `from_dict`,
   `from_values`, `from_bytes`, `from_npz`, `to_json`, `to_dict`, `to_bytes`, `to_npz`. No `read_*`,
@@ -25,15 +25,20 @@ Conventions on every entry:
 ## Return shapes
 
 Every public return that carries data uses only three shapes, defined once in `gemini/types/shapes.py`
-and built by one helper each, so no module assembles them by hand. Returns are plain JSON: no NumPy
-types, NaN and infinity are `null` (`gemini._utils.jsonable.to_plain`), and
-`json.dumps(result, allow_nan=False)` works.
+and built by one helper each, so no module assembles them by hand. The JSON form of a return is
+plain: no NumPy types, NaN and infinity are `null` (`gemini._utils.jsonable.to_plain`), and
+`json.dumps(to_plain(result), allow_nan=False)` works. `gm.call`, `Results` and `gm.analysis` return
+that plain JSON. A result of `gm.evaluate` and `gm.optim` is a `gm.units.Quantity` in SI (a
+`Value`, below), and `to_plain` turns it into the dict `{value, unit}`.
 
 1. **Value** `{value, unit}`. `value` is a number, an array or `null`; when it is `null`, a `reason`
    key says why. The key is `value` for arrays too. A time series is a value with a `time` key
    beside it: `{time, value, unit}`. Statistics are `{min, max, mean}`, each a value. An output that
    is a flag or a text keeps its boolean or string. An economics value adds the parts of its result
-   as more keys, each a value or a text.
+   as more keys, each a value or a text. In Python a result of `gm.evaluate` or `gm.optim` is a
+   `Value`, a `Quantity` with a `reason` and the `parts` of the result: `lcts(...).value`,
+   `.unit`, `.to("EUR/MWh")`, `.parts["heat"]`. Money is in the unit `currency` (`currency/J`,
+   `currency/yr`), whatever `Assumptions.currency` labels, and a year is `yr`.
 2. **Problem** `{path, code, message, suggestions}`, for every error, validation result and failed
    run row. A run row adds `time`. There is no `class` key: `code` is the stable key for machines.
 3. **Check** `{name, passed, value, limit}`, where `value` and `limit` are values. A failed check is
@@ -155,7 +160,7 @@ are in `gm.plants`, not in `gm.modules`; `gm.modules` never imports `gm.plants`.
 | `p.loop_tolerance`, `p.loop_passes` | the settings of a loop, 1e-9 and 50, see [plants.md](plants.md#loops) | real |
 | `p.summary()` | text table | real |
 | `p.validate(on_error="raise")` | as `gm.plants.validate` | real |
-| `p.set_inputs(values)` | the plant; sets inputs by path, the one public way: `{"heat_pump.temperature_setpoint": "100 degC", "heating_return.T": "60 degC"}`, stored by `to_dict` under `inputs`, see [plants.md](plants.md#the-plant-dict) | real |
+| `p.set_inputs(values)` | the plant; sets inputs by path, the one public way: `{"heat_pump.temperature_setpoint": {"value": 100, "unit": "degC"}, "heating_return.T": {"value": 60, "unit": "degC"}}`, stored by `to_dict` under `inputs`, see [plants.md](plants.md#the-plant-dict) | real |
 | `p.input_value(path)` | the input in SI, or `None` when it has no value | real |
 | `p.target_of(source)`, `p.source_of(target)` | the `"path.port"` an outlet feeds, or that feeds an inlet; `None` for a plant port | real |
 | `p.feeds(source)` | the paths of the modules an outlet reaches through its circuit, nearest first; it ends at a grid or a plant port | real |
@@ -187,10 +192,20 @@ On any plant, `path` being a dotted module path (`""` is the root):
 | Name | Returns | Status |
 | --- | --- | --- |
 | `gm.units.names(quantity=None)` | unit names, of one quantity if given | real |
-| `gm.units.parse(text)` | `(value, unit)` | real |
 | `gm.units.convert(value, from_unit, to_unit, quantity=None)` | number | real |
 | `gm.units.fits(unit, quantity)` | bool; an unknown unit is false, an unknown quantity raises | real |
-| `gm.units.Quantity` | the quantity type | real |
+| `gm.units.Unit` | the `str` enum of every unit of the table, generated from it: `Unit.M3_PER_H == "m3/h"` | real |
+| `gm.units.Quantity(value, unit)` | the one shape of a value with a dimension; `.si`, `.to(unit, quantity=None)`, `to_dict()`, `Quantity.from_dict(d)`; equality compares SI values | real |
+
+Every public input with a dimension takes a `Quantity` or its dict `{"value": 150, "unit":
+"m3/h"}`. A text such as `"150 m3/h"` is `ValidationError` `invalid_value` everywhere, and a unit
+of another dimension is `invalid_unit` that lists the units of the field. A bare number is taken
+for a value with a dimension only where the code works in SI by design: the parameters of a
+module and a plant (`set_params`, the plant dict, `gm.call`), a stream and a fluid. Everywhere
+else it is refused: the bounds of a `Constraint` (when judged, for a field with a unit), a
+`site` value, the prices and factors of `Assumptions`, and the variables, limits and
+distributions of `gm.optim`; a dimensionless value (an efficiency, a fraction, a rate, a count)
+stays a number.
 
 A `Doublet` has `volume_imbalance`, a `HeatingGrid` and a `CoolingGrid` have `surplus`: see
 [equipment.md](equipment.md).
@@ -216,18 +231,20 @@ the docstring of `gm.Problem` and in `inputs/examples/*/problem.json`; see [data
 
 | Name | Returns | Status |
 | --- | --- | --- |
-| `gm.Problem(demand, site=None, constraints=None, assumptions=None)` | the problem; `demand` is a frame of `gm.data.from_csv` or `from_values`, `site` is `{parameter path with *: value}`, `constraints` a list of `gm.Constraint` | real |
+| `gm.Problem(demand, site=None, constraints=None, assumptions=None)` | the problem; `demand` is a frame of `gm.data.from_csv` or `from_values`, `site` is `{parameter path with *: Quantity}`, `constraints` a list of `gm.Constraint` | real |
 | `gm.Problem.from_json(path)`, `problem.to_json(path)` | reads a `problem.json` with its demand CSV, or writes both | real |
 | `gm.Problem.from_dict(data)`, `problem.to_dict()` | the problem as plain data | real |
 | `gm.Problem.schema()` | JSON Schema of `to_dict` | real |
 | `problem.apply_site(plant)` | a copy of the plant with the site values, or the plant itself without a site; an unmatched path raises `unknown_name`, a value the plant states too `conflicting_value` | real |
-| `gm.Constraint(path, min=None, max=None, equals=None, over="each", when=None)` | a limit on a result field or a parameter; `over` is `each`, `sum`, `mean`, `max`, `min` or `duration`; `when` is `None` or `"running"`; `to_dict`, `from_dict`, `schema` | real |
+| `gm.Constraint(path, min=None, max=None, equals=None, over="each", when=None)` | a limit on a result field or a parameter, each bound a `Quantity` or its dict (a number for a field without a unit); `over` is `each`, `sum`, `mean`, `max`, `min` or `duration`; `when` is `None` or `"running"`; `to_dict`, `from_dict`, `schema` | real |
 | `gm.Assumptions(...)` | discount rate, lifetime, `prices`, `co2_price`, emission factors and cost factors; `to_dict`, `from_dict`, `schema`; sourced defaults in [economics.md](economics.md), others `None` | real |
 
 `Assumptions.prices` is `{carrier: price}` for `electricity`, `gas`, `heat`, `cold`,
-`waste_disposal` and `chemical`, beside `co2_price`. A price is a number in SI, a text with its
-unit (`"100 EUR/MWh"`) or a profile on the demand index; a profile price is integrated step by
-step. The six flat fields `electricity_price`, `gas_price`, `waste_disposal_price`,
+`waste_disposal` and `chemical`, beside `co2_price`. A price is a `Quantity` or its dict
+(`{"value": 100, "unit": "EUR/MWh"}`), or a profile on the demand index, a `Quantity` with an array
+value; a profile price is integrated step by step. `co2_price`, `electricity_emission_factor` and
+the cost factors are `Quantity` too (`g/kWh`, `EUR/t`, `EUR/W`); `lifetime_years` and
+`discount_rate` are numbers. The six flat fields `electricity_price`, `gas_price`, `waste_disposal_price`,
 `chemical_price`, `heat_price` and `cold_price` are gone.
 
 ## Running
@@ -265,7 +282,7 @@ a manual checkpoint. Each function builds an `Engine`, calls the matching method
 | `engine.to_checkpoint(path)`, `gm.Engine.from_checkpoint(path, callbacks=None)`, `engine.resume()` | see [engine.md](engine.md) | real |
 | `AutoCheckpoint(path, every=100)` | a callback that saves every N steps or every duration | real |
 | Callback `on_progress(engine, done, total)` | a callback may raise `gm.errors.Cancelled`; committed ticks stay in `engine.results` | real |
-| `gm.call(module, parameters, inlets, controls, on_error="raise", units=None)` | `{outlets: {port: {field: value}}, outputs: {name: value}, errors: [problem]}`; *units*; a run at one point. An inlet takes `m_dot` for a mass flow or `flow` for a volume flow (`"150 m3/h"`, by the density of the inlet's `fluid`), with `T`, `p` and an optional `fluid`; a volume unit on `m_dot` raises code `invalid_call` with the suggestion `flow` | real |
+| `gm.call(module, parameters, inlets, controls, on_error="raise", units=None)` | `{outlets: {port: {field: value}}, outputs: {name: value}, errors: [problem]}`; *units*; a run at one point. An inlet takes `m_dot` for a mass flow or `flow` for a volume flow (`{"value": 150, "unit": "m3/h"}`, by the density of the inlet's `fluid`), with `T`, `p` and an optional `fluid`; a volume unit on `m_dot` raises code `invalid_call` with the suggestion `flow` | real |
 
 `rules`, `order`, `cooling_order` and the list and fraction forms of `operating_time` of the old
 `gm.schedule` are gone: limits are `gm.Constraint`s of the problem.
@@ -324,7 +341,7 @@ returns is a value; every entry here takes *units*, except where a coefficient h
 Every `gm.evaluate` function takes `(plant, problem, results, ...)`; only `capex` has no results.
 The cost functions return a value with the parts of the result as more keys. A value the inputs
 cannot give raises `ValidationError` (code `no_value`, or `missing_assumption` for an assumption
-nobody gave); with `on_error="record"` it is `{value: null, unit, reason}`. Prices, rates and cost
+nobody gave); with `on_error="record"` it is a `Value` whose `value` is `None` and whose `reason` says why. Prices, rates and cost
 factors are those of `problem.assumptions`. Equipment declares `capex(assumptions)` from its design
 values and the cost factors of `Assumptions`, see [economics.md](economics.md). A violated
 constraint is a check, never an error.
@@ -348,8 +365,8 @@ constraint is a check, never an error.
 | `gm.evaluate.capacities(plant, problem, results)` | later: the peak load of each unit against its rating |
 | `gm.evaluate.report(plant, problem, results)` | later: totals, checks and costs as one document |
 | `gm.evaluate.compare(plant, problem, results, other)` | later: how a second run differs from the first |
-| `gm.optim.minimize(plant, problem, variables, objective, constraints=None, evaluations=100, *, plan=None)` | real: `{best: {parameters, value, unit}, history, evaluations}`, `parameters` in SI as `{"path.parameter": value}` for `set_params`; a failed trial has a `reason` and is never `best` |
-| `gm.optim.sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None)` | real: `{samples, summary}`, `summary` per metric `{mean, p5, p50, p95, unit}` |
+| `gm.optim.minimize(plant, problem, variables, objective, constraints=None, evaluations=100, *, plan=None)` | real: `{best, history, evaluations}`, `best` a `Value` of the objective whose `parts["parameters"]` are `{"path.parameter": Quantity}` for `set_params`; variable bounds and metric limits are `Quantity`; a failed trial has a `reason` and is never `best` |
+| `gm.optim.sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None)` | real: `{samples, summary}`, `summary` per metric `{mean, p5, p50, p95}`, each a `Value`; the fields of a distribution are `Quantity` |
 | `gm.optim.size(plant, problem, *, plan=None)` | later: the capacity of each unit that meets the problem at least cost |
 | `gm.optim.sensitivity(plant, problem, parameters, metrics, *, plan=None)` | later: how each metric moves with each parameter |
 
@@ -417,6 +434,10 @@ and `ROW_CODES` the row codes with their meaning.
 | 0.2.0, unreleased changes | | Category `grids`: `ElectricityGrid` (from `GridConnection`, without prices), `GasGrid`, `HeatingGrid` (from `HeatConsumer`), `CoolingGrid` (from `CoolingConsumer`), `WasteGrid`, `ChemicalGrid`; category `demand` removed. `GasMakeup` has `gas_in`, `grid_in`, `fuel_out`, `excess_out`; a burner's `fuel_in` shows what it burned and `gas_out` is gone. `gm.schedule` writes `<grid>.flow`. `validate` reports `root_plant_port`. |
 | 0.2.0, unreleased changes | | Ports carry a `Power`: `Inlet(Power, kind="electricity")`, `Outlet(Power, kind="heat")`; `many=True`, `drawn=True`, `offered=True`; consumers get `power_in`, generators `power_out`; a plant port may list several ends. `gm.streams.names()` adds `heat`, `air`, `waste`, `chemical`. |
 | 0.2.0, unreleased changes | | Layout: helpers in `gemini/modules/_utils/`, physics of one category in its `_physics.py`. Public names unchanged. |
+| 0.2.0, unreleased changes | | One unit format. New `gm.units.Unit`, a `str` enum generated from the unit table, and `gm.units.Quantity(value, unit)` is the one shape of a value with a dimension: `.si`, `.to(unit)`, `to_dict`, `from_dict`, equality on SI. Removed: `gm.units.parse`, `split_quantity`, and every reading of unit text: `"150 m3/h"` is `ValidationError` `invalid_value` in `set_params`, the plant dict, `gm.call`, `gm.Stream`, `gm.Fluid`, `gm.Problem`, `gm.Constraint` and `gm.Assumptions`, which take a `Quantity` or `{"value", "unit"}`. A unit of another dimension is `invalid_unit` and lists the units of the field; the schema of a parameter with a unit offers `{"value": number, "unit": enum}`. New units `yr`, `%/yr`, `g/kWh`, `kg/J`, `J/yr`, `1/yr`, `EUR`, `EUR/MWh`, `EUR/kWh`, `EUR/kg`, `EUR/t`, `EUR/W`, `EUR/m`, `EUR/(W/K)` (the currency is a label: nothing converts between currencies), and quantities `MoneyPerMass`, `MoneyPerPower`, `MoneyPerLength`, `MoneyPerConductance`, `MassPerEnergy`, `AnnualEnergy`, `AnnualRate`. `currency/year` is `currency/yr`. |
+| 0.2.0, unreleased changes | | `Assumptions`: `co2_price`, `electricity_emission_factor` and every cost factor are a `Quantity` (the price profile `{"unit", "values"}` is a `Quantity` with an array), and a bare number raises. `Constraint` bounds, `Problem.site` values and the `gm.optim` variables, limits and distributions are `Quantity` for a field with a unit. `Assumptions.emission_factor()` gives the factor in SI. |
+| 0.2.0, unreleased changes | | `Results.units` is `{"<path>.<field>": unit}` for every column of `to_frame`; the former `{path: {field: unit}}` is `Results.declared` (and the constructor argument). New units `MWh`, `GWh`, `TWh`, `MJ`, `GJ`, `GW`, `kt`, `Mt`, `kg/yr`, `t/yr`, `kt/yr`, `Mt/yr`, `kWh/yr`, `MWh/yr`, `GWh/yr`, `kEUR`, `MEUR`, `EUR/J`, `EUR/yr`, `kEUR/yr`, `MEUR/yr`. |
+| 0.2.0, unreleased changes | | Outputs: each value of `gm.evaluate`, each check `value` and `limit`, and the results of `gm.optim.minimize` and `sample` are a `Value`, a `Quantity` in SI with `reason` and `parts`; `to_plain` gives the JSON of before, with `currency` for money and `yr` for years. `Value` and `measure` are in `gemini/types/shapes.py`. `gm.optim.minimize` returns `Value` objects, not JSON. |
 | 0.2.0 | 2026-10-31 | Demand profiles: `gm.profiles.get` reads the two organiser files of 2027; `profile_schema` describes what `get` returns. |
 | 0.2.0 | 2026-10-31 | No dangling ports: an unconnected port is `unconnected_port`; plant ports exist only when named, the automatic `<path>_<port>` ports are gone. |
 | 0.2.0 | 2026-10-31 | A module may set its children's values: every parameter route reaches an overridden `set_params`; `to_dict` stores no derived value. |

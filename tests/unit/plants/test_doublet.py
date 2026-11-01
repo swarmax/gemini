@@ -38,19 +38,21 @@ def test_supply_is_the_riser_wellhead_and_return_reaches_the_sink(doublet):
 
 
 DESIGN = {
-    "depth": "2500 m",
-    "gradient": "30 K/km",
-    "surface_temperature": "12 degC",
-    "permeability": "200 mD",
-    "thickness": "100 m",
-    "well_diameter": "0.244 m",
+    "depth": {"value": 2500, "unit": "m"},
+    "gradient": {"value": 30, "unit": "K/km"},
+    "surface_temperature": {"value": 12, "unit": "degC"},
+    "permeability": {"value": 200, "unit": "mD"},
+    "thickness": {"value": 100, "unit": "m"},
+    "well_diameter": {"value": 0.244, "unit": "m"},
 }
 PUMP = {
-    "nominal_flow": "300 m3/h",
+    "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
-    "nominal_wellhead_pressure": "10 bar",
+    "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
 }
-BRINE = gm.Fluid(density="1030 kg/m3", viscosity="0.4 mPa*s")
+BRINE = gm.Fluid(
+    density={"value": 1030, "unit": "kg/m3"}, viscosity={"value": 0.4, "unit": "mPa*s"}
+)
 
 
 def designed(**extra):
@@ -108,7 +110,9 @@ def test_an_explicit_child_value_wins_over_the_derived_one():
             {"length": 2600.0, "inclination": 1.0, "inner_diameter": 0.2, "roughness": 1e-5}
         ]
     }
-    _, doublet = designed(**{"reservoir.pressure": "250 bar(g)", "well.pipe_path": path} | PUMP)
+    _, doublet = designed(
+        **{"reservoir.pressure": {"value": 250, "unit": "bar(g)"}, "well.pipe_path": path} | PUMP
+    )
     assert doublet.reservoir.pressure == pytest.approx(250e5 + 101325)
     assert doublet.well.pipe_path.total_length == 2600
     assert doublet.riser.pipe_path.total_length == 2500
@@ -171,23 +175,25 @@ def test_a_designed_doublet_as_the_root_round_trips():
 def test_a_dated_design_derives_at_its_date():
     """A deeper design from a date on gives its temperature from that date on."""
     plant, _ = designed()
-    plant.set_params("d0", {"depth": "3000 m"}, valid_from="2030-01-01")
+    plant.set_params("d0", {"depth": {"value": 3000, "unit": "m"}}, valid_from="2030-01-01")
     assert plant.params_at("d0.reservoir", "2031-01-01")["temperature"] == pytest.approx(375.15)
     assert plant.params_at("d0.reservoir", "2029-01-01")["temperature"] == pytest.approx(360.15)
 
 
 def test_a_waiting_depth_is_a_missing_parameter():
     """``missing_parameters`` names the geotherm, and a doublet without a depth needs none."""
-    doublet = gm.plants.Doublet().set_params("", {"depth": "2500 m"})
+    doublet = gm.plants.Doublet().set_params("", {"depth": {"value": 2500, "unit": "m"}})
     assert doublet.missing_parameters()[:2] == ["gradient", "surface_temperature"]
     assert "gradient" not in gm.plants.Doublet().missing_parameters()
 
 
 def test_a_depth_waits_for_its_geotherm():
     """A plant may hold the design and a problem the site: nothing is derived until both exist."""
-    doublet = gm.plants.Doublet().set_params("", {"depth": "2500 m", "gradient": "30 K/km"})
+    doublet = gm.plants.Doublet().set_params(
+        "", {"depth": {"value": 2500, "unit": "m"}, "gradient": {"value": 30, "unit": "K/km"}}
+    )
     assert doublet.get_submodule("reservoir")._params_at(None).get("temperature") is None
-    doublet.set_params("", {"surface_temperature": "12 degC"})
+    doublet.set_params("", {"surface_temperature": {"value": 12, "unit": "degC"}})
     assert doublet.reservoir.temperature == pytest.approx(285.15 + 75)
 
 
@@ -213,13 +219,13 @@ def test_the_volume_imbalance_of_a_balanced_doublet_is_zero():
     doublet = gm.plants.Doublet()
     doublet.fluid = gm.Fluid(
         density=1030,
-        viscosity="0.4 mPa*s",
+        viscosity={"value": 0.4, "unit": "mPa*s"},
         gas_liquid_ratio=0.8,
         gas_composition={"CH4": 0.8, "CO2": 0.2},
     )
     doublet.set_params("", DESIGN | PUMP)
     doublet.reservoir.production_rate = 80.0
-    doublet.esp.frequency = "60 Hz"
+    doublet.esp.frequency = {"value": 60, "unit": "Hz"}
     liquid = doublet.fluid.with_gas_fraction(0.0)
     produced = doublet.fluid.properties(0, 0)
     injected = gm.Stream(m_dot=80.0 * (1 - produced.gmf), T=320.0, p=5e6, fluid=liquid)
@@ -230,9 +236,9 @@ def test_the_volume_imbalance_of_a_balanced_doublet_is_zero():
 def test_the_volume_imbalance_is_produced_less_injected():
     """Less injected than produced is a positive imbalance."""
     doublet = gm.plants.Doublet()
-    doublet.fluid = gm.Fluid(density=1030, viscosity="0.4 mPa*s")
+    doublet.fluid = gm.Fluid(density=1030, viscosity={"value": 0.4, "unit": "mPa*s"})
     doublet.set_params("", DESIGN | PUMP)
     doublet.reservoir.production_rate = 80.0
-    doublet.esp.frequency = "60 Hz"
+    doublet.esp.frequency = {"value": 60, "unit": "Hz"}
     injected = gm.Stream(m_dot=70.0, T=320.0, p=5e6, fluid=doublet.fluid)
     assert doublet(return_in=injected).outputs.volume_imbalance == pytest.approx(10 / 1030)

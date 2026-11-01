@@ -9,7 +9,7 @@ from tests.fixtures.deriving import Column
 
 HEIGHT, DENSITY = 2500.0, 1030.0
 PRESSURE = hydraulics.hydrostatic_dp(DENSITY, HEIGHT)
-GIVEN = {"height": "2500 m", "density": "1030 kg/m3"}
+GIVEN = {"height": {"value": 2500, "unit": "m"}, "density": {"value": 1030, "unit": "kg/m3"}}
 
 
 @pytest.fixture(autouse=True)
@@ -81,12 +81,15 @@ def test_from_dict_derives_and_keeps_only_what_was_stated():
 
 def test_an_explicit_child_value_in_the_same_call_wins():
     """The stated child value stays, and stays through later calls and in the file."""
-    plant = plant_with(GIVEN | {"reservoir.pressure": "100 bar"})
+    plant = plant_with(GIVEN | {"reservoir.pressure": {"value": 100, "unit": "bar"}})
     assert plant.column.reservoir.pressure == 1e7
     plant.set_params("column", {"height": 1000.0})
     assert plant.column.reservoir.pressure == 1e7
     spec = plant.to_dict()
-    assert spec["modules"]["column"]["params"]["reservoir.pressure"] == "100 bar"
+    assert spec["modules"]["column"]["params"]["reservoir.pressure"] == {
+        "value": 100,
+        "unit": "bar",
+    }
     assert gm.Plant.from_dict(spec).column.reservoir.pressure == 1e7
 
 

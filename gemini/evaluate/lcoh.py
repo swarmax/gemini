@@ -31,9 +31,11 @@ def lcoh(plant, problem, results, discount_rate=None, lifetime=None, on_error="r
 
     Returns
     -------
-    dict
-        ``{value, unit, capex, opex, energy, discount_rate, lifetime_years}``, the last five each
-        a value; ``value`` in currency/J (multiply by 3.6e9 for currency/MWh). A plant that
+    Value
+        A ``gm.units.Quantity`` in SI, with the parts of the result in ``parts`` (``to_plain``
+        gives the JSON). ``{value, unit, capex, opex, energy, discount_rate,
+        lifetime_years}``, the last five each
+        a value; ``value`` in currency/J (``.to("EUR/MWh")`` converts). A plant that
         declares no cost, delivers no heat, or also delivers cold without a ``heat_cost_share`` has
         no value.
     """

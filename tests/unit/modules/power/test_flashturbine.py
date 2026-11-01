@@ -17,7 +17,7 @@ STEAM_FEED = Stream(m_dot=20, T=431.98, p=6e5, fluid=STEAM)
 def turbine():
     """Return a turbine exhausting to a 0.1 bar condenser through a 98 % generator."""
     return FlashTurbine().set_params(
-        "", {"condenser_pressure": "0.1 bar", "generator_efficiency": 0.98}
+        "", {"condenser_pressure": {"value": 0.1, "unit": "bar"}, "generator_efficiency": 0.98}
     )
 
 
@@ -122,7 +122,7 @@ def test_traced_call_matches_one_call_per_row():
 
 def test_a_bad_expansion_rejects_the_call_without_outputs_too():
     """``forward`` uses no number of the expansion, but its error still fails the call."""
-    module = turbine().set_params("", {"condenser_pressure": "7 bar"})
+    module = turbine().set_params("", {"condenser_pressure": {"value": 7, "unit": "bar"}})
     with pytest.raises(PhysicsError) as with_outputs:
         module(fluid_in=STEAM_FEED)
     with gm.modules.no_outputs():

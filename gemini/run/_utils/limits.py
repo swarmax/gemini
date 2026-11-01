@@ -59,18 +59,25 @@ def _forms(constraint):
     return forms
 
 
-def _quantity(bound, unit):
-    """Return a bound as a number in ``unit``; a temperature is a difference."""
-    number, given = units.parse(bound) if isinstance(bound, str) else (bound, unit)
-    return units.convert(number, given, unit, "temperature_difference" if unit == "K" else None)
+def _si(constraint, bound, unit, quantity=None):
+    """Return a bound of ``constraint`` in the SI ``unit``; a plain number raises."""
+    if not isinstance(bound, units.Quantity):
+        raise ValidationError(
+            f"schedule: constraint {constraint.path} bound = {bound!r}; expected "
+            f"{units.QUANTITY_FORM}",
+            path=constraint.path,
+            code="invalid_value",
+        )
+    return units.value_in_si(bound, unit, constraint.path, quantity)
 
 
 def _duration(constraint):
     """Return the duration of a duration constraint as a ``Timedelta``."""
     bound = constraint.equals if constraint.equals is not None else constraint.max
+    seconds = _si(constraint, bound, "s")
     try:
-        return to_timedelta(bound)
-    except (TypeError, ValueError) as error:
+        return to_timedelta(seconds)
+    except ValueError as error:
         raise ValidationError(
             f"schedule: constraint {constraint.path} duration = {bound!r}; expected a duration",
             path=constraint.path,
@@ -128,9 +135,9 @@ def of_doublet(constraints, doublet):
     flow, cooling = found["range"][1], found["cooling"][1]
     duration = found.get("duration")
     limits = DoubletLimits(
-        _quantity(flow.min, "m3/s"),
-        _quantity(flow.max, "m3/s"),
-        _quantity(cooling.max, "K"),
+        _si(flow, flow.min, "m3/s"),
+        _si(flow, flow.max, "m3/s"),
+        _si(cooling, cooling.max, "K", "temperature_difference"),
         None if duration is None else _duration(duration[1]),
     )
     return limits, {

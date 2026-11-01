@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 
+from gemini import units
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import GeminiError, ValidationError
 from gemini.evaluate import annualised_cost, co2, lcoc, lcoh, lcts, totals
@@ -36,6 +37,58 @@ def checked_metric(name, problem):
             code="missing_value",
         )
     return name
+
+
+def _declaration(plant, name):
+    """Return the parameter declaration of the dotted path ``name``."""
+    path, _, parameter = name.rpartition(".")
+    return plant.get_submodule(path)._parameters[parameter]
+
+
+def parameter_si(plant, name, bound, difference=False):
+    """Return ``bound``, a ``Quantity`` or its dict, in the SI unit of the parameter ``name``.
+
+    A plain number is accepted only for a parameter without a dimension. A ``difference`` is
+    a spread such as a standard deviation, which a unit offset does not move.
+    """
+    declaration = _declaration(plant, name)
+    if isinstance(bound, dict):
+        bound = units.Quantity.from_dict(bound)
+    if isinstance(bound, units.Quantity):
+        number = units.value_in_si(bound, declaration.unit, name, declaration.quantity)
+        return number - units.to_si(0, bound.unit) if difference else number
+    if declaration.unit not in (None, "-"):
+        raise ValidationError(
+            f"optim: {name} = {bound!r}; expected {units.QUANTITY_FORM}, because the parameter "
+            f"has the unit {declaration.unit!r}",
+            path=name,
+            code="invalid_value",
+        )
+    return bound
+
+
+def quantities(plant, parameters):
+    """Return ``{name: Quantity}`` for SI parameter values, each in the SI unit of its parameter."""
+    return {
+        name: units.Quantity(number, _declaration(plant, name).unit or "-")
+        for name, number in parameters.items()
+    }
+
+
+def limit_si(bound, metric, name):
+    """Return a limit on a metric in the SI unit of the ``metric`` value; a number needs no unit."""
+    if isinstance(bound, dict):
+        bound = units.Quantity.from_dict(bound)
+    if isinstance(bound, units.Quantity):
+        return units.value_in_si(bound, str(metric.unit), name)
+    if metric.unit != "-":
+        raise ValidationError(
+            f"optim: {name} limit = {bound!r}; expected {units.QUANTITY_FORM}, because the metric "
+            f"has the unit {str(metric.unit)!r}",
+            path=name,
+            code="invalid_value",
+        )
+    return bound
 
 
 def require_input(problem, plan):

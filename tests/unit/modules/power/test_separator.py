@@ -15,7 +15,7 @@ GEOFLUID = Stream(m_dot=100, T=523.15, p=40e5)
 
 def test_flash_split_matches_steam_tables():
     """250 degC liquid flashed to 6 bar: x = (1085.8 - 670.4) / 2085.9 = 0.199 (steam tables)."""
-    result = Separator()(fluid_in=GEOFLUID, pressure_setpoint="6 bar")
+    result = Separator()(fluid_in=GEOFLUID, pressure_setpoint={"value": 6, "unit": "bar"})
     out, liquid, gas = reading(result), result.outlets.liquid_out, result.outlets.gas_out
     assert out.steam_fraction == pytest.approx((1085.8 - 670.4) / 2085.9, abs=2e-4)
     assert out.saturation_temperature == pytest.approx(431.98, abs=0.01)

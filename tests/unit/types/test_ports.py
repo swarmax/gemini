@@ -71,7 +71,7 @@ def test_ports_reject_non_stream_values(streams):
     with pytest.raises(
         ValidationError, match="plant.esp.*fluid_in.*Stream or a power.*valid names: fluid_in"
     ):
-        Ports({"fluid_in": "1 W"}, path="plant.esp")
+        Ports({"fluid_in": {"value": 1, "unit": "W"}}, path="plant.esp")
 
 
 def test_ports_accept_streams_of_arrays():

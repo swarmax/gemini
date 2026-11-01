@@ -20,7 +20,11 @@ from tests.fixtures.errors import raises
 def test_mass_flow_inputs_and_units():
     """Plain numbers are kg/s; unit strings and quantities convert to SI fields."""
     assert Stream(flow=2, T=300, p=1e5).m_dot == 2
-    stream = Stream(flow="36 t/h", T="25 degC", p="2 bar")
+    stream = Stream(
+        flow={"value": 36, "unit": "t/h"},
+        T={"value": 25, "unit": "degC"},
+        p={"value": 2, "unit": "bar"},
+    )
     assert (stream.m_dot, stream.T, stream.p) == (10, 298.15, 2e5)
     assert Stream(m_dot=Quantity(3.6, "t/h"), T=300, p=1e5).m_dot == pytest.approx(1)
 
@@ -28,16 +32,16 @@ def test_mass_flow_inputs_and_units():
 def test_volume_flow_uses_the_stream_fluid_density():
     """Volume flow units convert to mass flow with the selected fluid."""
     fluid = Fluid(density=1068)
-    stream = Stream(flow="360 m3/h", T=300, p=1e5, fluid=fluid)
+    stream = Stream(flow={"value": 360, "unit": "m3/h"}, T=300, p=1e5, fluid=fluid)
     assert stream.m_dot == pytest.approx(106.8)
     assert stream.volumetric_flow() == pytest.approx(0.1)
     assert Stream(flow=Quantity(1, "l/s"), T=300, p=1e5).m_dot == pytest.approx(1)
 
 
-def test_flow_text_without_a_unit_is_a_unit_error():
-    """Flow text must carry a unit; formerly this raised IndexError."""
-    for text in ("10", "abc", "  "):
-        with raises(ValidationError, "invalid_unit", match="Stream.flow"):
+def test_flow_text_is_refused_and_shows_the_dict_form():
+    """Flow text, with or without a unit, is no quantity; the message shows how to write one."""
+    for text in ("10", "abc", "  ", "150 m3/h"):
+        with raises(ValidationError, "invalid_value", match="Stream.flow.*'value'"):
             Stream(flow=text, T=300, p=1e5)
 
 

@@ -16,16 +16,26 @@ INPUTS = {
     "boiler.temperature_setpoint": (90, "degC"),
 }
 ASSUMPTIONS = gm.Assumptions(
-    discount_rate=0.05, lifetime_years=25, prices={"gas": "40.0 EUR/MWh", "heat": 60.0 / MWH}
+    discount_rate=0.05,
+    lifetime_years=25,
+    prices={
+        "gas": {"value": 40.0, "unit": "EUR/MWh"},
+        "heat": gm.units.Quantity(60.0 / MWH, "currency/J"),
+    },
 )
 
 
 def build():
     """Return a boiler on a heating grid, with its gas from a grid and its flue to the air."""
     plant = gm.Plant("BoilerPlant")
-    users = {"return_temperature": "60 degC", "return_pressure": "6 bar"}
+    users = {
+        "return_temperature": {"value": 60, "unit": "degC"},
+        "return_pressure": {"value": 6, "unit": "bar"},
+    }
     plant.add("HeatingGrid", name="users", params=users)
-    plant.add("Boiler", name="boiler", params={"capacity": "1 MW", "efficiency": 0.9})
+    plant.add(
+        "Boiler", name="boiler", params={"capacity": {"value": 1, "unit": "MW"}, "efficiency": 0.9}
+    )
     plant.add("GasGrid", name="gas")
     plant.add("Atmosphere", name="air")
     plant.connect("users.return_out", "boiler.fluid_in")
@@ -33,7 +43,7 @@ def build():
     plant.connect("gas.gas_out", "boiler.fuel_in")
     plant.connect("boiler.flue_out", "air.gas_in")
     plant.connect("boiler.loss_out", "air.heat_in")
-    plant.air.temperature = "10 degC"
+    plant.air.temperature = {"value": 10, "unit": "degC"}
     return plant
 
 
@@ -52,11 +62,11 @@ def main():
     yearly = gm.evaluate.opex(plant, problem, results)
     heat = gm.evaluate.lcoh(plant, problem, results)
     emitted = gm.evaluate.co2(plant, problem, results)
-    prices = investment["price_year"]["value"]
-    print(f"Capex:  {investment['value'] / 1e3:8.1f} kEUR, prices of {prices}")
-    print(f"Opex:   {yearly['value'] / 1e3:8.1f} kEUR/year")
-    print(f"LCOH:   {heat['value'] * MWH:8.1f} EUR/MWh")
-    print(f"CO2:    {emitted['value']:8.0f} kg over the day")
+    prices = investment.parts["price_year"].value
+    print(f"Capex:  {investment.value / 1e3:8.1f} kEUR, prices of {prices}")
+    print(f"Opex:   {yearly.value / 1e3:8.1f} kEUR/year")
+    print(f"LCOH:   {heat.value * MWH:8.1f} EUR/MWh")
+    print(f"CO2:    {emitted.value:8.0f} kg over the day")
 
 
 if __name__ == "__main__":

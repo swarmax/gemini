@@ -68,9 +68,9 @@ def test_corrosion_inputs_on_arrays_match_floats():
 
 
 DEGASSED_BRINE = dict(
-    density="1030 kg/m3",
-    viscosity="0.4 mPa*s",
-    gas_liquid_ratio="0.8 Nm3/m3",
+    density={"value": 1030, "unit": "kg/m3"},
+    viscosity={"value": 0.4, "unit": "mPa*s"},
+    gas_liquid_ratio={"value": 0.8, "unit": "Nm3/m3"},
     gas_composition={"CH4": 0.8, "CO2": 0.2},
 )
 
@@ -121,9 +121,9 @@ def test_a_gas_fluid_is_an_ideal_gas_of_its_composition():
     stream = Stream(m_dot=1.0, p=101325.0, T=273.15, fluid=gas)
     assert stream.volumetric_flow() == pytest.approx(1 / normal)
     assert gas.density_at(np.array([101325.0, 202650.0]), 273.15)[1] == pytest.approx(2 * normal)
-    assert Stream(flow="10 m3/h", p=101325.0, T=273.15, fluid=gas).m_dot == pytest.approx(
-        10 / 3600 * normal
-    )
+    assert Stream(
+        flow={"value": 10, "unit": "m3/h"}, p=101325.0, T=273.15, fluid=gas
+    ).m_dot == pytest.approx(10 / 3600 * normal)
 
 
 def test_a_brine_with_a_composition_mixes_with_its_gas_at_the_stream_pressure():

@@ -25,13 +25,15 @@ def capex(plant, problem, on_error="raise"):
 
     Returns
     -------
-    dict
-        ``{value, unit, price_year, source}`` as plain JSON. ``value`` is the investment in the
+    Value
+        A ``gm.units.Quantity`` in SI, with the parts of the result in ``parts`` (``to_plain``
+        gives the JSON). ``{value, unit, price_year, source}`` as plain JSON. ``value`` is
+        the investment in the
         currency of the costs (``unit``), with their ``price_year`` (a value in ``year``) and
         ``source``. Costs in different currencies or price years raise ``ValidationError``.
     """
     return reported(
         on_error,
-        problem.assumptions.currency,
+        "currency",
         lambda: investment(problem.apply_site(plant), problem.assumptions, on_error),
     )

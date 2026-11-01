@@ -32,12 +32,14 @@ its heat and cold KPIs and levelised costs are `null` with that reason.
 
 ## Costs
 
-Every function returns a value with the parts of its result as more keys, each a value or a text;
-`unit` is the currency (`EUR`), `EUR/year`, `EUR/J`, `year` or `kg`. `A` is the annuity factor, the
+Every function returns a `Value`, a `gm.units.Quantity` in SI with the parts of its result in
+`.parts`, each a value or a text; `to_plain` gives the JSON, the parts as more keys. `unit` is
+`currency` (a label for the case's currency, nothing converts between currencies), `currency/yr`,
+`currency/J`, `yr` or `kg`; `result.to("EUR/MWh")` converts. `A` is the annuity factor, the
 sum over the lifetime years of `1 / (1 + discount_rate) ** t`, in years. Every function takes
 `on_error="raise"`: a value the inputs cannot give raises `ValidationError`, code `no_value`, or
 `missing_assumption`, naming it, for an assumption nobody gave. With `on_error="record"` nothing is
-raised and it is `{value: null, unit, reason}`. The prices, rates and cost factors are those of
+raised and `value` is `None` with a `reason`. The prices, rates and cost factors are those of
 `problem.assumptions` (`gm.Assumptions`).
 
 | Name | Returns |
@@ -91,11 +93,11 @@ for grid electricity drawn. A price is asked for only when its energy is non-zer
 | `methane_gwp` | - | 29.8 | IPCC Sixth Assessment Report, Working Group I, ch. 7, table 7.15 (Forster et al. 2021): fossil methane over 100 years |
 | `discount_rate` | per year | None | depends on the project; the user gives it |
 | `lifetime_years` | years | None | depends on the equipment; the user gives it |
-| `prices["electricity"]`, `prices["gas"]`, `prices["heat"]`, `prices["cold"]` | currency/J | None | depends on country, year and contract; a number in SI, a text such as `"100 EUR/MWh"`, or a profile on the demand index |
+| `prices["electricity"]`, `prices["gas"]`, `prices["heat"]`, `prices["cold"]` | currency/J | None | depends on country, year and contract; a `Quantity` such as `{"value": 100, "unit": "EUR/MWh"}`, or a profile on the demand index (an array value) |
 | `prices["waste_disposal"]`, `prices["chemical"]` | currency/kg | None | depends on the contract |
-| `co2_price` | currency/kg | None | a choice of the assessment; a number in SI or a text with its unit |
+| `co2_price` | currency/kg | None | a choice of the assessment; a `Quantity` (`{"value": 80, "unit": "EUR/t"}`) |
 | `heat_cost_share` | - | None | a choice of the assessment |
-| `electricity_emission_factor` | kg/J | None | depends on the grid and the year |
+| `electricity_emission_factor` | kg/J | None | depends on the grid and the year; a `Quantity` such as `{"value": 300, "unit": "g/kWh"}` |
 
 ### Sources of the cost factors
 
@@ -153,10 +155,10 @@ The limits of a run are the `constraints` of its `gm.Problem`, built without a p
 problem = gm.Problem(
     demand,
     constraints=[
-        gm.Constraint("d*.reservoir.liquid_flow", min="50 m3/h", max="300 m3/h", when="running"),
-        gm.Constraint("d*.brine_cooling", max="40 K"),
-        gm.Constraint("heat_users.supply_in_T", min="100 degC"),
-        gm.Constraint("d*.reservoir.liquid_flow", max="330 d", over="duration", when="running"),
+        gm.Constraint("d*.reservoir.liquid_flow", min={"value": 50, "unit": "m3/h"}, max={"value": 300, "unit": "m3/h"}, when="running"),
+        gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}),
+        gm.Constraint("heat_users.supply_in_T", min={"value": 100, "unit": "degC"}),
+        gm.Constraint("d*.reservoir.liquid_flow", max={"value": 330, "unit": "d"}, over="duration", when="running"),
     ],
 )
 checks = gm.evaluate.constraints(plant, problem, results)
@@ -170,7 +172,7 @@ durations, passing within half a step. `when="running"` counts only the steps on
 carried flow: the minimum flow holds while a doublet runs. A parameter takes `over="each"` and is
 judged once against its value with the site of the problem applied, or at each date inside the run
 when it changes. `d*.volume_imbalance` is the produced less the injected liquid volume flow of a
-doublet. A bound is a number in SI or a text with its unit; a value on the limit passes within a
+doublet. A bound is a `Quantity` or its dict, a plain number only for a field without a unit; a value on the limit passes within a
 relative 1e-9.
 
 `gm.evaluate.constraints` returns one check `{name, passed, value, limit, path, worst_step}` per
@@ -203,8 +205,8 @@ as a result column; that is a change to the engine, not to this package.
 | `erosion(plant, well)` | `NotImplementedYet` | a plant holds neither flow nor solids content, and the retained model has no solids fraction |
 
 `nodal` takes `conditions` as one dict or a list of dicts (a what-if): `wellhead_pressure` [Pa],
-`rates` as the `[low, high]` bracket [kg/s] and `frequency` [Hz] for an ESP; strings with units
-are accepted. A case whose bracket leaves the well model's domain raises `PhysicsError`; with `on_error="record"`
+`rates` as the `[low, high]` bracket [kg/s] and `frequency` [Hz] for an ESP; quantities such as
+`{"value": 3, "unit": "bar"}` are accepted. A case whose bracket leaves the well model's domain raises `PhysicsError`; with `on_error="record"`
 the case carries the problem in `error` and the other cases still run. The VLP is the wellhead pressure the well, ESP and riser
 deliver at each rate; the operating point is where it falls to the wellhead pressure asked for.
 

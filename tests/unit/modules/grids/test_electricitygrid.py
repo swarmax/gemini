@@ -29,7 +29,9 @@ def test_import_and_export_within_unlimited_connection():
 
 def test_connection_limits():
     """Imports above the limit go unserved; exports above it are curtailed."""
-    connection = grid(import_limit="1 MW", export_limit="0.5 MW")
+    connection = grid(
+        import_limit={"value": 1, "unit": "MW"}, export_limit={"value": 0.5, "unit": "MW"}
+    )
     out = reading(connection(power_out=[3e6], power_in=[1e6]))
     assert out.net_import == 1e6 and out.unserved_consumption == 1e6 and out.is_import_limited
     out = reading(connection(power_out=[], power_in=[2e6]))
@@ -58,7 +60,7 @@ class GridPlant(Module):
             },
         )
         self.boiler = ElectricBoiler().set_params("", {"capacity": 1e6, "efficiency": 0.99})
-        self.grid = grid(export_limit="10 MW")
+        self.grid = grid(export_limit={"value": 10, "unit": "MW"})
 
         # Inlets
         self.fluid_in = Inlet(Stream)
@@ -116,7 +118,7 @@ class Connected(Module):
         super().__init__()
 
         # Modules
-        self.grid = grid(import_limit="2 MW")
+        self.grid = grid(import_limit={"value": 2, "unit": "MW"})
 
         # Inlets
         self.rows = Inlet(Stream)

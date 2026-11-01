@@ -6,7 +6,7 @@ import pandas as pd
 from gemini._utils.strings import join_path
 from gemini.modules.declarations import Output
 from gemini.types.quantities import Temperature
-from gemini.types.shapes import check, value
+from gemini.types.shapes import check, measure
 
 _OUTSIDE = {
     "ge": np.less,
@@ -72,8 +72,8 @@ def bounds(plant, problem, results):
             if limits and pd.api.types.is_numeric_dtype(column) and column.dtype != bool:
                 judged += 1
                 violations += _outside(column, limits)
-    limit = value(0, "-")
+    limit = measure(0, "-")
     if not judged:
         reason = "no recorded output has a declared limit"
-        return check("bounds", None, value(None, "-", reason), limit)
-    return check("bounds", violations == 0, value(violations, "-"), limit)
+        return check("bounds", None, measure(None, "-", reason), limit)
+    return check("bounds", violations == 0, measure(violations, "-"), limit)

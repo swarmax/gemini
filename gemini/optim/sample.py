@@ -2,10 +2,16 @@
 
 import numpy as np
 
-from gemini._utils.jsonable import to_plain
 from gemini._utils.strings import close_matches, join_names
 from gemini.errors import ValidationError
-from gemini.optim._utils.trial import checked_metric, require_input, run_trial
+from gemini.optim._utils.trial import (
+    checked_metric,
+    parameter_si,
+    quantities,
+    require_input,
+    run_trial,
+)
+from gemini.types.shapes import measure
 
 DISTRIBUTIONS = {
     "normal": ("mean", "std"),
@@ -35,10 +41,13 @@ def _checked_distribution(plant, name, distribution):
         )
 
 
-def _draw(generator, name, distribution):
-    """Return one random value of a parameter."""
+def _draw(generator, plant, name, distribution):
+    """Return one random value of a parameter, in SI."""
     kind = distribution["kind"]
-    fields = [distribution[field] for field in DISTRIBUTIONS[kind]]
+    fields = [
+        parameter_si(plant, name, distribution[field], difference=field == "std")
+        for field in DISTRIBUTIONS[kind]
+    ]
     try:
         return float(getattr(generator, kind)(*fields))
     except ValueError as error:
@@ -46,15 +55,16 @@ def _draw(generator, name, distribution):
 
 
 def _spread(samples, name):
-    """Return ``{mean, p5, p50, p95, unit}`` of a metric over the samples that give it."""
+    """Return ``{mean, p5, p50, p95}``, each a ``Value``, of a metric over the samples giving it."""
     metrics = [item["metrics"][name] for item in samples if name in item["metrics"]]
-    numbers = [item["value"] for item in metrics if item["value"] is not None]
-    unit = metrics[0]["unit"] if metrics else "-"
+    numbers = [item.value for item in metrics if item.value is not None]
+    unit = metrics[0].unit if metrics else "-"
     if not numbers:
-        fields = dict.fromkeys(("mean", "p5", "p50", "p95"))
-        return fields | {"unit": unit, "reason": "no sample gives this metric"}
+        reason = "no sample gives this metric"
+        return {key: measure(None, unit, reason) for key in ("mean", "p5", "p50", "p95")}
     low, middle, high = np.percentile(numbers, (5, 50, 95))
-    return {"mean": np.mean(numbers), "p5": low, "p50": middle, "p95": high, "unit": unit}
+    spread = {"mean": np.mean(numbers), "p5": low, "p50": middle, "p95": high}
+    return {key: measure(number, unit) for key, number in spread.items()}
 
 
 def sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None):
@@ -73,7 +83,8 @@ def sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None):
     distributions : dict
         For each uncertain parameter ``"path.parameter"``, its distribution:
         ``{"kind": "normal", "mean", "std"}``, ``{"kind": "uniform", "lower", "upper"}`` or
-        ``{"kind": "triangular", "lower", "mode", "upper"}``, in the parameter's SI unit.
+        ``{"kind": "triangular", "lower", "mode", "upper"}``, each field a ``Quantity`` or its dict
+        (a plain number only for a parameter without a dimension).
     metrics : list of str
         The metrics to record, as the ``objective`` of ``minimize`` without a sign.
     count : int
@@ -86,10 +97,10 @@ def sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None):
     Returns
     -------
     dict
-        Plain JSON ``{samples, summary}``: ``samples`` lists each draw's ``parameters`` and
-        ``metrics``, a value per metric, with a ``reason`` for a draw whose run failed; ``summary``
-        gives, for each metric, ``{mean, p5, p50, p95, unit}`` over the draws that give it, each
-        ``None`` with a ``reason`` when none does.
+        ``{samples, summary}``: ``samples`` lists each draw's ``parameters``, ``Quantity`` values
+        in SI, and ``metrics``, a ``Value`` per metric, with a ``reason`` for a draw whose run
+        failed; ``summary`` gives, for each metric, ``{mean, p5, p50, p95}`` over the draws that
+        give it, each a ``Value`` that is ``None`` with a ``reason`` when none does.
     """
     if count < 1:
         raise ValidationError(f"optim.sample: count = {count}; expected at least 1", path="count")
@@ -100,9 +111,9 @@ def sample(plant, problem, distributions, metrics, count, seed=0, *, plan=None):
     samples = []
     require_input(problem, plan)
     for _ in range(count):
-        drawn = {key: _draw(generator, key, item) for key, item in distributions.items()}
+        drawn = {key: _draw(generator, plant, key, item) for key, item in distributions.items()}
         found, reason = run_trial(plant, problem, plan, drawn, names)
         failed = {"reason": reason} if reason else {}
-        samples.append({"parameters": drawn, "metrics": found, **failed})
+        samples.append({"parameters": quantities(plant, drawn), "metrics": found, **failed})
     summary = {name: _spread(samples, name) for name in names}
-    return to_plain({"samples": samples, "summary": summary})
+    return {"samples": samples, "summary": summary}

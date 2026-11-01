@@ -3,6 +3,7 @@
 import pytest
 
 import gemini as gm
+from gemini._utils.jsonable import to_plain
 from gemini.evaluate._utils import cost
 from gemini.modules import CoolingGrid
 from gemini.units import SECONDS_PER_YEAR
@@ -10,7 +11,9 @@ from tests.fixtures.costed_plants import day, heating_plant
 from tests.fixtures.errors import raises
 from tests.fixtures.result_tables import make_problem
 
-PRICES = make_problem(assumptions=gm.Assumptions(prices={"electricity": 2e-8}))
+PRICES = make_problem(
+    assumptions=gm.Assumptions(prices={"electricity": gm.units.Quantity(2e-8, "currency/J")})
+)
 HEAT = 1000.0 * SECONDS_PER_YEAR
 OPEX = 10.0 + 1e-9 * HEAT + 2e-8 * 100.0 * SECONDS_PER_YEAR
 """Yearly cost of the heating plant under ``PRICES``: fixed, variable and electricity."""
@@ -20,23 +23,25 @@ def test_lcoh_is_discounted_cost_over_discounted_heat():
     """(capex + opex A) / (heat A) with the annuity factor of 5 % over 20 years."""
     factor = (1 - 1.05**-20) / 0.05
     result = gm.evaluate.lcoh(heating_plant(), PRICES, day(), 0.05, 20)
-    assert result["value"] == pytest.approx((1000.0 + OPEX * factor) / (HEAT * factor), rel=1e-12)
-    assert result["unit"] == "EUR/J"
-    assert result["capex"] == {"value": 1000.0, "unit": "EUR"}
-    assert result["opex"]["value"] == pytest.approx(OPEX, rel=1e-12)
+    assert result.value == pytest.approx((1000.0 + OPEX * factor) / (HEAT * factor), rel=1e-12)
+    assert result.unit == "currency/J"
+    assert to_plain(result.parts["capex"]) == {"value": 1000.0, "unit": "currency"}
+    assert result.parts["opex"].value == pytest.approx(OPEX, rel=1e-12)
 
 
 def test_lcoh_at_zero_rate_spreads_the_cost_over_the_years():
     """Without discounting, the cost over the lifetime divided by the heat over the lifetime."""
     result = gm.evaluate.lcoh(heating_plant(), PRICES, day(), 0.0, 10)
-    assert result["value"] == pytest.approx((1000.0 + OPEX * 10) / (HEAT * 10), rel=1e-12)
+    assert result.value == pytest.approx((1000.0 + OPEX * 10) / (HEAT * 10), rel=1e-12)
 
 
 def test_the_rate_and_lifetime_come_from_the_assumptions():
     """Given in the assumptions, they give the same value as passed explicitly."""
     both = make_problem(
         assumptions=gm.Assumptions(
-            discount_rate=0.05, lifetime_years=20, prices={"electricity": 2e-8}
+            discount_rate=0.05,
+            lifetime_years=20,
+            prices={"electricity": gm.units.Quantity(2e-8, "currency/J")},
         )
     )
     explicit = gm.evaluate.lcoh(heating_plant(), PRICES, day(), 0.05, 20)
@@ -55,13 +60,13 @@ def test_null_with_a_reason_when_the_cost_or_the_heat_is_missing():
     unpriced = gm.evaluate.lcoh(
         heating_plant(costed=False), PRICES, day(), 0.05, 20, on_error="record"
     )
-    assert unpriced["value"] is None and "no module declares a cost" in unpriced["reason"]
+    assert unpriced.value is None and "no module declares a cost" in unpriced.reason
     idle = gm.evaluate.lcoh(heating_plant(), PRICES, day(heat=0.0), 0.05, 20, on_error="record")
-    assert idle["reason"] == "the run delivers no heat"
+    assert idle.reason == "the run delivers no heat"
     plant = heating_plant()
     plant._add_module("cool", CoolingGrid())
     both = gm.evaluate.lcoh(plant, PRICES, day(cold=100.0), 0.05, 20, on_error="record")
-    assert both["value"] is None and "split of its cost" in both["reason"]
+    assert both.value is None and "split of its cost" in both.reason
     with raises(gm.errors.ValidationError, "no_value", match="split of its cost"):
         gm.evaluate.lcoh(plant, PRICES, day(cold=100.0), 0.05, 20)
 
@@ -70,5 +75,5 @@ def test_lcoh_keeps_its_numbers():
     """One expression, one order of operations: bit for bit the lifetime cost over the energy."""
     factor = cost.annuity(0.05, 20)
     result = gm.evaluate.lcoh(heating_plant(), PRICES, day(), 0.05, 20)
-    capex, yearly, energy = (result[name]["value"] for name in ("capex", "opex", "energy"))
-    assert result["value"] == (capex + yearly * factor) / (energy * factor)
+    capex, yearly, energy = (result.parts[name].value for name in ("capex", "opex", "energy"))
+    assert result.value == (capex + yearly * factor) / (energy * factor)

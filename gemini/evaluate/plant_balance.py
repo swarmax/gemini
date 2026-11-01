@@ -8,7 +8,7 @@ from gemini.modules._utils import balance
 from gemini.plants._utils.plan import inner_ends, is_plant, leaf_ends
 from gemini.runtime import settings
 from gemini.types.results import ModuleResult
-from gemini.types.shapes import check, value
+from gemini.types.shapes import check, measure
 
 MODULE_TOLERANCE = 1e-9
 """Largest relative residual of a module, in or out, the larger of the two; numerical."""
@@ -46,13 +46,13 @@ def _reader(run):
 
 def _closure(name, incoming, outgoing, unresolved, tolerance):
     """Return the check that ``incoming - outgoing - unresolved`` is small against the flows."""
-    limit = value(tolerance, "-")
+    limit = measure(tolerance, "-")
     residual = np.abs(np.asarray(incoming - outgoing - unresolved, dtype=float))
     relative = residual / np.asarray(balance.scale(incoming, outgoing), dtype=float)
     if relative.size == 0 or np.isnan(relative).all():
-        return check(name, None, value(None, "-", "every value is missing"), limit)
+        return check(name, None, measure(None, "-", "every value is missing"), limit)
     worst = float(np.nanmax(relative))
-    return check(name, worst <= tolerance, value(worst, "-"), limit)
+    return check(name, worst <= tolerance, measure(worst, "-"), limit)
 
 
 def _root_ends(plant, run, section):

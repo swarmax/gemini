@@ -2,10 +2,11 @@
 
 The ``*_to_*`` functions convert at correlation boundaries that use US or laboratory units.
 ``_UNITS`` is the single table of public data units: every unit maps to its SI unit, a scale
-and an offset, ``si = value * scale + offset``. ``to_si``, ``convert``, ``value_in_si``,
-``si_unit``, ``names``, ``parse``, ``fits`` and the unit sets of ``Profile`` and ``Stream`` all
-read it. ``define_quantity`` records the SI unit of each named quantity (the types package calls
-it once per quantity), so ``names(quantity)`` and ``fits(unit, quantity)`` need no upward import.
+and an offset, ``si = value * scale + offset``. ``Unit``, the enum of the units, is generated from
+it, and ``to_si``, ``convert``, ``value_in_si``, ``si_unit``, ``names``, ``fits`` and the unit sets
+of ``Profile`` and ``Stream`` all read it. ``define_quantity`` records the SI unit of each named
+quantity (the types package calls it once per quantity), so ``names(quantity)`` and
+``fits(unit, quantity)`` need no upward import.
 
 Each conversion factor is declared once, as a named module constant below, and both the table
 and the converters read that constant. A converter whose body equals that of another quantity's
@@ -22,8 +23,9 @@ binding and plain operators work on every backend, so the registry wrapper would
 """
 
 import math
-import re
+from collections.abc import Mapping
 from dataclasses import dataclass
+from enum import StrEnum
 
 import numpy as np
 
@@ -59,7 +61,7 @@ HALF_TURN_DEGREES = 180
 MOL_M3_PA_PER_MOL_L_BAR = 0.01
 API_VELOCITY_FACTOR = 0.3048 / math.sqrt(0.0283 / 0.454)
 
-__all__ = ["Quantity", "names", "parse", "convert", "fits"]
+__all__ = ["Quantity", "Unit", "names", "convert", "fits"]
 
 
 def bar_to_pa(x: float) -> float:
@@ -292,10 +294,16 @@ _UNITS = {
     "W": ("W", 1, 0),
     "kW": ("W", KILO, 0),
     "MW": ("W", MEGA, 0),
+    "GW": ("W", GIGA, 0),
     "J": ("J", 1, 0),
     "kWh": ("J", JOULES_PER_KWH, 0),
+    "MWh": ("J", KILO * JOULES_PER_KWH, 0),
+    "GWh": ("J", MEGA * JOULES_PER_KWH, 0),
+    "TWh": ("J", GIGA * JOULES_PER_KWH, 0),
+    "MJ": ("J", MEGA, 0),
+    "GJ": ("J", GIGA, 0),
     "currency": ("currency", 1, 0),
-    "currency/year": ("currency/year", 1, 0),
+    "currency/yr": ("currency/yr", 1, 0),
     "currency/J": ("currency/J", 1, 0),
     "currency/kWh": ("currency/J", 1 / JOULES_PER_KWH, 0),
     "currency/MWh": ("currency/J", 1 / (KILO * JOULES_PER_KWH), 0),
@@ -303,6 +311,23 @@ _UNITS = {
     "currency/t": ("currency/kg", 1 / KILO, 0),
     "currency/s": ("currency/s", 1, 0),
     "currency/h": ("currency/s", 1 / SECONDS_PER_HOUR, 0),
+    "currency/W": ("currency/W", 1, 0),
+    "currency/m": ("currency/m", 1, 0),
+    "currency/(W/K)": ("currency/(W/K)", 1, 0),
+    "EUR": ("currency", 1, 0),
+    "kEUR": ("currency", KILO, 0),
+    "MEUR": ("currency", MEGA, 0),
+    "EUR/J": ("currency/J", 1, 0),
+    "EUR/yr": ("currency/yr", 1, 0),
+    "kEUR/yr": ("currency/yr", KILO, 0),
+    "MEUR/yr": ("currency/yr", MEGA, 0),
+    "EUR/MWh": ("currency/J", 1 / (KILO * JOULES_PER_KWH), 0),
+    "EUR/kWh": ("currency/J", 1 / JOULES_PER_KWH, 0),
+    "EUR/kg": ("currency/kg", 1, 0),
+    "EUR/t": ("currency/kg", 1 / KILO, 0),
+    "EUR/W": ("currency/W", 1, 0),
+    "EUR/m": ("currency/m", 1, 0),
+    "EUR/(W/K)": ("currency/(W/K)", 1, 0),
     "m": ("m", 1, 0),
     "km": ("m", KILO, 0),
     "mm": ("m", MILLI, 0),
@@ -312,6 +337,7 @@ _UNITS = {
     "min": ("s", SECONDS_PER_MINUTE, 0),
     "h": ("s", SECONDS_PER_HOUR, 0),
     "d": ("s", SECONDS_PER_DAY, 0),
+    "yr": ("s", SECONDS_PER_YEAR, 0),
     "m/s": ("m/s", 1, 0),
     "m2": ("m2", 1, 0),
     "mD": ("m2", md_to_m2(1), 0),
@@ -337,6 +363,20 @@ _UNITS = {
     "K/km": ("K/m", MILLI, 0),
     "kg": ("kg", 1, 0),
     "t": ("kg", KILO, 0),
+    "kt": ("kg", MEGA, 0),
+    "Mt": ("kg", GIGA, 0),
+    "kg/yr": ("kg/yr", 1, 0),
+    "t/yr": ("kg/yr", KILO, 0),
+    "kt/yr": ("kg/yr", MEGA, 0),
+    "Mt/yr": ("kg/yr", GIGA, 0),
+    "J/yr": ("J/yr", 1, 0),
+    "kWh/yr": ("J/yr", JOULES_PER_KWH, 0),
+    "MWh/yr": ("J/yr", KILO * JOULES_PER_KWH, 0),
+    "GWh/yr": ("J/yr", MEGA * JOULES_PER_KWH, 0),
+    "1/yr": ("1/yr", 1, 0),
+    "%/yr": ("1/yr", 0.01, 0),
+    "kg/J": ("kg/J", 1, 0),
+    "g/kWh": ("kg/J", MILLI / JOULES_PER_KWH, 0),
     "m3/s/Pa^0.5": ("m3/s/Pa^0.5", 1, 0),
     "m3/h/bar^0.5": ("m3/s/Pa^0.5", 1 / SECONDS_PER_HOUR / PA_PER_BAR**0.5, 0),
     "W/m/K": ("W/m/K", 1, 0),
@@ -349,18 +389,121 @@ _UNITS = {
     "Nm3/m3": ("-", 1, 0),
 }
 
-_NUMBER_AND_UNIT = re.compile(r"\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s+(.+?)\s*")
-
-
 _QUANTITY_UNITS = {}
 
+QUANTITY_FORM = (
+    "a Quantity or {'value': <number>, 'unit': <unit>}, e.g. {'value': 150, 'unit': 'm3/h'}"
+)
+"""How a value with a dimension is written; the message of every refused text shows it."""
 
-@dataclass(frozen=True)
+_NAMED = {
+    "-": "DIMENSIONLESS",
+    "degC": "DEG_C",
+    "°C": "DEGREE_C",
+    "bar(g)": "BAR_G",
+    "mPa*s": "MPA_TIMES_S",
+    "1/yr": "PER_YR",
+}
+_SPELLED = (
+    ("%", "PERCENT"),
+    ("(", ""),
+    (")", ""),
+    ("/", "_PER_"),
+    (".", "_"),
+    ("^", "_"),
+)
+
+
+def _member_name(unit):
+    """Return the member name of ``unit``: upper case words, ``/`` read as ``_PER_``."""
+    if unit in _NAMED:
+        return _NAMED[unit]
+    name = unit
+    for old, new in _SPELLED:
+        name = name.replace(old, new)
+    return name.upper()
+
+
+Unit = StrEnum("Unit", {_member_name(unit): unit for unit in _UNITS})
+Unit.__doc__ = (
+    "The units of the unit table, as strings: ``Unit.M3_PER_H == 'm3/h'``. Generated from the "
+    "table, so a unit has one source; ``Quantity`` and every dimensioned input take a member."
+)
+
+
+def _unit(unit, path="units"):
+    """Return the ``Unit`` member of a known unit string, or raise ``invalid_unit``."""
+    if unit not in _UNITS:
+        raise ValidationError(
+            f"{path}: unit = {unit!r}; expected a known unit{did_you_mean(unit, _UNITS)}",
+            code="invalid_unit",
+        )
+    return Unit(unit)
+
+
+@dataclass(frozen=True, eq=False)
 class Quantity:
-    """A scalar and unit accepted at public API boundaries."""
+    """A number or array with its unit: the one shape of a value with a dimension.
+
+    ``unit`` is a ``Unit``; a known unit string is turned into the member. ``si`` is the value in
+    SI, ``to`` a new quantity in another unit of the same dimension, ``to_dict`` the JSON form
+    ``{"value": ..., "unit": ...}``. Two quantities are equal when their SI values are.
+    """
 
     value: float
-    unit: str
+    unit: Unit
+
+    def __post_init__(self):
+        """Turn the unit into its ``Unit`` member and a list of numbers into an array."""
+        object.__setattr__(self, "unit", _unit(self.unit, "Quantity"))
+        if isinstance(self.value, (list, tuple)):
+            object.__setattr__(self, "value", np.asarray(self.value, dtype=float))
+
+    @property
+    def si(self):
+        """The value in SI (a float, or an array for an array value)."""
+        if isinstance(self.value, np.ndarray):
+            return array_to_si(self.value, self.unit)
+        return to_si(self.value, self.unit)
+
+    def to(self, unit, quantity=None):
+        """Return the quantity in ``unit``.
+
+        ``quantity`` names a difference such as ``"temperature_difference"``, which converts by
+        scale only.
+        """
+        unit = _unit(unit, "Quantity.to")
+        if isinstance(self.value, np.ndarray):
+            return Quantity(array_convert(self.value, self.unit, unit, quantity), unit)
+        return Quantity(convert(self.value, self.unit, unit, quantity), unit)
+
+    def to_dict(self):
+        """Return ``{"value": ..., "unit": ...}`` as plain data."""
+        value = self.value.tolist() if isinstance(self.value, np.ndarray) else self.value
+        return {"value": value, "unit": str(self.unit)}
+
+    @classmethod
+    def from_dict(cls, data):
+        """Return the quantity of ``{"value": ..., "unit": ...}``; any other shape raises."""
+        if not isinstance(data, Mapping) or set(data) != {"value", "unit"}:
+            raise ValidationError(
+                f"quantity = {data!r}; expected {QUANTITY_FORM}",
+                code="invalid_value",
+            )
+        value = data["value"]
+        return cls(
+            np.asarray(value, dtype=float) if isinstance(value, list) else value, data["unit"]
+        )
+
+    def __eq__(self, other):
+        """Compare SI values."""
+        if not isinstance(other, Quantity):
+            return NotImplemented
+        return bool(np.array_equal(self.si, other.si))
+
+    def __hash__(self):
+        """Hash the SI value of a scalar."""
+        return hash(float(self.si))
 
 
 def _entry(unit, path="units"):
@@ -418,36 +561,54 @@ def array_convert(values, from_unit, to_unit, quantity=None):
     return (si - _offset(to_unit, quantity)) / _entry(to_unit, "units.convert")[1]
 
 
-def split_quantity(value):
-    """Return ``(number, unit)`` for a ``Quantity`` or ``"<number> <unit>"`` text.
+def _allowed(expected_unit, quantity):
+    """Return the units a field of SI unit ``expected_unit`` accepts."""
+    if quantity is not None:
+        return names(quantity)
+    return sorted(unit for unit, entry in _UNITS.items() if entry[0] == expected_unit)
 
-    Any other value, including text that is not a number followed by a unit, returns
-    ``(value, None)``.
+
+def _as_quantity(value, expected_unit, path):
+    """Return ``value`` as a ``Quantity`` if it is one or its dict, ``None`` if it is a plain value.
+
+    Text for a field with a unit is refused: a value with a dimension is written as a ``Quantity``
+    or its dict.
     """
     if isinstance(value, Quantity):
-        return value.value, value.unit
-    if isinstance(value, str):
-        match = _NUMBER_AND_UNIT.fullmatch(value)
-        if match is not None:
-            return float(match.group(1)), match.group(2)
-    return value, None
+        return value
+    if isinstance(value, str) and expected_unit is not None:
+        raise ValidationError(
+            f"{path}: value = {value!r}; expected {QUANTITY_FORM}", code="invalid_value"
+        )
+    if isinstance(value, Mapping) and expected_unit is not None:
+        try:
+            return Quantity.from_dict(value)
+        except ValidationError as error:
+            raise ValidationError(f"{path}: {error}", code=error.code) from error
+    return None
 
 
 def value_in_si(value, expected_unit=None, path="value", quantity=None):
-    """Convert a unit string or ``Quantity`` to a declaration's SI unit.
+    """Convert a ``Quantity`` or its dict to a declaration's SI unit.
 
-    Values without a unit, and every value of a declaration without a unit, pass unchanged.
-    ``quantity`` names the declared quantity so that differences ignore unit offsets.
+    A plain number is SI already and passes unchanged, as does every value of a declaration
+    without a unit. A text for a declaration with a unit raises ``invalid_value``. ``quantity``
+    names the declared quantity so that differences ignore unit offsets; a unit of another
+    dimension raises ``invalid_unit`` listing the units of the field.
     """
-    number, supplied = split_quantity(value)
-    if supplied is None or expected_unit is None:
+    given = _as_quantity(value, expected_unit, path)
+    if given is None or expected_unit is None:
         return value
-    if _entry(supplied, path)[0] != expected_unit:
+    if _entry(given.unit, path)[0] != expected_unit:
+        allowed = _allowed(expected_unit, quantity)
         raise ValidationError(
-            f"{path}: unit = {supplied!r}; expected a unit of {expected_unit!r}",
+            f"{path}: unit = {str(given.unit)!r}; expected one of {join_names(allowed)}",
             code="invalid_unit",
         )
-    return to_si(number, supplied, quantity)
+    if isinstance(given.value, np.ndarray):
+        scale, offset = si_conversion(given.unit, quantity)
+        return given.value * scale + offset
+    return to_si(given.value, given.unit, quantity)
 
 
 def convert(value, from_unit, to_unit, quantity=None):
@@ -515,22 +676,6 @@ def names(quantity=None):
         return sorted(_UNITS)
     target = _quantity_si_unit(quantity)
     return sorted(unit for unit, entry in _UNITS.items() if entry[0] == target)
-
-
-def parse(text):
-    """Return ``(value, unit)`` of ``"<number> <unit>"`` text such as ``"150 m3/h"``.
-
-    The value stays in the given unit; the unit must be known. Text that is not a number and a
-    unit separated by a space raises ``ValidationError``.
-    """
-    value, unit = split_quantity(text)
-    if unit is None:
-        raise ValidationError(
-            f"units.parse: text = {text!r}; expected '<number> <unit>', e.g. '150 m3/h'",
-            code="invalid_unit",
-        )
-    _entry(unit, "units.parse")
-    return value, unit
 
 
 def fits(unit, quantity):

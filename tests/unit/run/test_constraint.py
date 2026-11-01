@@ -11,10 +11,20 @@ from tests.fixtures.json_schema import check
 @pytest.mark.parametrize(
     "constraint",
     [
-        gm.Constraint("d*.reservoir.liquid_flow", min="50 m3/h", max="300 m3/h", when="running"),
+        gm.Constraint(
+            "d*.reservoir.liquid_flow",
+            min={"value": 50, "unit": "m3/h"},
+            max={"value": 300, "unit": "m3/h"},
+            when="running",
+        ),
         gm.Constraint("d*.brine_cooling", max=40),
-        gm.Constraint("d*.reservoir.liquid_flow", equals="330 d", over="duration", when="running"),
-        gm.Constraint("grid.power_out", max="5 MW", over="mean"),
+        gm.Constraint(
+            "d*.reservoir.liquid_flow",
+            equals={"value": 330, "unit": "d"},
+            over="duration",
+            when="running",
+        ),
+        gm.Constraint("grid.power_out", max={"value": 5, "unit": "MW"}, over="mean"),
     ],
 )
 def test_a_round_trip_gives_the_same_constraint(constraint):
@@ -33,7 +43,7 @@ def test_a_round_trip_gives_the_same_constraint(constraint):
         ({"path": "d0.flow", "max": 1, "over": "median"}, "invalid_value"),
         ({"path": "d0.flow", "max": 1, "when": "stopped"}, "invalid_value"),
         ({"path": "d0.flow", "max": [1]}, "invalid_value"),
-        ({"path": "d0.flow", "max": "1 parsec"}, "invalid_unit"),
+        ({"path": "d0.flow", "max": {"value": 1, "unit": "parsec"}}, "invalid_unit"),
     ],
 )
 def test_what_no_plant_could_make_right_is_refused(arguments, code):

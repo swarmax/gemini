@@ -49,9 +49,12 @@ the combinations of a plant, described in [plants.md](plants.md#outputs). `UNSET
 the same object under copy, deep copy and pickling. `shape=` checks fixed vectors; bounds can
 tighten quantity defaults.
 
-`declaration.validate(value)` converts a unit string or `gm.units.Quantity(value, unit)` to the declared
-SI unit and then validates it with a Pydantic `TypeAdapter`; a failure raises
-`gm.errors.ValidationError`. Plain numbers are taken as SI. A cheap check built once per
+`declaration.validate(value)` converts a `gm.units.Quantity(value, unit)` or its dict
+`{"value": 150, "unit": "m3/h"}` to the declared SI unit and then validates it with a Pydantic
+`TypeAdapter`; a failure raises `gm.errors.ValidationError`. Text such as `"150 m3/h"` is
+`invalid_value` and a unit of another dimension `invalid_unit`, listing the units of the field.
+Plain numbers are taken as SI: inside a module, a plant and the engine every value is a plain SI
+number, and the conversion happens once, here at the boundary. A cheap check built once per
 declaration is tried first and accepts only the common case, returned unchanged: an exact `float`
 inside its bounds (NaN never is), an exact `bool` or `str` for those kinds, `None` for an optional
 kind. Everything else, and every failure, takes the full path, so accepted values, coercions and
@@ -65,7 +68,7 @@ items. Each has its own quantity name. Integer stage counts use `Count`. Every q
 table of `gemini/units/conversions.py` (`test_every_quantity_unit_is_a_known_si_unit`); add the unit
 there together with a new quantity. Use signed pressure/temperature *differences* separately
 from nonnegative absolute pressure and strictly positive absolute temperature. A difference
-converts by scale only: `"5 degC"` as a `TemperatureDifference` is 5 K, not 278.15 K.
+converts by scale only: `{"value": 5, "unit": "degC"}` as a `TemperatureDifference` is 5 K, not 278.15 K.
 Efficiencies used as design constraints are in (0, 1]; empirical ESP output efficiency remains
 `Dimensionless` because the unchanged polynomial model can return values above one.
 
@@ -83,8 +86,8 @@ Earlier catalogue work added `Speed` (`m/s`), `Mass` (`kg`, `t`), `SpecificEntha
 `ThermalDiffusivity` (`m2/s`), `LinearPower` (`W/m`) and `FlowCoefficient` (`m3/s/Pa^0.5`,
 catalogue Kv as `m3/h/bar^0.5`; `ge=0` so a closed valve reports zero, `Valve.flow_coefficient`
 keeps `gt=0`). The dimensionless unit `ppm` (1e-6) converts any `-` quantity, for example
-`InhibitorDosing.dose = "10 ppm"`. `Duration` accepts `s`, `min`, `h` and `d` (for example
-`integral_time="15 min"`), and `ProductivityIndex` accepts `m3/h/bar`.
+`InhibitorDosing.dose = {"value": 10, "unit": "ppm"}`. `Duration` accepts `s`, `min`, `h` and `d` (for example
+`integral_time={"value": 15, "unit": "min"}`), and `ProductivityIndex` accepts `m3/h/bar`.
 
 Add a quantity only when a real field needs a new dimension. Keep local descriptions and
 stricter design limits on fields. `tests/unit/modules/test_field_types.py` checks that every
@@ -103,16 +106,16 @@ helpers remain in `gemini.units`.
 
 `Stream(flow=..., T=..., p=..., fluid=None)` accepts mass flow (`kg/s`, `t/h`) or volumetric flow
 (`m3/s`, `m3/h`, `l/s`) and converts it with the stream's fluid density. Plain `flow` numbers are
-kg/s; text without a unit such as `flow="150"` raises `gm.errors.ValidationError`, and passing both
+kg/s; any text, such as `flow="150"` or `flow="150 m3/h"`, raises `gm.errors.ValidationError` (`invalid_value`), and passing both
 `flow` and `m_dot` raises `gm.errors.ValidationError`, as do an unknown keyword (with a did-you-mean),
 a missing field and a `fluid` that is neither a `Fluid` nor a mapping of its fields. The explicit
 SI `m_dot` field remains supported. Without `fluid` the constructor uses the runtime default
-fluid. All public numeric declarations accept a unit string or `gm.units.Quantity(value, unit)`.
+fluid. All public numeric declarations accept a `gm.units.Quantity(value, unit)` or its dict.
 `gm.units.convert(value, from_unit, to_unit, quantity=None)` handles explicit output conversion.
 
 `gm.units` is the one unit implementation (`gemini/units/conversions.py`, one table). Its public names:
 `names(quantity=None)` lists every unit, or those of a named quantity such as `"pressure"`;
-`parse("150 m3/h")` returns `(150.0, "m3/h")` (a number, a space and a known unit, else
+`parse({"value": 150, "unit": "m3/h"})` returns `(150.0, "m3/h")` (a number, a space and a known unit, else
 `ValidationError`); `convert(value, from_unit, to_unit, quantity=None)`; and `fits(unit, quantity)` tells
 whether a unit converts to the quantity's SI unit, which is how bindings and CSV headers
 `name [unit]` are checked. An unknown unit does not fit and an unknown quantity raises
@@ -143,7 +146,7 @@ guard of the graph cache; numeric parameters are graph inputs by default.
 dataclass: numbers become `float`, bounds raise `PhysicsError`), the original
 constant-water numbers. `Fluid` carries salinity, dissolved CO2 and free-gas mass fractions.
 `density`, `viscosity`, `specific_heat` and `thermal_conductivity` are validated and immutable, take
-unit strings (`"0.4 mPa*s"`) and describe the liquid of a brine or water fluid and the gas of a gas
+unit strings (`{"value": 0.4, "unit": "mPa*s"}`) and describe the liquid of a brine or water fluid and the gas of a gas
 fluid; a mixture density is a computed property, never an input. Reservoirs hold no density or
 viscosity: the fluid owns its properties. A value that does not fit raises `ValidationError`.
 

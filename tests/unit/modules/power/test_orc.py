@@ -19,19 +19,19 @@ BRINE = Stream(m_dot=100, T=423.15, p=10e5)
 def orc(**changes):
     """Return an air-cooled ORC with a 70 degC reinjection limit."""
     params = dict(
-        minimum_brine_outlet_temperature="70 degC",
+        minimum_brine_outlet_temperature={"value": 70, "unit": "degC"},
         pinch=5,
         carnot_fraction=0.5,
         condenser_approach=15,
         parasitic_fraction=0.15,
-        capacity="5 MW",
+        capacity={"value": 5, "unit": "MW"},
     )
     return ORC().set_params("", params | changes)
 
 
 def test_hand_calculated_lorenz_power():
     """Brine 150 -> 70 degC, T_c = 15 + 15 degC: W = 0.5 m cp ((T_a - T_b) - T_c ln(T_a/T_b))."""
-    out = reading(orc()(fluid_in=BRINE, air_in=air("15 degC")))
+    out = reading(orc()(fluid_in=BRINE, air_in=air({"value": 15, "unit": "degC"})))
     heat = 100 * 4217.4 * 80
     gross = 0.5 * 100 * 4217.4 * (80 - 303.15 * math.log(418.15 / 338.15))
     assert out.heat_input == pytest.approx(heat, rel=1e-12)
@@ -57,7 +57,7 @@ def test_first_law_and_mass_closure():
 def test_capacity_bypasses_brine_at_constant_cycle_efficiency():
     """A 1 MW cap processes part of the brine; the mixed outlet is warmer."""
     full = reading(orc()(fluid_in=BRINE, air_in=air(288.15)))
-    module = orc(capacity="1 MW")
+    module = orc(capacity={"value": 1, "unit": "MW"})
     result = module(fluid_in=BRINE, air_in=air(288.15))
     out = reading(result)
     assert out.is_capped and out.gross_power == pytest.approx(1e6, rel=1e-12)
@@ -68,8 +68,8 @@ def test_capacity_bypasses_brine_at_constant_cycle_efficiency():
 
 def test_hot_ambient_raises_condensing_and_outlet_temperatures():
     """At 55 degC ambient the pinch above T_c sets the brine outlet; power falls."""
-    cool = reading(orc()(fluid_in=BRINE, air_in=air("15 degC")))
-    hot = reading(orc()(fluid_in=BRINE, air_in=air("55 degC")))
+    cool = reading(orc()(fluid_in=BRINE, air_in=air({"value": 15, "unit": "degC"})))
+    hot = reading(orc()(fluid_in=BRINE, air_in=air({"value": 55, "unit": "degC"})))
     assert hot.fluid_out_T == pytest.approx(273.15 + 55 + 15 + 5)
     assert hot.electricity_generated < cool.electricity_generated
 

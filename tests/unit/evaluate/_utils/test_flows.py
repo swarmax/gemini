@@ -39,7 +39,9 @@ def test_the_gas_price_buys_purchased_gas_only():
         "gas": {"gas_out.chemical_flow": [1e6] * HOURS},
     }
     flows = Flows(heating_plant(), make_results(columns))
-    problem = make_problem(assumptions=gm.Assumptions(prices={"gas": "40.0 EUR/MWh"}))
+    problem = make_problem(
+        assumptions=gm.Assumptions(prices={"gas": {"value": 40.0, "unit": "EUR/MWh"}})
+    )
     assert flows.energy("fuel") == pytest.approx(1e6 * SECONDS_PER_YEAR)
     assert flows.cost("fuel", problem) == pytest.approx(flows.energy("fuel") / 3.6e9 * 40.0)
     assert flows.cost("electricity", make_problem()) == 0.0
@@ -50,7 +52,9 @@ def test_the_gas_price_buys_purchased_gas_only():
 def test_a_constant_price_multiplies_the_energy_of_the_year():
     """Bit for bit the energy of the year times the price."""
     flows = Flows(heating_plant(), day())
-    problem = make_problem(assumptions=gm.Assumptions(prices={"electricity": 2e-8}))
+    problem = make_problem(
+        assumptions=gm.Assumptions(prices={"electricity": gm.units.Quantity(2e-8, "currency/J")})
+    )
     assert flows.cost("electricity", problem) == flows.energy("electricity") * 2e-8
 
 
@@ -58,8 +62,12 @@ def test_a_price_profile_is_integrated_over_the_run():
     """The power of each step times its price: half a day at 1 and half at 3 averages to 2."""
     flows = Flows(heating_plant(), day())
     price = [1e-8] * (HOURS // 2) + [3e-8] * (HOURS // 2)
-    problem = make_problem(assumptions=gm.Assumptions(prices={"electricity": price}))
-    constant = make_problem(assumptions=gm.Assumptions(prices={"electricity": 2e-8}))
+    problem = make_problem(
+        assumptions=gm.Assumptions(prices={"electricity": gm.units.Quantity(price, "currency/J")})
+    )
+    constant = make_problem(
+        assumptions=gm.Assumptions(prices={"electricity": gm.units.Quantity(2e-8, "currency/J")})
+    )
     assert flows.cost("electricity", problem) == pytest.approx(flows.cost("electricity", constant))
 
 
@@ -68,13 +76,22 @@ def test_a_profile_weights_the_hours_that_draw_power():
     power = [0.0] * (HOURS // 2) + [100.0] * (HOURS // 2)
     run = make_results({"grid": {"net_import": power}})
     price = np.array([1e-8] * (HOURS // 2) + [3e-8] * (HOURS // 2))
-    problem = make_problem(assumptions=gm.Assumptions(prices={"electricity": list(price)}))
+    problem = make_problem(
+        assumptions=gm.Assumptions(
+            prices={"electricity": gm.units.Quantity(list(price), "currency/J")}
+        )
+    )
     bill = Flows(heating_plant(), run).cost("electricity", problem)
     assert bill == pytest.approx(3e-8 * 100.0 * SECONDS_PER_YEAR / 2)
 
 
 def test_a_profile_of_another_length_than_the_run_is_refused():
     """One price per step of the run."""
-    problem = make_problem(count=4, assumptions=gm.Assumptions(prices={"electricity": [1e-8] * 4}))
+    problem = make_problem(
+        count=4,
+        assumptions=gm.Assumptions(
+            prices={"electricity": gm.units.Quantity([1e-8] * 4, "currency/J")}
+        ),
+    )
     with raises(gm.errors.ValidationError, "invalid_value", match="one per step"):
         Flows(heating_plant(), day()).cost("electricity", problem)

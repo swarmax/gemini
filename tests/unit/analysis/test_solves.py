@@ -160,7 +160,7 @@ def test_injection_pressure_balances_a_shallow_injector():
     sink = InjectionReservoir().set_params(
         "", {"pressure": 230e5, "injectivity_index": INDEX, "top_depth": 2000, **RESERVOIR}
     )
-    wellhead = Stream(flow="129.02 m3/h", T=293.15, p=2e5)
+    wellhead = Stream(flow={"value": 129.02, "unit": "m3/h"}, T=293.15, p=2e5)
     pressure = nodal.solve_injection_pressure(well, sink, wellhead, (2e5, 1e8))
     assert pressure > 2e5
     bottom = well(wellhead_in=wellhead.with_(p=pressure)).outlets.bottom_out
@@ -174,7 +174,7 @@ def test_deep_injector_needs_no_pump_and_draws_no_power(injector):
     electricity.
     """
     well, sink = injector
-    wellhead = Stream(flow="129.02 m3/h", T=293.15, p=1e3)
+    wellhead = Stream(flow={"value": 129.02, "unit": "m3/h"}, T=293.15, p=1e3)
     assert nodal.solve_injection_pressure(well, sink, wellhead, (1e3, 1e8)) is None
     pump = InjectionPump().set_params("", {"efficiency": 0.8})
     result = pump(fluid_in=wellhead, pressure_setpoint=wellhead.p)
@@ -224,7 +224,7 @@ def test_injection_pressure_gap_to_upstream_is_the_friction_sign():
     sink = InjectionReservoir().set_params(
         "", {"pressure": 180e5, "injectivity_index": 2.3 / 3.6e8, "top_depth": 1883, **RESERVOIR}
     )
-    wellhead = Stream(flow="125.1 m3/h", T=343.15, p=1e5)
+    wellhead = Stream(flow={"value": 125.1, "unit": "m3/h"}, T=343.15, p=1e5)
     pressure = nodal.solve_injection_pressure(well, sink, wellhead, (1e5, 1e8))
     out = reading(well(wellhead_in=wellhead.with_(p=pressure)))
     assert out.friction_pressure_drop == pytest.approx(-5.197358519692272e5, rel=1e-9)

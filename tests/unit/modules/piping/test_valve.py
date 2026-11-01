@@ -11,12 +11,14 @@ from tests.fixtures.equivalence import assert_module_matches
 KV = 100 / 3600 / 1e5**0.5
 """Flow coefficient [m3/s/Pa^0.5] of a catalogue Kv = 100 m3/h/bar^0.5."""
 
-STREAM = Stream(flow="36 m3/h", T=353.15, p=20e5)
+STREAM = Stream(flow={"value": 36, "unit": "m3/h"}, T=353.15, p=20e5)
 
 
 def valve(**changes):
     """Return a Kv 100 equal-percentage valve."""
-    return Valve().set_params("", {"flow_coefficient": "100 m3/h/bar^0.5"} | changes)
+    return Valve().set_params(
+        "", {"flow_coefficient": {"value": 100, "unit": "m3/h/bar^0.5"}} | changes
+    )
 
 
 def test_fully_open_valve_matches_the_catalogue_kv():

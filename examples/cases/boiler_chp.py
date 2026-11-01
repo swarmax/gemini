@@ -15,7 +15,12 @@ Run with ``python examples/cases/boiler_chp.py``.
 
 import gemini as gm
 
-SECONDARY = gm.Stream(flow="140 m3/h", T="20 degC", p="3 bar", fluid=gm.Fluid(kind="water"))
+SECONDARY = gm.Stream(
+    flow={"value": 140, "unit": "m3/h"},
+    T={"value": 20, "unit": "degC"},
+    p={"value": 3, "unit": "bar"},
+    fluid=gm.Fluid(kind="water"),
+)
 GAS_FACTOR = 56.6 / 1e9
 """CO2 emitted per joule of natural gas [kg/J]: 56.6 kg/GJ, the upstream factor."""
 
@@ -23,12 +28,12 @@ GRID_FACTOR = 0.3 / gm.units.convert(1, "kWh", "J")
 """CO2 emitted per joule of grid electricity [kg/J]: 0.3 kg/kWh, the upstream factor."""
 
 INPUTS = {
-    "doublet.esp.frequency": "65 Hz",
-    "doublet.wellhead_pressure": "3 bar",
+    "doublet.esp.frequency": {"value": 65, "unit": "Hz"},
+    "doublet.wellhead_pressure": {"value": 3, "unit": "bar"},
     "splitter.split_fraction": 0.5,
-    "boiler.temperature_setpoint": "70 degC",
+    "boiler.temperature_setpoint": {"value": 70, "unit": "degC"},
     "chp.load_fraction": 1.0,
-    "air.temperature": "10 degC",
+    "air.temperature": {"value": 10, "unit": "degC"},
 }
 
 

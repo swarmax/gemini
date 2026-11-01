@@ -1,6 +1,7 @@
 """One problem: the demand, the site, the constraints and the assumptions of a plant's run."""
 
 import json
+from collections.abc import Mapping
 from copy import deepcopy
 from fnmatch import fnmatchcase
 from pathlib import Path
@@ -24,8 +25,9 @@ class Problem:
         The run input of ``gm.data.from_csv`` or ``from_values``, or several joined: any constant
         step and length.
     site : dict, optional
-        Values of the plant parameters that describe the site, keyed by parameter path with ``*``,
-        with their units: ``{"d*.gradient": "30 K/km", "d*.surface_temperature": "12 degC"}``.
+        Values of the plant parameters that describe the site, keyed by parameter path with ``*``:
+        a ``Quantity`` or its dict, a plain number only for a parameter without a dimension.
+        ``{"d*.gradient": Quantity(30, "K/km"), "d*.surface_temperature": Quantity(12, "degC")}``.
     constraints : list of Constraint, optional
         The limits of the run.
     assumptions : Assumptions, optional
@@ -34,8 +36,9 @@ class Problem:
     Raises
     ------
     ValidationError
-        ``invalid_value`` for an argument of another type or a price profile that is not on the
-        demand index, ``invalid_unit`` for a site value with an unknown unit, and what
+        ``invalid_value`` for an argument of another type, a site value that is a text or a number
+        for a parameter with a dimension, or a price profile that is not on the demand index,
+        ``invalid_unit`` for a site value with an unknown unit, and what
         ``gm.data.from_csv`` raises for a demand.
 
     A problem lives in a folder as ``problem.json`` and a CSV of the demand next to it
@@ -44,9 +47,9 @@ class Problem:
         {
           "demand": {"file": "demand.csv", "columns": {"<file column>": "heating_demand"},
                      "unit": "MW", "time_column": "date"},
-          "site": {"d*.gradient": "30 K/km"},
-          "constraints": [{"path": "d*.brine_cooling", "max": "40 K"}],
-          "assumptions": {"prices": {"electricity": "100 EUR/MWh"}}
+          "site": {"d*.gradient": {"value": 30, "unit": "K/km"}},
+          "constraints": [{"path": "d*.brine_cooling", "max": {"value": 40, "unit": "K"}}],
+          "assumptions": {"prices": {"electricity": {"value": 100, "unit": "EUR/MWh"}}}
         }
 
     ``demand`` holds the arguments of ``gm.data.from_csv`` around a file name; ``time_column`` is
@@ -85,7 +88,10 @@ class Problem:
         """Return the problem as plain data, the demand in the shape ``from_values`` takes."""
         return {
             "demand": demand_frame.to_dict(self.demand),
-            "site": dict(self.site),
+            "site": {
+                path: value.to_dict() if isinstance(value, units.Quantity) else value
+                for path, value in self.site.items()
+            },
             "constraints": [constraint.to_dict() for constraint in self.constraints],
             "assumptions": self.assumptions.to_dict(),
         }
@@ -160,7 +166,12 @@ class Problem:
     @classmethod
     def schema(cls):
         """Return the JSON Schema (draft 2020-12) of ``to_dict``."""
-        number_or_text = {"type": ["number", "string"]}
+        quantity = {
+            "type": "object",
+            "required": ["value", "unit"],
+            "additionalProperties": False,
+            "properties": {"value": {"type": "number"}, "unit": {"enum": units.names()}},
+        }
         demand = {
             "type": "object",
             "required": ["start", "step", "units", "values"],
@@ -183,7 +194,10 @@ class Problem:
             "additionalProperties": False,
             "properties": {
                 "demand": demand,
-                "site": {"type": "object", "additionalProperties": number_or_text},
+                "site": {
+                    "type": "object",
+                    "additionalProperties": {"anyOf": [{"type": "number"}, quantity]},
+                },
                 "constraints": {"type": "array", "items": Constraint.schema()},
                 "assumptions": Assumptions.schema(),
             },
@@ -221,23 +235,26 @@ def _checked_keys(data):
 
 
 def _checked_site(site):
-    """Return ``site``, its keys parameter paths and its values numbers or texts with a unit."""
+    """Return ``site``, its keys parameter paths and its values numbers or quantities."""
     if not isinstance(site, dict):
         raise ValidationError(
             f"problem: site = {type(site).__name__}; expected a dict of path to value",
             path="site",
             code="invalid_value",
         )
+    checked = {}
     for path, value in site.items():
-        if isinstance(value, str):
-            units.si_unit(units.parse(value)[1])
-        elif not isinstance(value, (int, float)) or isinstance(value, bool):
+        if isinstance(value, Mapping):
+            value = units.Quantity.from_dict(value)
+        if not isinstance(value, (int, float, units.Quantity)) or isinstance(value, bool):
             raise ValidationError(
-                f"problem: site[{path!r}] = {value!r}; expected a number or a text with its unit",
+                f"problem: site[{path!r}] = {value!r}; expected {units.QUANTITY_FORM}, or a "
+                "number for a parameter without a dimension",
                 path=f"site.{path}",
                 code="invalid_value",
             )
-    return dict(site)
+        checked[path] = value
+    return checked
 
 
 def _matching_modules(plant, pattern):
@@ -274,8 +291,21 @@ def _site_values(plant, site):
                     path=join_path(path, name),
                     code="conflicting_value",
                 )
+            _checked_dimension(plant.get_submodule(path), name, value, pattern)
             values.setdefault(path, {})[name] = value
     return values
+
+
+def _checked_dimension(module, name, value, pattern):
+    """Raise unless a parameter with a dimension gets a quantity, not a plain number."""
+    unit = module._parameters[name].unit
+    if unit not in (None, "-") and not isinstance(value, units.Quantity):
+        raise ValidationError(
+            f"problem: site[{pattern!r}] = {value!r}; expected {units.QUANTITY_FORM}, because "
+            f"{name} has the unit {unit!r}",
+            path=f"site.{pattern}",
+            code="invalid_value",
+        )
 
 
 def _checked_constraints(constraints):

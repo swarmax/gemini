@@ -4,7 +4,7 @@ from gemini.evaluate._utils.cashflow import net_cash_flow
 from gemini.evaluate._utils.cost import annuity
 from gemini.evaluate._utils.outcome import reported, unavailable
 from gemini.run.assumptions import discounting
-from gemini.types.shapes import value
+from gemini.types.shapes import measure
 
 
 def npv(plant, problem, results, discount_rate=None, lifetime=None, on_error="raise"):
@@ -34,14 +34,16 @@ def npv(plant, problem, results, discount_rate=None, lifetime=None, on_error="ra
 
     Returns
     -------
-    dict
-        ``{value, unit, capex, net_cash_flow, discount_rate, lifetime_years}``, the last four each
+    Value
+        A ``gm.units.Quantity`` in SI, with the parts of the result in ``parts`` (``to_plain``
+        gives the JSON). ``{value, unit, capex, net_cash_flow, discount_rate,
+        lifetime_years}``, the last four each
         a value, with ``value`` and ``capex`` in the currency (``unit``) and ``net_cash_flow`` in
         currency per year. A plant that declares no cost has no value.
     """
     return reported(
         on_error,
-        problem.assumptions.currency,
+        "currency",
         lambda: _npv(plant, problem, results, (discount_rate, lifetime), on_error),
     )
 
@@ -52,11 +54,11 @@ def _npv(plant, problem, results, discount, on_error):
     cost, flow, unit, reason = net_cash_flow(problem.apply_site(plant), problem, results, on_error)
     if cost is None:
         return unavailable(unit, reason, on_error)
-    return value(
+    return measure(
         flow * annuity(rate, years) - cost,
         unit,
-        capex=value(cost, unit),
-        net_cash_flow=value(flow, f"{unit}/year"),
-        discount_rate=value(rate, "-"),
-        lifetime_years=value(years, "year"),
+        capex=measure(cost, unit),
+        net_cash_flow=measure(flow, "currency/yr"),
+        discount_rate=measure(rate, "-"),
+        lifetime_years=measure(years, "yr"),
     )

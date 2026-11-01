@@ -13,21 +13,26 @@ from tests.fixtures.parity import BACKENDS
 
 BRINE = gm.Fluid(density=1030.0, viscosity=4e-4, specific_heat=4000.0)
 DESIGN = {
-    "depth": "2500 m",
-    "gradient": "30 K/km",
-    "surface_temperature": "12 degC",
-    "permeability": "200 mD",
-    "thickness": "100 m",
-    "well_diameter": "0.244 m",
-    "nominal_flow": "300 m3/h",
+    "depth": {"value": 2500, "unit": "m"},
+    "gradient": {"value": 30, "unit": "K/km"},
+    "surface_temperature": {"value": 12, "unit": "degC"},
+    "permeability": {"value": 200, "unit": "mD"},
+    "thickness": {"value": 100, "unit": "m"},
+    "well_diameter": {"value": 0.244, "unit": "m"},
+    "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
-    "nominal_wellhead_pressure": "10 bar",
+    "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
 }
 CONSTRAINTS = [
-    gm.Constraint("d*.reservoir.liquid_flow", min="50 m3/h", max="300 m3/h", when="running"),
-    gm.Constraint("d*.brine_cooling", max="40 K"),
+    gm.Constraint(
+        "d*.reservoir.liquid_flow",
+        min={"value": 50, "unit": "m3/h"},
+        max={"value": 300, "unit": "m3/h"},
+        when="running",
+    ),
+    gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}),
 ]
-PRICES = {"electricity": "100 EUR/MWh", "gas": "40 EUR/MWh"}
+PRICES = {"electricity": {"value": 100, "unit": "EUR/MWh"}, "gas": {"value": 40, "unit": "EUR/MWh"}}
 HEAT_PER_FLOW = 1030.0 * 4000.0 * 40.0
 FULL = 300 / 3600 * HEAT_PER_FLOW
 
@@ -53,15 +58,20 @@ def plant_of_two():
     )
     plant.add("Splitter", name="injection")
     plant.add("GasGrid", name="grid")
-    plant.add("Boiler", name="boiler", params={"capacity": "40 MW", "efficiency": 0.9})
+    plant.add(
+        "Boiler", name="boiler", params={"capacity": {"value": 40, "unit": "MW"}, "efficiency": 0.9}
+    )
     plant.add(
         "HeatingGrid",
         name="users",
-        params={"return_temperature": "60 degC", "return_pressure": "6 bar"},
+        params={
+            "return_temperature": {"value": 60, "unit": "degC"},
+            "return_pressure": {"value": 6, "unit": "bar"},
+        },
     )
     plant.get_submodule("users").fluid = gm.WATER
     wire(plant)
-    plant.boiler.temperature_setpoint = "100 degC"
+    plant.boiler.temperature_setpoint = {"value": 100, "unit": "degC"}
     return plant
 
 
@@ -118,7 +128,7 @@ def plan_of(*heat, constraints=(), prices=None, plant=None, freq="D"):
 def _duration_checks(plant, problem, results):
     """Return the checks of the duration constraint, one per doublet."""
     checks = gm.evaluate.constraints(plant, problem, results)
-    return [item for item in checks if item["value"]["unit"] == "s"]
+    return [item for item in checks if item["value"].unit == "s"]
 
 
 def test_doublets_run_in_order_at_the_flow_of_the_need():
@@ -142,8 +152,14 @@ def test_the_boiler_covers_what_the_doublets_cannot():
 
 def test_the_dispatch_order_follows_the_prices():
     """Swap the two prices and the order swaps: cheap gas loads the boiler before the doublets."""
-    dear_gas = {"electricity": "1 EUR/MWh", "gas": "100 EUR/MWh"}
-    cheap_gas = {"electricity": "100 EUR/MWh", "gas": "0.001 EUR/MWh"}
+    dear_gas = {
+        "electricity": {"value": 1, "unit": "EUR/MWh"},
+        "gas": {"value": 100, "unit": "EUR/MWh"},
+    }
+    cheap_gas = {
+        "electricity": {"value": 100, "unit": "EUR/MWh"},
+        "gas": {"value": 0.001, "unit": "EUR/MWh"},
+    }
     heat = 40e6 + FULL / 2
     assert plan_of(heat, prices=dear_gas)["d0.flow"].iloc[0] == pytest.approx(300 / 3600)
     assert plan_of(heat, prices=cheap_gas)["d0.flow"].iloc[0] == pytest.approx(150 / 3600)
@@ -151,11 +167,14 @@ def test_the_dispatch_order_follows_the_prices():
 
 def test_the_carbon_price_changes_the_order():
     """CO2 costs the gas boiler its emission: a high price puts the doublets first again."""
-    prices = {"electricity": "1 EUR/MWh", "gas": "0.001 EUR/MWh"}
+    prices = {
+        "electricity": {"value": 1, "unit": "EUR/MWh"},
+        "gas": {"value": 0.001, "unit": "EUR/MWh"},
+    }
     problem = problem_of(demand(40e6 + FULL / 2), prices=prices)
     plan = gm.schedule(plant_of_two(), problem)
     assert plan["d0.flow"].iloc[0] == pytest.approx(150 / 3600)
-    assumptions = gm.Assumptions(prices=prices, co2_price="1 EUR/kg")
+    assumptions = gm.Assumptions(prices=prices, co2_price={"value": 1, "unit": "EUR/kg"})
     taxed = gm.Problem(problem.demand, constraints=CONSTRAINTS, assumptions=assumptions)
     assert gm.schedule(plant_of_two(), taxed)["d0.flow"].iloc[0] == pytest.approx(300 / 3600)
 
@@ -214,14 +233,14 @@ def test_a_plan_is_the_same_on_every_backend():
 def test_unmet_demand_is_no_error():
     """A boiler too small leaves demand unmet, which the run reports."""
     plant = plant_of_two()
-    plant.set_params("boiler", {"capacity": "1 MW"})
+    plant.set_params("boiler", {"capacity": {"value": 1, "unit": "MW"}})
     results = gm.simulate(plant, problem_of(demand(5 * FULL)))
     assert results.errors() == [] and results.to_frame()["users.unmet_demand"].iloc[0] > 0
 
 
 def test_a_site_value_the_plant_states_too_is_refused():
     """The site never overrides the design: ``conflicting_value`` for schedule and simulate."""
-    problem = problem_of(demand(FULL), site={"d0.gradient": "31 K/km"})
+    problem = problem_of(demand(FULL), site={"d0.gradient": {"value": 31, "unit": "K/km"}})
     with raises(gm.errors.ValidationError, "conflicting_value"):
         gm.schedule(plant_of_two(), problem)
     with raises(gm.errors.ValidationError, "conflicting_value"):
@@ -231,7 +250,9 @@ def test_a_site_value_the_plant_states_too_is_refused():
 def test_a_constraint_the_schedule_does_not_enforce_is_left_to_the_check():
     """Listed as plain data in ``attrs["check_only"]``; the flow range and cooling are enforced."""
     extra = gm.Constraint("users.unmet_demand", max=0)
-    short = gm.Constraint("d0.reservoir.liquid_flow", min="1 d", over="duration", when="running")
+    short = gm.Constraint(
+        "d0.reservoir.liquid_flow", min={"value": 1, "unit": "d"}, over="duration", when="running"
+    )
     plan = plan_of(FULL, constraints=[extra, short])
     assert plan.attrs["check_only"] == [extra.to_dict(), short.to_dict()]
     assert plan_of(FULL).attrs["check_only"] == []
@@ -241,20 +262,28 @@ def test_outage_steps_are_the_lowest_demand_days_and_never_overlap():
     """The first doublet takes the lowest days, the next the lowest left; heat and cold add up."""
     frame = demand(1.0, 2.0, 3.0, 4.0, 5.0, 6.0)
     frame["cooling_demand"] = [9.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    plan = gm.schedule(plant_of_two(), problem_of(frame, [duration("4 d")]))
+    plan = gm.schedule(plant_of_two(), problem_of(frame, [duration({"value": 4, "unit": "d"})]))
     assert plan.attrs["outages"] == {"d0": [at(2), at(3)], "d1": [at(4), at(5)]}
 
 
 def test_a_duration_on_one_doublet_leaves_the_other_without_an_outage():
     """The pattern names the doublet; the others run every step."""
-    only = gm.Constraint("d1.reservoir.liquid_flow", max="2 d", over="duration", when="running")
+    only = gm.Constraint(
+        "d1.reservoir.liquid_flow", max={"value": 2, "unit": "d"}, over="duration", when="running"
+    )
     plan = plan_of(FULL, FULL, FULL, constraints=[only])
     assert plan.attrs["outages"] == {"d0": [], "d1": [at(1)]}
 
 
 def test_an_outage_moves_the_heat_to_the_next_doublet_and_the_boiler():
     """No flow on the outage day; every other day each doublet runs."""
-    plan = plan_of(0.5 * FULL, 1.5 * FULL, 2.5 * FULL, 3.0 * FULL, constraints=[duration("3 d")])
+    plan = plan_of(
+        0.5 * FULL,
+        1.5 * FULL,
+        2.5 * FULL,
+        3.0 * FULL,
+        constraints=[duration({"value": 3, "unit": "d"})],
+    )
     assert plan["d0.flow"].iloc[0] == 0 and not plan["d0.is_running"].iloc[0]
     assert plan["d1.flow"].iloc[0] == pytest.approx(150 / 3600)
     assert plan["d1.flow"].iloc[1] == 0 and plan["d0.flow"].iloc[1] == pytest.approx(300 / 3600)
@@ -264,7 +293,7 @@ def test_an_outage_moves_the_heat_to_the_next_doublet_and_the_boiler():
 
 def test_a_doublet_without_a_need_still_runs_its_days():
     """Each doublet runs exactly its days: at the minimum flow when the need is covered."""
-    plan = plan_of(FULL, FULL, FULL, constraints=[duration("2 d")])
+    plan = plan_of(FULL, FULL, FULL, constraints=[duration({"value": 2, "unit": "d"})])
     assert plan.attrs["outages"] == {"d0": [at(1)], "d1": [at(2)]}
     assert plan["d1.flow"].iloc[2] == pytest.approx(50 / 3600)
     assert plan["d0.is_running"].sum() == plan["d1.is_running"].sum() == 2
@@ -272,7 +301,12 @@ def test_a_doublet_without_a_need_still_runs_its_days():
 
 def test_equals_is_a_duration_too():
     """``equals`` fixes the time as ``max`` does."""
-    exact = gm.Constraint("d*.reservoir.liquid_flow", equals="2 d", over="duration", when="running")
+    exact = gm.Constraint(
+        "d*.reservoir.liquid_flow",
+        equals={"value": 2, "unit": "d"},
+        over="duration",
+        when="running",
+    )
     assert plan_of(FULL, FULL, FULL, constraints=[exact]).attrs["outages"] == {
         "d0": [at(1)],
         "d1": [at(2)],
@@ -287,9 +321,9 @@ def test_no_duration_gives_no_outage():
 @pytest.mark.parametrize(
     ("text", "message"),
     [
-        ("0 d", "expected a duration"),
-        ("1 d", "more than the 3 steps"),
-        ("4 d", "expected 0 to 3"),
+        ({"value": 0, "unit": "d"}, "expected a duration"),
+        ({"value": 1, "unit": "d"}, "more than the 3 steps"),
+        ({"value": 4, "unit": "d"}, "expected 0 to 3"),
     ],
 )
 def test_a_duration_that_does_not_fit_is_refused(text, message):
@@ -301,14 +335,14 @@ def test_a_duration_that_does_not_fit_is_refused(text, message):
 def test_a_duration_needs_a_step():
     """One row has no step to count in."""
     with raises(gm.errors.ValidationError, "invalid_value", match="constant step"):
-        plan_of(FULL, constraints=[duration("2 d")])
+        plan_of(FULL, constraints=[duration({"value": 2, "unit": "d"})])
 
 
 def test_an_hourly_demand_is_planned_and_run():
     """Four days of hours: the same plan columns, one row per hour, and a run of them."""
     plant = plant_of_two()
     heat = [(0.5 + 0.1 * (hour % 24) / 24) * FULL for hour in range(96)]
-    problem = problem_of(demand(*heat, freq="h"), [duration("90 h")])
+    problem = problem_of(demand(*heat, freq="h"), [duration({"value": 90, "unit": "h"})])
     plan = gm.schedule(plant, problem)
     assert len(plan) == 96 and plan.index[1] - plan.index[0] == pd.Timedelta(hours=1)
     assert plan["d0.is_running"].sum() == plan["d1.is_running"].sum() == 90
@@ -328,16 +362,18 @@ def test_a_daily_demand_is_planned_and_run():
 def test_the_operating_time_is_the_same_share_on_hourly_and_daily_steps():
     """Two thirds of three days: 2 days of 3, or 48 hours of 72."""
     low_high = [FULL, 3 * FULL, 2 * FULL]
-    daily = plan_of(*low_high, constraints=[duration("2 d")])
-    hourly = plan_of(*np.repeat(low_high, 24), constraints=[duration("48 h")], freq="h")
+    daily = plan_of(*low_high, constraints=[duration({"value": 2, "unit": "d"})])
+    hourly = plan_of(
+        *np.repeat(low_high, 24), constraints=[duration({"value": 48, "unit": "h"})], freq="h"
+    )
     assert daily["d0.is_running"].mean() == hourly["d0.is_running"].mean() == pytest.approx(2 / 3)
 
 
 def test_a_duration_that_is_not_whole_steps_rounds_to_the_nearest_step():
     """Eight and a half hours of ten runs nine; 8.4 runs eight."""
     heat = (demand(*range(1, 11), freq="h") * FULL)["heating_demand"]
-    nine = plan_of(*heat, constraints=[duration("8.5 h")], freq="h")
-    eight = plan_of(*heat, constraints=[duration("8.4 h")], freq="h")
+    nine = plan_of(*heat, constraints=[duration({"value": 8.5, "unit": "h"})], freq="h")
+    eight = plan_of(*heat, constraints=[duration({"value": 8.4, "unit": "h"})], freq="h")
     assert nine["d0.is_running"].sum() == 9 and eight["d0.is_running"].sum() == 8
 
 
@@ -349,7 +385,7 @@ def split_sources():
     spec["modules"] = {name: item for name, item in spec["modules"].items() if name not in drop}
     spec["modules"]["heat_pump"] = {
         "type": "HeatPump",
-        "params": {"mode": "heating", "capacity": "10 MW"},
+        "params": {"mode": "heating", "capacity": {"value": 10, "unit": "MW"}},
     }
     spec.pop("outlets", None)
     spec["inlets"] = {"power_in": ["d0.power_in", "d1.power_in", "heat_pump.power_in"]}
@@ -366,8 +402,8 @@ def split_sources():
         {"source": "boiler.fluid_out", "target": "users.supply_in"},
     ]
     built = gm.Plant.from_dict(spec)
-    built.boiler.temperature_setpoint = "100 degC"
-    built.heat_pump.temperature_setpoint = "100 degC"
+    built.boiler.temperature_setpoint = {"value": 100, "unit": "degC"}
+    built.heat_pump.temperature_setpoint = {"value": 100, "unit": "degC"}
     return built
 
 
@@ -375,7 +411,7 @@ def split_sources():
 def split_run():
     """Return the plan and the run of ``split_sources``: ``d0`` off first, then ``d1``."""
     plant = split_sources()
-    problem = problem_of(demand(0.5 * FULL, FULL, 2 * FULL), [duration("2 d")])
+    problem = problem_of(demand(0.5 * FULL, FULL, 2 * FULL), [duration({"value": 2, "unit": "d"})])
     plan = gm.schedule(plant, problem)
     return plan, gm.simulate(plant, plan=plan).to_frame()
 
@@ -422,31 +458,31 @@ def test_a_finished_run_ran_the_time_of_the_constraint():
     """Two doublets, three days of four each: the plan, the run and the check agree."""
     plant = plant_of_two()
     frame = demand(0.5 * FULL, 1.5 * FULL, 2.5 * FULL, 3.0 * FULL)
-    problem = problem_of(frame, [duration("3 d")])
+    problem = problem_of(frame, [duration({"value": 3, "unit": "d"})])
     results = gm.simulate(plant, problem)
     assert results.errors() == []
     checks = _duration_checks(plant, problem, results)
     assert [item["passed"] for item in checks] == [True, True]
-    assert [item["value"]["value"] for item in checks] == [3 * 86400.0] * 2
+    assert [item["value"].value for item in checks] == [3 * 86400.0] * 2
 
 
 COOLING_SIZES = {
-    "heat_pump.capacity": "2 MW",
-    "peak_boiler.capacity": "30 MW",
+    "heat_pump.capacity": {"value": 2, "unit": "MW"},
+    "peak_boiler.capacity": {"value": 30, "unit": "MW"},
     "peak_boiler.efficiency": 0.9,
-    "absorption_chiller.capacity": "3 MW",
-    "adsorption_chiller.capacity": "1 MW",
-    "compression_chiller.capacity": "10 MW",
+    "absorption_chiller.capacity": {"value": 3, "unit": "MW"},
+    "adsorption_chiller.capacity": {"value": 1, "unit": "MW"},
+    "compression_chiller.capacity": {"value": 10, "unit": "MW"},
     "absorption_chiller.thermal_cop": 0.8,
     "adsorption_chiller.thermal_cop": 0.7,
-    "heating_consumer.return_temperature": "60 degC",
-    "cooling_consumer.return_temperature": "28 degC",
+    "heating_consumer.return_temperature": {"value": 60, "unit": "degC"},
+    "cooling_consumer.return_temperature": {"value": 28, "unit": "degC"},
 }
 COOLING_INPUTS = {
-    "heat_pump.temperature_setpoint": "100 degC",
-    "peak_boiler.temperature_setpoint": "100 degC",
-    "compression_chiller.temperature_setpoint": "20 degC",
-    "compression_cooler.temperature_setpoint": "35 degC",
+    "heat_pump.temperature_setpoint": {"value": 100, "unit": "degC"},
+    "peak_boiler.temperature_setpoint": {"value": 100, "unit": "degC"},
+    "compression_chiller.temperature_setpoint": {"value": 20, "unit": "degC"},
+    "compression_cooler.temperature_setpoint": {"value": 35, "unit": "degC"},
 }
 
 
@@ -545,8 +581,13 @@ def test_a_plan_keeps_the_unit_of_the_demand():
 def test_the_doublet_heat_plant_runs_a_plan_within_its_pump_curve():
     """Its bindings read m3/s and a plan is in kg/s: the flow is what was planned, in range."""
     plant = gm.plants.example("DoubletHeatPlant")
-    wide = gm.Constraint("*.reservoir.liquid_flow", min="50 m3/h", max="165 m3/h", when="running")
-    cooling = gm.Constraint("*.brine_cooling", max="40 K")
+    wide = gm.Constraint(
+        "*.reservoir.liquid_flow",
+        min={"value": 50, "unit": "m3/h"},
+        max={"value": 165, "unit": "m3/h"},
+        when="running",
+    )
+    cooling = gm.Constraint("*.brine_cooling", max={"value": 40, "unit": "K"})
     assumptions = gm.Assumptions(prices=PRICES)
     problem = gm.Problem(demand(5e6, 3e7), constraints=[wide, cooling], assumptions=assumptions)
     results = gm.simulate(plant, problem, on_error="record")
@@ -572,7 +613,10 @@ def test_a_limit_the_schedule_needs_has_no_default(index, path):
 def test_a_pattern_matches_one_name():
     """``*`` stays within a name: ``d*.x`` fits ``d0.x`` but ``*.x`` fits any single name."""
     narrow = gm.Constraint(
-        "d0.reservoir.liquid_flow", min="50 m3/h", max="300 m3/h", when="running"
+        "d0.reservoir.liquid_flow",
+        min={"value": 50, "unit": "m3/h"},
+        max={"value": 300, "unit": "m3/h"},
+        when="running",
     )
     problem = gm.Problem(
         demand(FULL),

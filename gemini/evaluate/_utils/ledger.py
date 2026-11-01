@@ -3,7 +3,7 @@
 import numpy as np
 
 from gemini._utils.strings import join_path
-from gemini.types.shapes import check, value
+from gemini.types.shapes import check, measure
 
 
 def columns(results, wanted):
@@ -20,12 +20,12 @@ def columns(results, wanted):
 
 def nonnegative(name, values, tolerance, unit, absent):
     """Judge that every value is finite-or-missing and at least ``-tolerance`` in ``unit``."""
-    limit = value(tolerance, unit)
+    limit = measure(tolerance, unit)
     if values.shape[1] == 0:
-        return check(name, None, value(None, unit, absent), limit)
+        return check(name, None, measure(None, unit, absent), limit)
     array = values.to_numpy(dtype=float)
     if np.isnan(array).all():
-        return check(name, None, value(None, unit, "every value is missing"), limit)
+        return check(name, None, measure(None, unit, "every value is missing"), limit)
     smallest = float(np.nanmin(array))
     passed = bool(smallest >= -tolerance and not np.isinf(array).any())
-    return check(name, passed, value(smallest, unit), limit)
+    return check(name, passed, measure(smallest, unit), limit)

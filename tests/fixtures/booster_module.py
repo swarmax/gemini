@@ -38,5 +38,13 @@ class Booster(Module):
         return outlets
 
 
-EXAMPLE = {"inlets": {"fluid_in": {"m_dot": "10 kg/s", "T": "50 degC", "p": "2 bar"}}}
+EXAMPLE = {
+    "inlets": {
+        "fluid_in": {
+            "m_dot": {"value": 10, "unit": "kg/s"},
+            "T": {"value": 50, "unit": "degC"},
+            "p": {"value": 2, "unit": "bar"},
+        }
+    }
+}
 """Values for one call of ``Booster``, the arguments of ``gm.evaluate``."""

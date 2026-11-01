@@ -9,28 +9,28 @@
     "time_column": "timestamp"
   },
   "site": {
-    "d*.gradient": "36 K/km",
-    "d*.surface_temperature": "9 degC",
-    "d*.thickness": "60 m",
-    "d*.permeability": "450 mD",
-    "d*.reservoir.pressure": "120 barg",
-    "d*.sink.pressure": "120 barg"
+    "d*.gradient": {"value": 36, "unit": "K/km"},
+    "d*.surface_temperature": {"value": 9, "unit": "degC"},
+    "d*.thickness": {"value": 60, "unit": "m"},
+    "d*.permeability": {"value": 450, "unit": "mD"},
+    "d*.reservoir.pressure": {"value": 120, "unit": "barg"},
+    "d*.sink.pressure": {"value": 120, "unit": "barg"}
   },
   "constraints": [
     {
       "path": "d*.reservoir.liquid_flow",
-      "min": "35 m3/h",
-      "max": "180 m3/h",
+      "min": {"value": 35, "unit": "m3/h"},
+      "max": {"value": 180, "unit": "m3/h"},
       "when": "running"
     },
     {
       "path": "d*.brine_cooling",
-      "max": "22 K",
+      "max": {"value": 22, "unit": "K"},
       "when": "running"
     },
     {
       "path": "d*.reservoir.liquid_flow",
-      "max": "450 h",
+      "max": {"value": 450, "unit": "h"},
       "over": "duration",
       "when": "running"
     },
@@ -41,28 +41,28 @@
     },
     {
       "path": "d*.volume_imbalance",
-      "min": "-1e-5 m3/s",
-      "max": "1e-5 m3/s",
+      "min": {"value": -1e-05, "unit": "m3/s"},
+      "max": {"value": 1e-05, "unit": "m3/s"},
       "when": "running"
     },
     {
       "path": "heating_consumer.supply_in.temperature",
-      "min": "65 degC",
+      "min": {"value": 65, "unit": "degC"},
       "when": "running"
     },
     {
       "path": "cooling_consumer.supply_in.temperature",
-      "max": "16 degC",
+      "max": {"value": 16, "unit": "degC"},
       "when": "running"
     }
   ],
   "assumptions": {
     "discount_rate": 0.04,
     "lifetime_years": 30,
-    "electricity_emission_factor": 1e-07,
+    "electricity_emission_factor": {"value": 360, "unit": "g/kWh"},
     "prices": {
-      "electricity": "120 EUR/MWh",
-      "gas": "55 EUR/MWh"
+      "electricity": {"value": 120, "unit": "EUR/MWh"},
+      "gas": {"value": 55, "unit": "EUR/MWh"}
     }
   }
 }

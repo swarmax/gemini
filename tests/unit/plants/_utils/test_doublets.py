@@ -9,7 +9,7 @@ from tests.fixtures.errors import raises
 
 BRINE = gm.Fluid(
     density=1030,
-    viscosity="0.4 mPa*s",
+    viscosity={"value": 0.4, "unit": "mPa*s"},
     gas_liquid_ratio=0.8,
     gas_composition={"CH4": 0.8, "CO2": 0.2},
 )
@@ -21,44 +21,57 @@ TEMPLATES = (
     "HeatingHeatPumpCoolingPlant",
 )
 WELL_DESIGN = {
-    "gradient": "30 K/km",
-    "surface_temperature": "12 degC",
-    "permeability": "200 mD",
-    "thickness": "100 m",
-    "well_diameter": "0.244 m",
-    "nominal_flow": "300 m3/h",
+    "gradient": {"value": 30, "unit": "K/km"},
+    "surface_temperature": {"value": 12, "unit": "degC"},
+    "permeability": {"value": 200, "unit": "mD"},
+    "thickness": {"value": 100, "unit": "m"},
+    "well_diameter": {"value": 0.244, "unit": "m"},
+    "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
-    "nominal_wellhead_pressure": "10 bar",
+    "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
 }
 SIZES = {
     "degasser.separation_efficiency": 1.0,
     "injection_pump.efficiency": 0.7,
-    "heat_exchanger.thermal_conductance": "1500000 W/K",
-    "heat_exchanger.hot_nominal_pressure_drop": "0 bar",
-    "heat_exchanger.cold_nominal_pressure_drop": "0 bar",
-    "heat_exchanger.hot_nominal_mass_flow": "100 kg/s",
-    "heat_exchanger.cold_nominal_mass_flow": "100 kg/s",
-    "peak_boiler.capacity": "30 MW",
+    "heat_exchanger.thermal_conductance": {"value": 1500000, "unit": "W/K"},
+    "heat_exchanger.hot_nominal_pressure_drop": {"value": 0, "unit": "bar"},
+    "heat_exchanger.cold_nominal_pressure_drop": {"value": 0, "unit": "bar"},
+    "heat_exchanger.hot_nominal_mass_flow": {"value": 100, "unit": "kg/s"},
+    "heat_exchanger.cold_nominal_mass_flow": {"value": 100, "unit": "kg/s"},
+    "peak_boiler.capacity": {"value": 30, "unit": "MW"},
     "peak_boiler.efficiency": 0.9,
-    "heating_consumer.return_temperature": "60 degC",
-    "heating_consumer.return_pressure": "6 bar",
+    "heating_consumer.return_temperature": {"value": 60, "unit": "degC"},
+    "heating_consumer.return_pressure": {"value": 6, "unit": "bar"},
 }
 PIPE = {"length": 100, "inner_diameter": 0.3, "elevation_change": 0, "heat_transfer_coefficient": 1}
 INPUTS = {
-    "peak_boiler.temperature_setpoint": "100 degC",
-    "injection_pump.pressure_setpoint": "60 bar",
-    "atmosphere.temperature": "10 degC",
+    "peak_boiler.temperature_setpoint": {"value": 100, "unit": "degC"},
+    "injection_pump.pressure_setpoint": {"value": 60, "unit": "bar"},
+    "atmosphere.temperature": {"value": 10, "unit": "degC"},
 }
 GEOTHERM = {
     f"d{index}.{name}": value
     for index in range(2)
-    for name, value in (("gradient", "30 K/km"), ("surface_temperature", "12 degC"))
+    for name, value in (
+        ("gradient", {"value": 30, "unit": "K/km"}),
+        ("surface_temperature", {"value": 12, "unit": "degC"}),
+    )
 }
 LIMITS = [
-    gm.Constraint("d*.reservoir.liquid_flow", min="50 m3/h", max="300 m3/h", when="running"),
-    gm.Constraint("d*.brine_cooling", max="40 K"),
+    gm.Constraint(
+        "d*.reservoir.liquid_flow",
+        min={"value": 50, "unit": "m3/h"},
+        max={"value": 300, "unit": "m3/h"},
+        when="running",
+    ),
+    gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}),
 ]
-ASSUMPTIONS = gm.Assumptions(prices={"electricity": "100 EUR/MWh", "gas": "40 EUR/MWh"})
+ASSUMPTIONS = gm.Assumptions(
+    prices={
+        "electricity": {"value": 100, "unit": "EUR/MWh"},
+        "gas": {"value": 40, "unit": "EUR/MWh"},
+    }
+)
 
 
 def brine_side(plant):
@@ -78,7 +91,7 @@ def designed(count):
     plant = gm.plants.HeatingPlant(doublets=count)
     for module in brine_side(plant):
         module.fluid = BRINE
-    values = {"depth": "2500 m"} | SIZES
+    values = {"depth": {"value": 2500, "unit": "m"}} | SIZES
     for index in range(count):
         values |= {f"d{index}.{name}": value for name, value in WELL_DESIGN.items()}
     for pipe in ("heating_return_pipe", "heating_supply_pipe"):
@@ -129,7 +142,7 @@ def test_a_plant_runs_one_day(stored):
     clock = gm.engine.Clock.days(2027, 1, 28, step="24h")
     problem = gm.Problem(demand, constraints=LIMITS, assumptions=ASSUMPTIONS)
     results = gm.simulate(built, problem, clock=clock)
-    delivered = gm.evaluate.totals(built, problem, results)["heat_delivered"]["value"]
+    delivered = gm.evaluate.totals(built, problem, results)["heat_delivered"].value
     assert delivered == pytest.approx(8e6 * count * 86400, rel=2e-3)
 
 
@@ -137,7 +150,7 @@ def test_depth_gives_the_reservoir_of_every_doublet():
     """3000 m at 30 K/km from 12 degC is 102 degC, and the pressure the brine column's."""
     plant = gm.plants.HeatingPlant(doublets=2)
     plant.d0.fluid = plant.d1.fluid = BRINE
-    plant.set_params("", {"depth": "3000 m"} | GEOTHERM)
+    plant.set_params("", {"depth": {"value": 3000, "unit": "m"}} | GEOTHERM)
     for doublet in (plant.d0, plant.d1):
         assert doublet.reservoir.temperature == pytest.approx(375.15)
         assert doublet.sink.temperature == pytest.approx(375.15)
@@ -147,8 +160,15 @@ def test_depth_gives_the_reservoir_of_every_doublet():
 def test_an_explicit_temperature_wins_and_stays_stated():
     """A child value of one doublet is kept against a later depth, on that doublet alone."""
     plant = gm.plants.HeatingPlant(doublets=2)
-    plant.set_params("", {"depth": "3000 m", "d1.reservoir.temperature": "90 degC"} | GEOTHERM)
-    plant.set_params("", {"depth": "2000 m"})
+    plant.set_params(
+        "",
+        {
+            "depth": {"value": 3000, "unit": "m"},
+            "d1.reservoir.temperature": {"value": 90, "unit": "degC"},
+        }
+        | GEOTHERM,
+    )
+    plant.set_params("", {"depth": {"value": 2000, "unit": "m"}})
     assert plant.d0.reservoir.temperature == pytest.approx(345.15)
     assert plant.d1.reservoir.temperature == pytest.approx(363.15)
     assert gm.Plant.from_dict(plant.to_dict()).d1.reservoir.temperature == pytest.approx(363.15)
@@ -157,13 +177,15 @@ def test_an_explicit_temperature_wins_and_stays_stated():
 def test_the_stored_plant_keeps_the_depth_and_no_derived_value():
     """Only what was given is stored: the depth, not the depth of each doublet."""
     plant = gm.plants.HeatingPlant(doublets=2)
-    plant.set_params("", {"depth": "3000 m"} | GEOTHERM)
-    assert plant.to_dict()["params"] == {"depth": "3000 m"} | GEOTHERM
+    plant.set_params("", {"depth": {"value": 3000, "unit": "m"}} | GEOTHERM)
+    assert plant.to_dict()["params"] == {"depth": {"value": 3000, "unit": "m"}} | GEOTHERM
 
 
 def test_a_depth_on_a_plant_waits_for_the_geotherm_of_each_doublet():
     """The geotherm may come later, as a site value does."""
-    plant = gm.plants.HeatingPlant(doublets=1).set_params("", {"depth": "3000 m"})
+    plant = gm.plants.HeatingPlant(doublets=1).set_params(
+        "", {"depth": {"value": 3000, "unit": "m"}}
+    )
     assert plant.d0.depth == 3000.0
     assert plant.d0.reservoir._params_at(None).get("temperature") is None
 
@@ -171,6 +193,9 @@ def test_a_depth_on_a_plant_waits_for_the_geotherm_of_each_doublet():
 def test_the_geotherm_of_one_doublet_may_come_in_the_call_of_the_depth():
     """``depth`` goes to each doublet in the same call that gives the doublet its geotherm."""
     plant = gm.plants.HeatingPlant(doublets=1)
-    geotherm = {"d0.surface_temperature": "12 degC", "d0.gradient": "30 K/km"}
-    plant.set_params("", {"depth": "3000 m"} | geotherm)
+    geotherm = {
+        "d0.surface_temperature": {"value": 12, "unit": "degC"},
+        "d0.gradient": {"value": 30, "unit": "K/km"},
+    }
+    plant.set_params("", {"depth": {"value": 3000, "unit": "m"}} | geotherm)
     assert plant.d0.reservoir.temperature == pytest.approx(375.15)

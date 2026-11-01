@@ -11,9 +11,12 @@ from gemini.run._utils import sources
 from tests.fixtures.errors import raises
 
 
-def costs(steps=2, **fields):
-    """Return the prices of ``Assumptions`` with ``fields`` for ``steps`` rows."""
-    return sources.Costs(gm.Assumptions(**fields), steps)
+def costs(steps=2, prices=None, **fields):
+    """Return the prices of ``Assumptions`` with ``fields`` for ``steps`` rows, in SI."""
+    per_joule = {
+        name: gm.units.Quantity(price, "currency/J") for name, price in (prices or {}).items()
+    }
+    return sources.Costs(gm.Assumptions(prices=per_joule, **fields), steps)
 
 
 def test_a_cost_is_the_price_over_the_efficiency():
@@ -30,9 +33,15 @@ def test_a_price_profile_gives_a_cost_per_step():
 
 def test_the_carbon_price_adds_the_emission_of_the_carrier():
     """Gas burns to CO2; electricity emits what its factor says."""
-    gas = costs(prices={"gas": 0.0}, co2_price=1.0).gas("boiler", 1.0)
+    gas = costs(prices={"gas": 0.0}, co2_price=gm.units.Quantity(1.0, "currency/kg")).gas(
+        "boiler", 1.0
+    )
     assert gas[0] == pytest.approx(sources.dispatch.methane_emission_factor())
-    power = costs(prices={"electricity": 0.0}, co2_price=1.0, electricity_emission_factor=2e-8)
+    power = costs(
+        prices={"electricity": 0.0},
+        co2_price=gm.units.Quantity(1.0, "currency/kg"),
+        electricity_emission_factor=gm.units.Quantity(2e-8, "kg/J"),
+    )
     assert power.electric("hp", 1.0)[0] == pytest.approx(2e-8)
 
 
@@ -44,7 +53,9 @@ def test_a_missing_price_names_the_carrier_and_the_source():
 
 def _heat_pump(**params):
     """Return a heat pump with the values of ``params``."""
-    return gm.modules.HeatPump().set_params("", {"mode": "heating", "capacity": "1 MW"} | params)
+    return gm.modules.HeatPump().set_params(
+        "", {"mode": "heating", "capacity": {"value": 1, "unit": "MW"}} | params
+    )
 
 
 def test_the_cop_of_the_estimate_follows_the_parameter_of_the_module():

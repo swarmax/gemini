@@ -33,7 +33,10 @@ def test_only_the_sourced_defaults_are_set():
 def test_a_factor_says_where_it_comes_from():
     """A default cites its source; a factor the user gives is the user's."""
     assert "SDE+" in Assumptions().source_of("drilling_cost")
-    assert Assumptions(boiler_cost=0.1).source_of("boiler_cost") == "assumptions.boiler_cost"
+    assert (
+        Assumptions(boiler_cost=gm.units.Quantity(0.1, "currency/W")).source_of("boiler_cost")
+        == "assumptions.boiler_cost"
+    )
     assert Assumptions().factor("boiler_cost") == 0.06
     with pytest.raises(gm.errors.ValidationError, match="pump_cost") as error:
         Assumptions().factor("pump_cost")
@@ -78,11 +81,15 @@ def test_discounting_prefers_the_arguments_and_checks_them():
 
 def test_a_round_trip_keeps_the_values():
     """``from_dict`` of ``to_dict`` gives the same assumptions, and only what differs is stored."""
-    values = Assumptions(discount_rate=0.05, prices={"gas": "40 EUR/MWh"}, co2_price="80 EUR/t")
+    values = Assumptions(
+        discount_rate=0.05,
+        prices={"gas": {"value": 40, "unit": "EUR/MWh"}},
+        co2_price={"value": 80, "unit": "EUR/t"},
+    )
     assert values.to_dict() == {
         "discount_rate": 0.05,
-        "prices": {"gas": "40 EUR/MWh"},
-        "co2_price": "80 EUR/t",
+        "prices": {"gas": {"value": 40, "unit": "EUR/MWh"}},
+        "co2_price": {"value": 80, "unit": "EUR/t"},
     }
     assert Assumptions.from_dict(values.to_dict()) == values
 
@@ -93,17 +100,17 @@ def test_the_schema_describes_the_fields():
     assert {"prices", "co2_price", "discount_rate"} <= set(properties)
 
 
-def test_a_price_is_a_number_a_text_or_a_profile():
+def test_a_price_is_a_quantity_a_dict_or_a_profile():
     """Every form gives SI numbers."""
     values = Assumptions(
         prices={
-            "electricity": 2e-8,
-            "gas": "36 EUR/MWh",
-            "heat": [1.0, 2.0],
-            "cold": {"unit": "EUR/MWh", "values": [3.6, 7.2]},
-            "chemical": "3 EUR/kg",
+            "electricity": gm.units.Quantity(2e-8, "currency/J"),
+            "gas": {"value": 36, "unit": "EUR/MWh"},
+            "heat": gm.units.Quantity([1.0, 2.0], "currency/J"),
+            "cold": {"value": [3.6, 7.2], "unit": "EUR/MWh"},
+            "chemical": {"value": 3, "unit": "EUR/kg"},
         },
-        co2_price="80 EUR/t",
+        co2_price={"value": 80, "unit": "EUR/t"},
     )
     assert values.price("electricity") == 2e-8
     assert values.price("gas") == pytest.approx(1e-8)
@@ -127,9 +134,9 @@ def test_a_missing_price_names_the_carrier():
         ({"heat_cost_share": 2}, "out_of_bounds"),
         ({"discount": 0.05}, "unknown_name"),
         ({"lifetime_years": "long"}, "invalid_value"),
-        ({"prices": {"steam": 1.0}}, "unknown_name"),
-        ({"prices": {"gas": "1 EUR/kg"}}, "invalid_unit"),
-        ({"co2_price": "1 EUR/MWh"}, "invalid_unit"),
+        ({"prices": {"steam": {"value": 1, "unit": "EUR/MWh"}}}, "unknown_name"),
+        ({"prices": {"gas": {"value": 1, "unit": "EUR/kg"}}}, "invalid_unit"),
+        ({"co2_price": {"value": 1, "unit": "EUR/MWh"}}, "invalid_unit"),
     ],
 )
 def test_a_field_is_refused_with_its_code(fields, code):

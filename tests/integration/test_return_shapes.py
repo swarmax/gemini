@@ -7,6 +7,7 @@ import re
 import pytest
 
 import gemini as gm
+from gemini._utils.jsonable import to_plain
 from tests.fixtures import ROOT
 from tests.fixtures.costed_plants import cooling_plant, day, heating_plant
 from tests.fixtures.json_schema import check
@@ -14,15 +15,15 @@ from tests.fixtures.result_tables import make_problem
 
 SCHEMAS = ROOT / "docs" / "schemas"
 PAGE = ROOT / ".claude" / "docs" / "api.md"
-CASE = {"wellhead_pressure": "4.6 bar", "rates": [20, 45], "frequency": 55.484}
+CASE = {"wellhead_pressure": {"value": 4.6, "unit": "bar"}, "rates": [20, 45], "frequency": 55.484}
 BROKEN = dict(CASE, rates=[20, 200])
 CORROSION = {
     "correlation": "NORSOK",
     "conditions": {
-        "temperature": "60 degC",
-        "pressure": "20 bar",
+        "temperature": {"value": 60, "unit": "degC"},
+        "pressure": {"value": 20, "unit": "bar"},
         "water_flow_rate": 0.01,
-        "co2_partial_pressure": "2 bar",
+        "co2_partial_pressure": {"value": 2, "unit": "bar"},
         "diameter": 0.1,
     },
     "thickness": 0.008,
@@ -30,8 +31,12 @@ CORROSION = {
     "start": "2024-01-01T00:00:00Z",
 }
 VALUES = gm.Assumptions(
-    prices={"electricity": 2e-8, "heat": 5e-8, "cold": 4e-8},
-    electricity_emission_factor=1e-7,
+    prices={
+        "electricity": gm.units.Quantity(2e-8, "currency/J"),
+        "heat": gm.units.Quantity(5e-8, "currency/J"),
+        "cold": gm.units.Quantity(4e-8, "currency/J"),
+    },
+    electricity_emission_factor=gm.units.Quantity(1e-7, "kg/J"),
 )
 POINTS = [
     {"flow": 0.03, "frequency": 50, "head": 3e6},
@@ -49,9 +54,13 @@ def _constrained():
     """Return a problem with a constraint on each way of reading a run."""
     demand = gm.data.from_values([1.0], "W", "2024-07-01", "1 h", "heating_demand")
     constraints = [
-        gm.Constraint("heat_exchanger.duty", min="0 MW"),
-        gm.Constraint("heat_exchanger.duty", max="1000 MW", over="mean", when="running"),
-        gm.Constraint("heat_exchanger.duty", min="1 h", over="duration", when="running"),
+        gm.Constraint("heat_exchanger.duty", min={"value": 0, "unit": "MW"}),
+        gm.Constraint(
+            "heat_exchanger.duty", max={"value": 1000, "unit": "MW"}, over="mean", when="running"
+        ),
+        gm.Constraint(
+            "heat_exchanger.duty", min={"value": 1, "unit": "h"}, over="duration", when="running"
+        ),
     ]
     return gm.Problem(demand, constraints=constraints)
 
@@ -68,8 +77,16 @@ def _run_entries(plant, results):
                 "cold_nominal_mass_flow": 40,
             },
             {
-                "hot_in": {"m_dot": 40.0, "T": "90 degC", "p": "5 bar"},
-                "cold_in": {"m_dot": 40.0, "T": "40 degC", "p": "5 bar"},
+                "hot_in": {
+                    "m_dot": 40.0,
+                    "T": {"value": 90, "unit": "degC"},
+                    "p": {"value": 5, "unit": "bar"},
+                },
+                "cold_in": {
+                    "m_dot": 40.0,
+                    "T": {"value": 40, "unit": "degC"},
+                    "p": {"value": 5, "unit": "bar"},
+                },
             },
             {},
         ),
@@ -220,7 +237,7 @@ def _walk_mapping(tree, where):
 
 
 def _walked(entries):
-    return [(name, call()) for name, call in entries.items()]
+    return [(name, to_plain(call())) for name, call in entries.items()]
 
 
 def test_every_public_return_fits_its_shapes(entries):
@@ -238,7 +255,7 @@ def test_the_walk_meets_every_shape(entries):
     results = dict(_walked(entries))
     assert results["economics.record"]["reason"]
     assert results["nodal"]["cases"][1]["error"]["code"] == "out_of_range"
-    assert results["bounds"]["limit"] == {"value": 0, "unit": "-"}
+    assert to_plain(results["bounds"]["limit"]) == {"value": 0, "unit": "-"}
     assert any("time" in row for row in results["errors"])
     assert {row["code"] for row in results["errors"]} >= {"missing_value"}
 

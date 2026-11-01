@@ -4,13 +4,18 @@ Every public return that carries data is built from these, by the helpers here, 
 assembles a shape by hand. Each shape has a JSON Schema, written to ``docs/schemas/``.
 
 - **Value** ``{value, unit}``: a number, an array or ``None``, and when it is ``None`` a ``reason``
-  says why. A time series adds ``time``; statistics are ``{min, max, mean}``, each a value.
+  says why. A time series adds ``time``; statistics are ``{min, max, mean}``, each a value. In
+  Python a result of ``gm.evaluate`` or ``gm.study`` is a ``Value``, a ``gm.units.Quantity`` that
+  also holds the ``reason`` and the ``parts`` of the result; ``to_dict`` gives the JSON form
+  that ``value`` builds.
 - **Problem** ``{path, code, message, suggestions}``: every error, validation result and failed
   run row; a run row adds ``time``. ``code`` is the stable key for machines. ``problem`` is defined
   in ``gemini.errors``, a leaf package, because ``GeminiError.to_dict`` returns one.
 - **Check** ``{name, passed, value, limit}``, where ``value`` and ``limit`` are values. A failed
   check is an answer, not an error.
 """
+
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -20,7 +25,17 @@ from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import ValidationError
 from gemini.errors.base import problem
 
-__all__ = ["value", "series", "statistics", "problem", "check", "OutputUnits", "SCHEMAS"]
+__all__ = [
+    "value",
+    "series",
+    "statistics",
+    "problem",
+    "check",
+    "measure",
+    "Value",
+    "OutputUnits",
+    "SCHEMAS",
+]
 
 NO_VALUE = "no value"
 """The ``reason`` of a value that is ``None`` when the caller gives none."""
@@ -128,6 +143,47 @@ def check(name, passed, measured, limit):
     reason in ``measured``.
     """
     return {"name": name, "passed": passed, "value": measured, "limit": limit}
+
+
+@dataclass(frozen=True, eq=False)
+class Value(units.Quantity):
+    """A ``Quantity`` that is the result of a public call, with what the JSON value also holds.
+
+    ``value`` is ``None`` when the call cannot give it, and ``reason`` then says why. ``parts`` are
+    the other keys of the JSON value: the values and the texts the result is made of. ``to_dict``
+    gives exactly what ``value`` builds.
+    """
+
+    reason: str | None = None
+    parts: dict = field(default_factory=dict)
+
+    @property
+    def si(self):
+        """The value in SI, ``None`` when there is none."""
+        return None if self.value is None else super().si
+
+    def to(self, unit, quantity=None):
+        """Return the value in ``unit``; a value that is ``None`` stays ``None``."""
+        if self.value is None:
+            return Value(None, unit, self.reason, self.parts)
+        converted = super().to(unit, quantity)
+        return Value(converted.value, converted.unit, self.reason, self.parts)
+
+    def to_dict(self):
+        """Return the JSON value ``{value, unit}`` with the ``reason`` and the parts."""
+        return value(self.value, str(self.unit), self.reason, **self.parts)
+
+    def __hash__(self):
+        """Hash the SI value."""
+        return hash((self.value is None, self.value if self.value is None else float(self.si)))
+
+
+def measure(number, unit, reason=None, **parts):
+    """Return the ``Value`` of ``number`` in ``unit``, with a ``reason`` when it is ``None``.
+
+    ``parts`` adds the values and texts of the result after the value's own keys.
+    """
+    return Value(number, unit, (reason or NO_VALUE) if number is None else None, parts)
 
 
 def _converted(number, unit, target, quantity):

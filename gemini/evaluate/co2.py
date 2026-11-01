@@ -5,8 +5,7 @@ import numpy as np
 from gemini.evaluate._utils.outcome import reported
 from gemini.evaluate._utils.series import edge_total, energy, results_total, window_seconds
 from gemini.modules.grids import ElectricityGrid
-from gemini.run.assumptions import require
-from gemini.types.shapes import value
+from gemini.types.shapes import measure
 
 
 def co2(plant, problem, results, on_error="raise"):
@@ -32,8 +31,10 @@ def co2(plant, problem, results, on_error="raise"):
 
     Returns
     -------
-    dict
-        ``{value, unit, direct, methane, electricity, fuel_energy, grid_energy, window}``: ``value``
+    Value
+        A ``gm.units.Quantity`` in SI, with the parts of the result in ``parts`` (``to_plain``
+        gives the JSON). ``{value, unit, direct, methane, electricity, fuel_energy,
+        grid_energy, window}``: ``value``
         in kg over the window of the results; ``direct`` the CO2, ``methane`` the methane released
         and ``electricity`` the CO2 of grid electricity, in kg; ``fuel_energy`` and ``grid_energy``
         in J and ``window`` in s, each a value. Grid electricity drawn without
@@ -65,14 +66,14 @@ def _co2(plant, results, assumptions):
     methane = released(results, "methane_emission")
     electricity = 0.0
     if grid > 0:
-        electricity = grid * require(assumptions, "electricity_emission_factor")
-    return value(
+        electricity = grid * assumptions.emission_factor(required=True)
+    return measure(
         direct + methane * assumptions.methane_gwp + electricity,
         "kg",
-        direct=value(direct, "kg"),
-        methane=value(methane, "kg"),
-        electricity=value(electricity, "kg"),
-        fuel_energy=value(fuel, "J"),
-        grid_energy=value(grid, "J"),
-        window=value(float(window_seconds(results).sum()), "s"),
+        direct=measure(direct, "kg"),
+        methane=measure(methane, "kg"),
+        electricity=measure(electricity, "kg"),
+        fuel_energy=measure(fuel, "J"),
+        grid_energy=measure(grid, "J"),
+        window=measure(float(window_seconds(results).sum()), "s"),
     )

@@ -30,7 +30,10 @@ def test_a_spec_with_unit_strings_and_sections_round_trips_exactly():
         "format": 2,
         "name": "DoubletHeatPlant",
         "modules": {
-            "pipe": {"type": "Pipe", "params": {"length": "100 ft", "inner_diameter": 0.1}},
+            "pipe": {
+                "type": "Pipe",
+                "params": {"length": {"value": 100, "unit": "ft"}, "inner_diameter": 0.1},
+            },
             "valve": {"type": "Valve", "params": {}},
         },
         "connections": [{"source": "pipe.fluid_out", "target": "valve.fluid_in"}],
@@ -40,7 +43,10 @@ def test_a_spec_with_unit_strings_and_sections_round_trips_exactly():
         "param_history": {
             "pipe": [
                 {"valid_from": "2020-01-01T00:00:00Z", "params": {"length": 30.48}},
-                {"valid_from": "2021-01-01T00:00:00Z", "params": {"length": "200 ft"}},
+                {
+                    "valid_from": "2021-01-01T00:00:00Z",
+                    "params": {"length": {"value": 200, "unit": "ft"}},
+                },
             ]
         },
         "fluids": {"pipe": gm.WATER.model_dump(mode="json")},
@@ -48,7 +54,10 @@ def test_a_spec_with_unit_strings_and_sections_round_trips_exactly():
     complete = {"bindings": {}, "param_history": {}} | spec
     plant = gm.Plant.from_dict(complete)
     written = plant.to_dict()
-    assert written["modules"]["pipe"]["params"] == {"length": "100 ft", "inner_diameter": 0.1}
+    assert written["modules"]["pipe"]["params"] == {
+        "length": {"value": 100, "unit": "ft"},
+        "inner_diameter": 0.1,
+    }
     assert written == {key: complete[key] for key in written}
     assert set(written) - set(complete) == set()
     assert gm.Plant.from_dict(written).to_dict() == written
@@ -94,7 +103,7 @@ def test_params_set_since_and_validation_agree_with_the_builder():
     assert found == gm.plants.validate(plant.to_dict(), on_error="record")
     assert {item["code"] for item in found} == {"root_plant_port"}
     with pytest.raises(gm.errors.ValidationError):
-        plant.add("Pipe", "bad", params={"length": "5 bar"})
+        plant.add("Pipe", "bad", params={"length": {"value": 5, "unit": "bar"}})
 
 
 def test_a_raised_error_carries_every_problem_of_the_list_record_returns():

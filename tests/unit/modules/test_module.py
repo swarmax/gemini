@@ -254,15 +254,15 @@ def test_input_resolution_units_bounds_and_metadata():
     """Per-call, persistent and default values resolve in order and validate as SI."""
     stream = Stream(m_dot=1, T=300, p=1e5)
     module = RequiredInputs()
-    module.frequency = "40 Hz"
+    module.frequency = {"value": 40, "unit": "Hz"}
     module.grid_frequency = 50
     assert module.get("frequency").unit == "Hz"
     assert module.get("grid_frequency").unit == "Hz"
     assert module(fluid_in=stream).outputs.total == 90
-    assert module(fluid_in=stream, frequency="45 Hz").outputs.total == 95
+    assert module(fluid_in=stream, frequency={"value": 45, "unit": "Hz"}).outputs.total == 95
     assert module.frequency == 40
     with pytest.raises(gm.errors.ValidationError, match="frequency.*invalid control.*Hz"):
-        module.frequency = "61 Hz"
+        module.frequency = {"value": 61, "unit": "Hz"}
 
 
 def test_missing_input_and_unknown_keyword_errors_are_complete():
@@ -382,7 +382,7 @@ def test_set_inputs_uses_recursive_paths_and_suggests_mistakes():
             return outlets
 
     parent = ParentInputs()
-    parent._set_inputs({"child.frequency": "50 Hz", "child.grid_frequency": 50})
+    parent._set_inputs({"child.frequency": {"value": 50, "unit": "Hz"}, "child.grid_frequency": 50})
     assert parent().children["child"].outputs.total == 100
     with raises(gm.errors.ValidationError, "unknown_name", match="did you mean 'child.frequency'"):
         parent._set_inputs({"child.frequncy": 40})

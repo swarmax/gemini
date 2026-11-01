@@ -217,7 +217,7 @@ class Engine:
         plan = BindingPlan(plant, dataset, kind, only, self.on_error)
         if not continuing:
             self._begin(state)
-        self.results.units = declared_units(plant)
+        self.results.declared = declared_units(plant)
         self.results.quantities = declared_quantities(plant)
         self.run_kind = kind
         self.dataset = dataset

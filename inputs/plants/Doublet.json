@@ -1,14 +1,14 @@
 {
   "plant": "Doublet",
   "params": {
-    "reservoir.pressure": "220 bar",
-    "reservoir.temperature": "80 degC",
-    "reservoir.permeability": "9.869233e-12 m2",
-    "reservoir.aquifer_thickness": "45 m",
-    "reservoir.drainage_radius": "1000 m",
-    "reservoir.top_depth": "1800 m",
-    "reservoir.productivity_index": "5.833333333333333e-08 m3/s/Pa",
-    "reservoir.wellbore_radius": "0.0765 m",
+    "reservoir.pressure": {"value": 220, "unit": "bar"},
+    "reservoir.temperature": {"value": 80, "unit": "degC"},
+    "reservoir.permeability": {"value": 9.869233e-12, "unit": "m2"},
+    "reservoir.aquifer_thickness": {"value": 45, "unit": "m"},
+    "reservoir.drainage_radius": {"value": 1000, "unit": "m"},
+    "reservoir.top_depth": {"value": 1800, "unit": "m"},
+    "reservoir.productivity_index": {"value": 5.833333333333333e-08, "unit": "m3/s/Pa"},
+    "reservoir.wellbore_radius": {"value": 0.0765, "unit": "m"},
     "well.pipe_path": {
       "sections": [
         {
@@ -79,9 +79,9 @@
         }
       ]
     },
-    "well.soil_temperature": "15 degC",
+    "well.soil_temperature": {"value": 15, "unit": "degC"},
     "well.segment": "below_esp",
-    "well.esp_depth": "600 m",
+    "well.esp_depth": {"value": 600, "unit": "m"},
     "esp.stage_count": 15,
     "esp.head_coefficients": [
       125.518426,
@@ -100,11 +100,11 @@
       0.0
     ],
     "esp.pump_type": "DEFAULT-PUMP",
-    "esp.setting_depth": "600 m",
-    "esp.minimum_flow": "82 m3/h",
-    "esp.maximum_flow": "178 m3/h",
-    "esp.best_efficiency_flow": "129.98 m3/h",
-    "esp.tubing": "0.1778 m",
+    "esp.setting_depth": {"value": 600, "unit": "m"},
+    "esp.minimum_flow": {"value": 82, "unit": "m3/h"},
+    "esp.maximum_flow": {"value": 178, "unit": "m3/h"},
+    "esp.best_efficiency_flow": {"value": 129.98, "unit": "m3/h"},
+    "esp.tubing": {"value": 0.1778, "unit": "m"},
     "riser.pipe_path": {
       "sections": [
         {
@@ -175,9 +175,9 @@
         }
       ]
     },
-    "riser.soil_temperature": "15 degC",
+    "riser.soil_temperature": {"value": 15, "unit": "degC"},
     "riser.segment": "above_esp",
-    "riser.esp_depth": "600 m",
+    "riser.esp_depth": {"value": 600, "unit": "m"},
     "injector.pipe_path": {
       "sections": [
         {
@@ -200,15 +200,15 @@
         }
       ]
     },
-    "injector.soil_temperature": "15 degC",
-    "sink.pressure": "220 bar",
-    "sink.temperature": "80 degC",
-    "sink.permeability": "9.869233e-12 m2",
-    "sink.aquifer_thickness": "45 m",
-    "sink.drainage_radius": "0 m",
-    "sink.top_depth": "0 m",
-    "sink.injectivity_index": "5.5555555555555555e-08 m3/s/Pa",
-    "sink.wellbore_radius": "0.0765 m"
+    "injector.soil_temperature": {"value": 15, "unit": "degC"},
+    "sink.pressure": {"value": 220, "unit": "bar"},
+    "sink.temperature": {"value": 80, "unit": "degC"},
+    "sink.permeability": {"value": 9.869233e-12, "unit": "m2"},
+    "sink.aquifer_thickness": {"value": 45, "unit": "m"},
+    "sink.drainage_radius": {"value": 0, "unit": "m"},
+    "sink.top_depth": {"value": 0, "unit": "m"},
+    "sink.injectivity_index": {"value": 5.5555555555555555e-08, "unit": "m3/s/Pa"},
+    "sink.wellbore_radius": {"value": 0.0765, "unit": "m"}
   },
   "fluids": {
     "reservoir": {

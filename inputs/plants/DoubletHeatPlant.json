@@ -1,14 +1,14 @@
 {
   "plant": "DoubletHeatPlant",
   "params": {
-    "doublet.reservoir.pressure": "220 bar",
-    "doublet.reservoir.temperature": "80 degC",
-    "doublet.reservoir.permeability": "9.869233e-12 m2",
-    "doublet.reservoir.aquifer_thickness": "45 m",
-    "doublet.reservoir.drainage_radius": "1000 m",
-    "doublet.reservoir.top_depth": "1800 m",
-    "doublet.reservoir.productivity_index": "5.833333333333333e-08 m3/s/Pa",
-    "doublet.reservoir.wellbore_radius": "0.0765 m",
+    "doublet.reservoir.pressure": {"value": 220, "unit": "bar"},
+    "doublet.reservoir.temperature": {"value": 80, "unit": "degC"},
+    "doublet.reservoir.permeability": {"value": 9.869233e-12, "unit": "m2"},
+    "doublet.reservoir.aquifer_thickness": {"value": 45, "unit": "m"},
+    "doublet.reservoir.drainage_radius": {"value": 1000, "unit": "m"},
+    "doublet.reservoir.top_depth": {"value": 1800, "unit": "m"},
+    "doublet.reservoir.productivity_index": {"value": 5.833333333333333e-08, "unit": "m3/s/Pa"},
+    "doublet.reservoir.wellbore_radius": {"value": 0.0765, "unit": "m"},
     "doublet.well.pipe_path": {
       "sections": [
         {
@@ -79,9 +79,9 @@
         }
       ]
     },
-    "doublet.well.soil_temperature": "15 degC",
+    "doublet.well.soil_temperature": {"value": 15, "unit": "degC"},
     "doublet.well.segment": "below_esp",
-    "doublet.well.esp_depth": "600 m",
+    "doublet.well.esp_depth": {"value": 600, "unit": "m"},
     "doublet.esp.stage_count": 15,
     "doublet.esp.head_coefficients": [
       125.518426,
@@ -100,11 +100,11 @@
       0.0
     ],
     "doublet.esp.pump_type": "DEFAULT-PUMP",
-    "doublet.esp.setting_depth": "600 m",
-    "doublet.esp.minimum_flow": "82 m3/h",
-    "doublet.esp.maximum_flow": "178 m3/h",
-    "doublet.esp.best_efficiency_flow": "129.98 m3/h",
-    "doublet.esp.tubing": "0.1778 m",
+    "doublet.esp.setting_depth": {"value": 600, "unit": "m"},
+    "doublet.esp.minimum_flow": {"value": 82, "unit": "m3/h"},
+    "doublet.esp.maximum_flow": {"value": 178, "unit": "m3/h"},
+    "doublet.esp.best_efficiency_flow": {"value": 129.98, "unit": "m3/h"},
+    "doublet.esp.tubing": {"value": 0.1778, "unit": "m"},
     "doublet.riser.pipe_path": {
       "sections": [
         {
@@ -175,9 +175,9 @@
         }
       ]
     },
-    "doublet.riser.soil_temperature": "15 degC",
+    "doublet.riser.soil_temperature": {"value": 15, "unit": "degC"},
     "doublet.riser.segment": "above_esp",
-    "doublet.riser.esp_depth": "600 m",
+    "doublet.riser.esp_depth": {"value": 600, "unit": "m"},
     "doublet.injector.pipe_path": {
       "sections": [
         {
@@ -200,21 +200,21 @@
         }
       ]
     },
-    "doublet.injector.soil_temperature": "15 degC",
-    "doublet.sink.pressure": "220 bar",
-    "doublet.sink.temperature": "80 degC",
-    "doublet.sink.permeability": "9.869233e-12 m2",
-    "doublet.sink.aquifer_thickness": "45 m",
-    "doublet.sink.drainage_radius": "0 m",
-    "doublet.sink.top_depth": "0 m",
-    "doublet.sink.injectivity_index": "5.5555555555555555e-08 m3/s/Pa",
-    "doublet.sink.wellbore_radius": "0.0765 m",
+    "doublet.injector.soil_temperature": {"value": 15, "unit": "degC"},
+    "doublet.sink.pressure": {"value": 220, "unit": "bar"},
+    "doublet.sink.temperature": {"value": 80, "unit": "degC"},
+    "doublet.sink.permeability": {"value": 9.869233e-12, "unit": "m2"},
+    "doublet.sink.aquifer_thickness": {"value": 45, "unit": "m"},
+    "doublet.sink.drainage_radius": {"value": 0, "unit": "m"},
+    "doublet.sink.top_depth": {"value": 0, "unit": "m"},
+    "doublet.sink.injectivity_index": {"value": 5.5555555555555555e-08, "unit": "m3/s/Pa"},
+    "doublet.sink.wellbore_radius": {"value": 0.0765, "unit": "m"},
     "degasser.heat_transfer_coefficient": 100000.0,
-    "heat_exchanger.thermal_conductance": "100000 W/K",
-    "heat_exchanger.hot_nominal_pressure_drop": "0 bar",
-    "heat_exchanger.cold_nominal_pressure_drop": "0 bar",
-    "heat_exchanger.hot_nominal_mass_flow": "1 kg/s",
-    "heat_exchanger.cold_nominal_mass_flow": "1 kg/s",
+    "heat_exchanger.thermal_conductance": {"value": 100000, "unit": "W/K"},
+    "heat_exchanger.hot_nominal_pressure_drop": {"value": 0, "unit": "bar"},
+    "heat_exchanger.cold_nominal_pressure_drop": {"value": 0, "unit": "bar"},
+    "heat_exchanger.hot_nominal_mass_flow": {"value": 1, "unit": "kg/s"},
+    "heat_exchanger.cold_nominal_mass_flow": {"value": 1, "unit": "kg/s"},
     "injection_pump.stage_count": 10,
     "injection_pump.pump_type": "DEFAULT-PUMP",
     "injection_pump.efficiency": 0.8

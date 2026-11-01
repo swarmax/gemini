@@ -6,13 +6,21 @@ import pandas as pd
 import pytest
 
 import gemini as gm
+from gemini._utils.jsonable import to_plain
 from gemini.optim._utils import trial
 from tests.fixtures.errors import raises
 from tests.fixtures.result_tables import make_results
 
 DEMAND = 1e6
 """Constant heat demand [W]."""
-CAPACITY = [{"path": "boiler", "parameter": "capacity", "lower": 2e5, "upper": 3e6}]
+
+
+def watts(number):
+    """Return ``number`` as a power."""
+    return gm.units.Quantity(number, "W")
+
+
+CAPACITY = [{"path": "boiler", "parameter": "capacity", "lower": watts(2e5), "upper": watts(3e6)}]
 PEAK = "boiler.capacity"
 
 
@@ -26,11 +34,16 @@ def boiler_plant():
     """Return a gas boiler and its heat user, with the heat water named at 60 and 100 degC."""
     plant = gm.Plant("Boiler")
     plant.add("GasGrid", name="grid")
-    plant.add("Boiler", name="boiler", params={"capacity": "2 MW", "efficiency": 0.9})
+    plant.add(
+        "Boiler", name="boiler", params={"capacity": {"value": 2, "unit": "MW"}, "efficiency": 0.9}
+    )
     plant.add(
         "HeatingGrid",
         name="users",
-        params={"return_temperature": "60 degC", "return_pressure": "6 bar"},
+        params={
+            "return_temperature": {"value": 60, "unit": "degC"},
+            "return_pressure": {"value": 6, "unit": "bar"},
+        },
     )
     plant.connect("grid.gas_out", "boiler.fuel_in")
     plant.connect("users.return_out", "boiler.fluid_in")
@@ -63,19 +76,20 @@ def half_covered():
 
 def test_minimize_finds_the_optimum_within_the_budget(half_covered):
     """The constraint sets the optimum; the result is plain JSON and ready for ``set_params``."""
-    assert half_covered["best"]["parameters"][PEAK] == pytest.approx(DEMAND / 2, rel=0.05)
-    assert half_covered["best"]["value"] == pytest.approx(DEMAND / 2, rel=0.05)
-    assert half_covered["best"]["unit"] == "W"
+    best = half_covered["best"]
+    assert best.parts["parameters"][PEAK].si == pytest.approx(DEMAND / 2, rel=0.05)
+    assert best.value == pytest.approx(DEMAND / 2, rel=0.05)
+    assert best.unit == "W"
     assert half_covered["evaluations"] == len(half_covered["history"]) == 20
-    json.dumps(half_covered, allow_nan=False)
+    json.dumps(to_plain(half_covered), allow_nan=False)
 
 
 def test_a_trial_that_breaks_a_constraint_is_recorded_and_never_best(half_covered):
     """Its reason stays in the history."""
-    rejected = [item for item in half_covered["history"] if "reason" in item]
-    assert rejected and all("heating_coverage" in item["reason"] for item in rejected)
-    assert all(item["parameters"][PEAK] < 0.5 * DEMAND for item in rejected)
-    assert half_covered["best"]["parameters"][PEAK] >= 0.5 * DEMAND
+    rejected = [item for item in half_covered["history"] if item.reason]
+    assert rejected and all("heating_coverage" in item.reason for item in rejected)
+    assert all(item.parts["parameters"][PEAK].value < 0.5 * DEMAND for item in rejected)
+    assert half_covered["best"].parts["parameters"][PEAK].value >= 0.5 * DEMAND
 
 
 def test_a_failed_run_is_recorded_too():
@@ -84,10 +98,12 @@ def test_a_failed_run_is_recorded_too():
     result = gm.optim.minimize(
         boiler_plant(), None, variables, "peak_heat", evaluations=10, plan=profile()
     )
-    failed = [item for item in result["history"] if "reason" in item]
-    assert failed and all(item["parameters"]["boiler.efficiency"] > 1 for item in failed)
-    assert all(item["value"] is None for item in failed)
-    assert result["best"]["parameters"]["boiler.efficiency"] <= 1
+    failed = [item for item in result["history"] if item.reason]
+    assert failed and all(
+        item.parts["parameters"]["boiler.efficiency"].value > 1 for item in failed
+    )
+    assert all(item.value is None for item in failed)
+    assert result["best"].parts["parameters"]["boiler.efficiency"].value <= 1
 
 
 def test_every_trial_failing_leaves_no_best():
@@ -96,18 +112,18 @@ def test_every_trial_failing_leaves_no_best():
     result = gm.optim.minimize(
         boiler_plant(), None, variables, "peak_heat", evaluations=5, plan=profile()
     )
-    assert result["best"]["value"] is None and result["best"]["parameters"] is None
-    assert "every trial" in result["best"]["reason"]
+    assert result["best"].value is None and result["best"].parts["parameters"] is None
+    assert "every trial" in result["best"].reason
 
 
 def test_a_leading_minus_maximises():
     """The value keeps the sign of the metric."""
-    variables = [dict(CAPACITY[0], upper=DEMAND)]
+    variables = [dict(CAPACITY[0], upper=watts(DEMAND))]
     result = gm.optim.minimize(
         boiler_plant(), None, variables, "-peak_heat", evaluations=10, plan=profile()
     )
-    assert result["best"]["value"] == pytest.approx(DEMAND, rel=0.1)
-    assert result["best"]["value"] == max(item["value"] for item in result["history"])
+    assert result["best"].value == pytest.approx(DEMAND, rel=0.1)
+    assert result["best"].value == max(item.value for item in result["history"])
 
 
 @pytest.fixture(scope="module")
@@ -130,8 +146,10 @@ def test_the_same_call_gives_the_same_trials_and_leaves_the_plant_alone(repeated
 
 def test_an_economic_metric_reads_the_assumptions_of_the_problem():
     """With them a value per year."""
-    variables = [dict(CAPACITY[0], lower=DEMAND, upper=2 * DEMAND)]
-    values = gm.Assumptions(discount_rate=0.05, lifetime_years=20, prices={"gas": "40.0 EUR/MWh"})
+    variables = [dict(CAPACITY[0], lower=watts(DEMAND), upper=watts(2 * DEMAND))]
+    values = gm.Assumptions(
+        discount_rate=0.05, lifetime_years=20, prices={"gas": {"value": 40.0, "unit": "EUR/MWh"}}
+    )
     run = gm.optim.minimize(
         boiler_plant(),
         problem(assumptions=values),
@@ -140,16 +158,16 @@ def test_an_economic_metric_reads_the_assumptions_of_the_problem():
         evaluations=5,
         plan=profile(),
     )
-    assert run["best"]["unit"] == "EUR/year" and "reason" not in run["best"]
+    assert run["best"].unit == "currency/yr" and run["best"].reason is None
 
 
 def test_an_economic_metric_without_assumptions_gives_the_reason():
     """What is missing is in the history, and no trial is best."""
-    variables = [dict(CAPACITY[0], lower=DEMAND, upper=2 * DEMAND)]
+    variables = [dict(CAPACITY[0], lower=watts(DEMAND), upper=watts(2 * DEMAND))]
     idle = gm.optim.minimize(
         boiler_plant(), problem(), variables, "lcts", evaluations=5, plan=profile()
     )
-    assert "discount_rate" in idle["history"][0]["reason"] and idle["best"]["value"] is None
+    assert "discount_rate" in idle["history"][0].reason and idle["best"].value is None
 
 
 @pytest.mark.parametrize(
@@ -158,7 +176,7 @@ def test_an_economic_metric_without_assumptions_gives_the_reason():
         ({"objective": "lcox"}, "unknown_name"),
         ({"constraints": [{"metric": "cost", "minimum": 0}]}, "unknown_name"),
         ({"variables": []}, "missing_value"),
-        ({"variables": [dict(CAPACITY[0], lower=2e6, upper=1e6)]}, "invalid_value"),
+        ({"variables": [dict(CAPACITY[0], lower=watts(2e6), upper=watts(1e6))]}, "invalid_value"),
         ({"variables": [dict(CAPACITY[0], parameter="capacty")]}, "unknown_name"),
         ({"evaluations": 4}, "invalid_value"),
     ],
