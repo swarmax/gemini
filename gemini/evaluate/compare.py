@@ -3,9 +3,11 @@
 import numpy as np
 import pandas as pd
 
+from gemini._utils.jsonable import to_plain
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import ValidationError
 from gemini.evaluate._utils.display import display_units, in_unit
+from gemini.units import Quantity, si_unit
 
 SENSES = ("min", "max")
 """The two ways to prefer a metric: the smaller or the larger value."""
@@ -35,9 +37,9 @@ class Comparison(list):
             {
                 **{
                     _label(name, shown): (
-                        in_unit(name, entry["values"][name], shown[name])
+                        in_unit(name, _number(entry["values"][name]), shown[name])
                         if name in shown
-                        else entry["values"][name]
+                        else _number(entry["values"][name])
                     )
                     for name in names
                 },
@@ -48,6 +50,32 @@ class Comparison(list):
             for entry in self
         ]
         return pd.DataFrame(rows, index=pd.Index([entry["index"] for entry in self], name="index"))
+
+    def to_dict(self):
+        """Return the entries as plain JSON: every ``Quantity`` as ``{value, unit}`` in SI."""
+        return to_plain(list(self))
+
+    @classmethod
+    def from_dict(cls, data):
+        """Return the ``Comparison`` of what ``to_dict`` gave; a metric is a ``Quantity`` again.
+
+        The ``reasons`` stay plain dicts, as ``to_dict`` wrote them.
+        """
+        return cls(
+            {
+                **entry,
+                "values": {
+                    name: Quantity.from_dict(item) if isinstance(item, dict) else item
+                    for name, item in entry["values"].items()
+                },
+            }
+            for entry in data
+        )
+
+
+def _number(value):
+    """Return the SI number of a comparison value: a ``Quantity``, a plain number or ``None``."""
+    return value.si if isinstance(value, Quantity) else value
 
 
 def _label(name, shown):
@@ -78,16 +106,19 @@ def compare(reports, by):
     -------
     Comparison
         One entry per report, in the order given: ``index`` (its position), ``values`` (the
-        metrics as floats in SI, ``None`` for no value), ``ranks`` (1 is best; equal values share a
-        rank), ``pareto`` (whether no other feasible report is at least as good in every metric and
-        better in one; an infeasible report is never on it), ``feasible`` and, when not feasible,
+        metrics as ``gm.units.Quantity`` in SI; a plain number stays a float; ``None`` for no
+        value), ``ranks`` (1 is best; equal values share a rank), ``pareto`` (whether no other
+        feasible report is at least as good in every metric and better in one; an infeasible
+        report is never on it), ``feasible`` and, when not feasible,
         ``reasons``: the failed constraints as ``gm.evaluate.constraints`` gives them, and
         ``{name, reason}`` for a missing service, a failed step or constraints none of which
         was checked.
-        With one metric the front is its best reports. ``to_frame()`` gives a table.
+        With one metric the front is its best reports. ``to_frame()`` gives a table in display
+        units and ``to_dict()`` plain JSON.
     """
     senses = _senses(by, reports)
     values = {name: [_value(report, name) for report in reports] for name in senses}
+    quantities = {name: [_quantity(report, name) for report in reports] for name in senses}
     reasons = [_reasons(report) for report in reports]
     feasible = [not found for found in reasons]
     ranks = {name: _ranks(values[name], senses[name], reasons) for name in senses}
@@ -95,7 +126,7 @@ def compare(reports, by):
     return Comparison(
         {
             "index": position,
-            "values": {name: values[name][position] for name in senses},
+            "values": {name: quantities[name][position] for name in senses},
             "ranks": {name: ranks[name][position] for name in senses},
             "pareto": bool(front[position]),
             "feasible": feasible[position],
@@ -157,6 +188,15 @@ def _value(report, name):
         return None
     number = getattr(found, "si", found)
     return None if number is None else float(number)
+
+
+def _quantity(report, name):
+    """Return metric ``name`` of a report as a ``Quantity`` in SI, a plain number, or ``None``."""
+    found = report.get(name)
+    number = _value(report, name)
+    if number is None or not isinstance(found, Quantity):
+        return number
+    return Quantity(number, si_unit(str(found.unit)))
 
 
 def _worse(values, sense):

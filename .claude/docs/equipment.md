@@ -33,8 +33,9 @@ Shared conventions, stated once here and not repeated per module:
   are the graph breaks, which run tick by tick: `ThermalDecline`, `AquiferStorage`,
   `BoreholeField`, `ThermalStorage`, `IceStorage` and `PIDController`, stateful until `scan` exists
   (see [native-engine.md](native-engine.md)). Structural parameters, fixed in a trace and a graph
-  cache guard, are `ProductionReservoir`/`InjectionReservoir` `drainage_radius`,
-  `ProductionWell.esp_depth` and `Degasser.separation_efficiency`.
+  cache guard, are `ProductionReservoir`/`InjectionReservoir` `drainage_radius` and
+  `Degasser.separation_efficiency`. The ESP depth and the pipe path of a well are numeric, so one
+  graph serves every depth of a study.
 
 ## Overview
 
@@ -161,8 +162,11 @@ basis (`gemini.physics.pumps`).
   `pumps.is_in_operating_window`, `pumps.power`, `pumps.speed_ratio`
 - **Health**: worst relative drift of measured `power`, `head` and `discharge_pressure`, alarm
   above `drift_threshold` or outside the operating window.
-- **Assumptions and validity**: isothermal; empirical curves valid on their fitted flow range.
-  Reverse flow raises `PhysicsError`. The fits
+- **Assumptions and validity**: isothermal; the curves are valid for a flow at most `maximum_flow`
+  scaled by `frequency / 60 Hz` and where head and power are not negative. A row outside it fails
+  with `PhysicsError`, code `out_of_range`, naming the path, the flow, the head, the power and the
+  largest flow, never a number from the extrapolated polynomial. `minimum_flow` is the recommended
+  range: a flow below it only raises the health alarm. Reverse flow raises `PhysicsError`. The fits
   (`gm.analysis.fit_head_coefficients`, `gm.analysis.fit_head_correction`) are in `gm.analysis`;
   `head_curve` is the private helper of `gm.analysis.pump_curve`.
 - **Energy audit**: unresolved pump power. The pump is isothermal and allocates no
@@ -201,13 +205,15 @@ Injection (booster) pump that raises the brine to a discharge pressure.
   from `capex`. `gm.study.size` sets them from the doublets the pump serves.
 - **Controls**: `pressure_setpoint` (`Pressure | None`, default `None`), `frequency`
   (`Frequency`, default 60 Hz, used with curves).
-- **Outputs**: `head` (soft sensor), `power` (soft sensor), `discharge_pressure` (soft sensor).
+- **Outputs**: `head` (soft sensor), `power` (soft sensor), `discharge_pressure` (soft sensor),
+  `is_pumping` (the required head is positive).
 - **Model**: with `head_coefficients` (and `stage_count`) the head is the ESP polynomial; otherwise
   `head = pressure_setpoint - suction.p`. Power is `pumps.power` when both curves are given,
   else `Q head / efficiency`; `power_in = power`.
 - **Physics**: `energy.input_power`, `pumps.head`, `pumps.hydraulic_power`, `pumps.power`
-- **Validity**: a negative head (setpoint below suction) and reverse flow raise
-  `PhysicsError`; neither a setpoint nor a head curve raises `ValidationError`.
+- **Validity**: a setpoint below the suction pressure needs no pumping: head 0, power 0, discharge
+  pressure equal to the suction pressure, `is_pumping` false. A head curve below zero and reverse
+  flow raise `PhysicsError`; neither a setpoint nor a head curve raises `ValidationError`.
 - **Energy audit**: unresolved pump power, as `ESP`.
 
 ```python
@@ -1256,11 +1262,18 @@ Swamee–Jain friction, Beggs–Brill two-phase flow and explicit heat loss
 (`hydraulics.pipe_path_profile`).
 
 - **Ports**: `bottom_in` -> `wellhead_out`, `loss_out` (power).
-- **Parameters**: `pipe_path` (`geometry.PipePath`, required), `soil_temperature` (required),
+- **Parameters**: the pipe path as four parallel lists with one item per constant-diameter section
+  from the surface to the bottom, `section_length` [m], `section_inclination` [rad],
+  `section_diameter` [m] and `section_roughness` [m] (all required; plain SI numbers; `well.pipe_path`
+  reads them as a validated `geometry.PipePath`), `soil_temperature` (required),
   `heat_transfer_coefficient` (default 10 W/m2/K, calibratable), `correction_factors` (affine pressure
   correction, default `(1, 0)`, calibratable), `friction_correlation` (`"darcy_weisbach"`),
   `two_phase_friction_correlation` (`"BeggsBrill"`). The production well adds `segment` (`"full"`,
-  `"below_esp"`, `"above_esp"`, default full) and `esp_depth` (default `None`).
+  `"below_esp"`, `"above_esp"`, default full) and `esp_depth` (default `None`). The lists and `esp_depth` are graph inputs: a traced well serves any
+  lengths, diameters and ESP depth with the same number of sections. A segment keeps every section
+  of the path, each with the length that lies in the segment (zero outside it), so
+  `section_pressure` and `section_temperature` have one item per section of the whole path, a
+  section outside the segment repeating the value it was entered at.
 - **Outputs**: `friction_pressure_drop`, `gravity_pressure_drop`, `section_pressure`,
   `section_temperature`.
 - **Model**: see [physics.md](physics.md) and [refactor-notes.md](refactor-notes.md); the
@@ -1277,11 +1290,10 @@ import math
 
 import gemini as gm
 from gemini.modules import ProductionWell
-from gemini.physics.geometry import PipePath, PipeSection
+from gemini.physics.geometry import section_values, vertical_path
 
-vertical = PipeSection(length=1500, inclination=math.pi / 2, inner_diameter=0.2, roughness=2e-5)
-path = PipePath(sections=[vertical])
-well = ProductionWell().set_params("", {"pipe_path": path, "soil_temperature": {"value": 40, "unit": "C"}})
+path = vertical_path(1500, 0.2, 2e-5)
+well = ProductionWell().set_params("", {**section_values(path), "soil_temperature": {"value": 40, "unit": "C"}})
 result = well(bottom_in=gm.Stream(m_dot=40, T={"value": 80, "unit": "C"}, p={"value": 180, "unit": "bar"}))
 assert round(result.outputs.gravity_pressure_drop / 1e5, 2) == 147.15
 assert round(result.outlets.loss_out) == 376991
@@ -1726,7 +1738,7 @@ Reusable production and reinjection limbs of a geothermal doublet (`gm.plants.ge
 ```python
 import gemini as gm
 
-doublet = gm.plants.example("DoubletHeatPlant").doublet
+doublet = gm.Plant.from_json("inputs/doublet_heat/plant.json").doublet
 doublet.reservoir.production_rate = {"value": 42.4, "unit": "kg/s"}
 doublet.esp.frequency = {"value": 55.5, "unit": "Hz"}
 result = doublet(return_in=gm.Stream(m_dot=40, T={"value": 45, "unit": "C"}, p={"value": 20, "unit": "bar"}, fluid=doublet.fluid))
@@ -1768,7 +1780,7 @@ temperature and pressure at the doublet's own depth from the two rules of `gemin
 is refused (`invalid_value`, naming the case path).
 
 `drainage_radius` defaults to `ground.DOUBLET_WELL_SPACING`, 1000 m. Every derived value can be
-overridden in the same call, by a child name such as `reservoir.pressure` or `well.pipe_path`, and
+overridden in the same call, by a child name such as `reservoir.pressure` or `well.section_length`, and
 stays explicit. `esp.frequency` remains a control; the pump head is the design head at
 `ESP_REFERENCE_FREQUENCY`. The old way, setting every child value directly, keeps working. Setting
 `fluid` gives it to every child and derives again.
@@ -1805,7 +1817,7 @@ dict.
 ```python
 import gemini as gm
 
-doublet = gm.plants.example("DoubletHeatPlant").doublet
+doublet = gm.Plant.from_json("inputs/doublet_heat/plant.json").doublet
 field = gm.plants.MultiWellPlant(producers=2, injectors=2)
 for limb, rate in zip(field.producers, (40.0, 30.0)):
     for name in ("reservoir", "well", "esp", "riser"):
@@ -2096,13 +2108,13 @@ upstream adds the injector's 5.20 bar friction instead of subtracting it, see
 recalibrates the injectivity to 2.8430 m3/h/bar, which restores 44.47 bar. `BoilerChpPlant` (upstream `doublet_plant`) adds a boiler and a CHP on the secondary
 side and reports `emissions`; its 3100 m injector needs no pump, so the injection pump draws zero
 electricity. Both open the doublet, because the surface equipment sits between its limbs, and
-`gm.plants.example(name)` gives each with its upstream data.
+`example_plant(name)` of `tests/fixtures/sample_cases.py` gives each with its upstream data.
 A run sets `esp.frequency`, `wellhead_pressure`, the `split_fraction`s and the setpoints as inputs.
 
 ```python
 from gemini.modules import ESP, ProductionReservoir, ProductionWell
 from gemini.analysis import solves
-from gemini.physics.geometry import build_path
+from gemini.physics.geometry import build_path, section_values
 
 path = build_path([dict(MD=d, TVD=d, ID=0.15, roughness=0.01) for d in (0, 300, 400, 600, 2400)])
 reservoir = ProductionReservoir().set_params("", {
@@ -2117,7 +2129,7 @@ reservoir = ProductionReservoir().set_params("", {
 })
 well, riser = (
     ProductionWell().set_params("", {
-    "pipe_path": path,
+    **section_values(path),
     "soil_temperature": {"value": 20, "unit": "C"},
     "segment": segment,
     "esp_depth": 650,
@@ -2137,7 +2149,7 @@ reservoir.production_rate = rate
 
 ### The plants of the cases
 
-`gm.plants.example(name)` gives each plant with a file in `inputs/plants/` with its design values; controls and
+`example_plant(name)` of `tests/fixtures/sample_cases.py` gives each plant with a file in `inputs/plants/` with its design values; controls and
 boundaries stay inputs of the run.
 
 - `DistrictEnergyPlant` (`plants/districtenergyplant.py`): a `DistrictNetwork` of two heating

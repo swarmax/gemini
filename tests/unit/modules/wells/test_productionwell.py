@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from gemini.compiler.graph import run
+from gemini.compiler.graph import GraphCache, run
 from gemini.modules.wells import ProductionWell
 from gemini.plants._utils.legacy import tables as mapping
 from gemini.types.flows import Stream
@@ -85,3 +85,15 @@ def test_production_well_traces_with_its_section_profiles():
         },
     )
     assert traced.breaks == [] and traced.outputs["section_pressure"].shape[0] == 2
+
+
+def test_another_esp_depth_and_path_length_reuse_the_graph():
+    """The ESP depth and the section lengths are graph inputs: a new value traces nothing."""
+    cache = GraphCache()
+    first, other = _well(), _well()
+    other.esp_depth = first.esp_depth - 50
+    other.section_length = [length * 1.1 for length in first.section_length]
+    for well in (first, other):
+        cache.graph(well, {name: well.fluid for name in well._fed_inlets()})
+    assert cache.traces == 1
+    assert_module_matches(other, [{"bottom_in": Stream(m_dot=40.0, T=353.15, p=25e6)}])

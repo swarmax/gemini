@@ -1,15 +1,19 @@
 """A shallow plant and case, and a run replaced by a cost model, shared by the study tests."""
 
+from datetime import timedelta
+
 import pandas as pd
 import pytest
 
 import gemini as gm
 from gemini._utils.files import from_json
 from gemini.case._utils.kinds import EQUIPMENT_KINDS
+from gemini.engine.chunks import ResultChunk
+from gemini.errors.base import problem
 from gemini.plants._utils.roles import units_of
 from gemini.study._utils import trial
 from gemini.types.shapes import measure
-from tests.fixtures.result_tables import make_results
+from tests.fixtures.result_tables import START, make_results
 from tests.fixtures.sample_cases import SHALLOW_DISTRICT
 
 SAMPLE = SHALLOW_DISTRICT
@@ -27,11 +31,12 @@ PLACEHOLDERS = {
 """A cost factor of each basis for a kind the sample case gives none: the test needs a number."""
 
 
-def shallow_case(days=None, folder=None, **sections):
+def shallow_case(days=None, folder=None, uncertain=None, **sections):
     """Return the shallow sample case with the choices of the study tests, plus ``sections``.
 
-    ``days`` keeps only the first days of the sample demand, written to ``folder``, so that a real
-    run is short.
+    ``uncertain`` maps the dotted path of a number of the case to its ``uncertainty`` dict, as
+    ``case.json`` writes it next to the value. ``days`` keeps only the first days of the sample
+    demand, written to ``folder``, so that a real run is short.
     """
     data = from_json(SAMPLE / "case.json")
     where = SAMPLE
@@ -55,6 +60,20 @@ def shallow_case(days=None, folder=None, **sections):
     fixed = data["assumptions"]["finance"]["opex"].setdefault("fixed", {})
     for kind in EQUIPMENT_KINDS:
         fixed.setdefault(kind, {"value": 2, "unit": "%/yr"})
+    for path, uncertainty in (uncertain or {}).items():
+        *parents, last = path.split(".")
+        node = data
+        for part in parents:
+            node = node[part]
+        value = node[last]
+        node[last] = (
+            {**value, "uncertainty": uncertainty}
+            if isinstance(value, dict)
+            else {
+                "value": value,
+                "uncertainty": uncertainty,
+            }
+        )
     return gm.Case.from_dict(data | sections, where)
 
 
@@ -95,3 +114,31 @@ def runs(monkeypatch):
     monkeypatch.setattr(trial, "metric", cost_model)
     monkeypatch.setattr(trial, "constraints", lambda plant, case, results: [])
     return calls
+
+
+FAILS_ABOVE = 200
+"""The electricity price [EUR/MWh] above which a run fails."""
+FAILS_DEEPER = 1700
+"""The depth [m] beyond which a run fails."""
+
+
+@pytest.fixture
+def failing_runs(runs, monkeypatch):
+    """Like ``runs``, but the injected module ``d0.esp`` fails two steps of a run that is too dear.
+
+    A run fails where the electricity price is above ``FAILS_ABOVE`` EUR/MWh or the depth is
+    beyond ``FAILS_DEEPER``; the others run clean.
+    """
+
+    def fake(plant, case=None, plan=None):
+        runs.append((plant, case, plan))
+        results = make_results({"users": {"unmet_demand": [0.0, 0.0, 0.0]}})
+        price = case.assumptions.finance.opex.electricity * 3.6e9
+        if price > FAILS_ABOVE or plant.depth > FAILS_DEEPER:
+            errors = [(row, problem("d0.esp", "out_of_range", "flow too high")) for row in (0, 1)]
+            later = [START + timedelta(hours=3), START + timedelta(hours=4)]
+            results.commit(ResultChunk(later, [3600.0] * 2, {}, [{}] * 2, errors))
+        return results
+
+    monkeypatch.setattr(trial, "simulate", fake)
+    return runs

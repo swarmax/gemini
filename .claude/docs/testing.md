@@ -92,7 +92,10 @@ under `-n auto` or on a busy machine a test is descheduled and its wall time gro
 extra work, so a wall-clock budget flaked on tests that need 0.5 s alone. `process_time` adds the
 CPU of every thread of the process, so work a test hands to its own threads or to the NumPy
 thread pool still counts (`thread_time` would miss it and let a heavy test pass), while sleeping
-and waiting do not count. A worker runs one test at a time, so the process clock belongs to the
+and waiting do not count. The user and system time of child processes the test started and
+waited for (`os.times().children_*`, such as a process pool of parallel study trials) is added,
+so work handed to other processes counts too (a test of parallel trials is charged all their
+CPU, so it uses a few short trials). A worker runs one test at a time, so the process clock belongs to the
 test. The budget stays one second; the failure message shows CPU and elapsed time. Never raise
 the budget, skip a test or mark it flaky to get under it.
 
@@ -169,7 +172,7 @@ timing test: the best of three eager daily years against three times a measured 
 Read-only expensive setup belongs in session or module fixtures. `dataset_path`,
 `selected_frame` and `selected_dataset` load the chosen e2e data once; `fast_frame`,
 `fast_dataset` and `reference_dataset` serve short behaviour checks; `shared_plant` validates
-`gm.plants.example("DoubletHeatPlant")` once; a test that takes `module_class` runs once per shipped module class and
+`example_plant("DoubletHeatPlant")` once; a test that takes `module_class` runs once per shipped module class and
 example plant (`pytest_generate_tests` in `tests/conftest.py`), so each class stays within the
 per-test budget. Never mutate these objects. Request `fresh_plant` for a function-scoped deep
 copy or `module_plant` when one workflow shares a copied plant across assertions. Prefer the
@@ -281,7 +284,7 @@ and its runtime dependencies installed from the repository, about 640 MB, and a 
 `sandbox`. `docker/sandbox.Dockerfile.dockerignore` lets only `pyproject.toml`, `README.md`, `LICENSE`
 and `gemini/` into the build. Nothing in the image needs a network at run time: it runs under
 `--read-only --network none`, the flags of `DockerSandbox`. `inputs/` is not in the image, so
-`gm.plants.example` raises `inputs_missing` there, as in any installed package.
+`example_plant` raises `inputs_missing` there, as in any installed package.
 
 The image lives on the machine that built it. Publishing it needs a registry name, such as
 `ghcr.io/<organisation>/gemini-sandbox:<version>`, a `docker login` with a token that may write
@@ -321,8 +324,8 @@ build equipment from the original `.param` files: the subsurface, wells and exch
 
 `tests/e2e/test_examples.py` has one case per `.py` file under `examples/`. The cases run in both
 profiles (the development profile selects them when any file under `examples/` changes) and are
-exempt from the one-second budget; `TIMEOUT_S` is the time budget of one example, 120 s on the fast
-dataset and a 900 s hang guard on the slow one. Each example runs as a subprocess from an empty
+exempt from the one-second budget; `TIMEOUT_S` is a 900 s hang guard for one example (the hackathon
+flow, marked `slow`, runs for minutes and sets `processes` of `gm.runtime.settings`). Each example runs as a subprocess from an empty
 `tmp_path`, without `PYTHONPATH`, so it imports the installed `gemini`, not the files of the checkout: a
 worktree needs its own venv with its own code installed to test its own code, which proves it is standalone and keeps its output out of the
 repository; `GEMINI_EXAMPLE_DATASET` points it at the selected dataset. On the fast dataset what it

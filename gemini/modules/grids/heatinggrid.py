@@ -51,31 +51,53 @@ class HeatingGrid(Module):
         self.fluid = WATER
 
         # Parameters
-        self.minimum_return_temperature = Parameter(Temperature | None, default=None)
+        self.minimum_return_temperature = Parameter(
+            Temperature | None,
+            default=None,
+            description="Lowest temperature the consumer can cool the water to",
+        )
         self.return_temperature = Parameter(
             Temperature | None,
             default=None,
             structural=True,
             case="demand.heating.return_temperature",
+            description="Return temperature of the heating circuit; empty takes it from the case",
         )
         self.minimum_supply_temperature = Parameter(
-            Temperature | None, default=None, case="demand.heating.supply_temperature"
+            Temperature | None,
+            default=None,
+            case="demand.heating.supply_temperature",
+            description=(
+                "Lowest supply temperature at which the heat demand is served; empty takes it from "
+                "the case"
+            ),
         )
-        self.return_pressure = Parameter(Pressure | None, default=None)
+        self.return_pressure = Parameter(
+            Pressure | None,
+            default=None,
+            description=(
+                "Pressure of the stream leaving the consumer; empty keeps the supply pressure"
+            ),
+        )
 
         # Inlets
         self.supply_in = Inlet(Stream, kind="hot_water")
 
         # Controls
-        self.flow = Control(MassFlow | None, default=None, ge=0)
+        self.flow = Control(
+            MassFlow | None,
+            default=None,
+            ge=0,
+            description="Mass flow of the heating circuit; empty lets the supply stream impose it",
+        )
 
         # Boundaries
-        self.heat_demand = Boundary(Power, ge=0)
+        self.heat_demand = Boundary(Power, ge=0, description="Heat demand of the consumer")
 
         # Outputs
-        self.unmet_demand = Output(Power)
-        self.surplus = Output(Power)
-        self.is_unmet = Output(bool)
+        self.unmet_demand = Output(Power, description="Heat demand not served")
+        self.surplus = Output(Power, description="Heat offered beyond the demand")
+        self.is_unmet = Output(bool, description="True when the demand was not fully served")
 
         # Outlets
         self.return_out = Outlet(Stream, kind="hot_water", offered=True)

@@ -127,13 +127,12 @@ def test_the_skin_of_a_reservoir_enters_its_index():
 def test_an_explicit_child_value_wins_over_the_derived_one():
     """A stated pressure and pipe path stay, and the pump is sized on the stated pressure."""
     path = {
-        "sections": [
-            {"length": 2600.0, "inclination": 1.0, "inner_diameter": 0.2, "roughness": 1e-5}
-        ]
+        "well.section_length": [2600.0],
+        "well.section_inclination": [1.0],
+        "well.section_diameter": [0.2],
+        "well.section_roughness": [1e-5],
     }
-    _, doublet = designed(
-        **{"reservoir.pressure": {"value": 250, "unit": "bar(g)"}, "well.pipe_path": path} | PUMP
-    )
+    _, doublet = designed(**{"reservoir.pressure": {"value": 250, "unit": "bar(g)"}} | path | PUMP)
     assert doublet.reservoir.pressure == pytest.approx(250e5 + 101325)
     assert doublet.well.pipe_path.total_length == 2600
     assert doublet.riser.pipe_path.total_length == 2500
@@ -205,8 +204,11 @@ def test_a_dated_design_derives_at_its_date():
 def test_a_waiting_depth_is_a_missing_parameter():
     """``missing_parameters`` names the geotherm, and a doublet without a depth needs none."""
     doublet = gm.plants.Doublet().set_params("", {"depth": {"value": 2500, "unit": "m"}})
-    assert doublet.missing_parameters()[:2] == ["gradient", "surface_temperature"]
-    assert "gradient" not in gm.plants.Doublet().missing_parameters()
+    assert [item["path"] for item in doublet.missing_parameters()[:2]] == [
+        "gradient",
+        "surface_temperature",
+    ]
+    assert "gradient" not in [item["path"] for item in gm.plants.Doublet().missing_parameters()]
 
 
 def test_a_depth_waits_for_its_geotherm():

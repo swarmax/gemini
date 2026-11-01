@@ -2,17 +2,24 @@
 
 from copy import deepcopy
 
+import numpy as np
+
 from gemini import units
 from gemini.analysis import solves
 from gemini.analysis.wells import WELLHEAD_PRESSURES
 from gemini.case._utils.access import require
-from gemini.errors import ValidationError
+from gemini.errors import PhysicsError, RunError, ValidationError
+from gemini.evaluate import constraints
 from gemini.modules.pumps import InjectionPump
 from gemini.physics.fluid import FluidProperties, heat_capacity_rate
 from gemini.plants._utils.roles import units_of
+from gemini.run import simulate
 from gemini.run._utils.apply import apply_case
 from gemini.study._utils.resize import resized
 from gemini.types import Stream
+
+POLICIES = ("none", "peak")
+"""The backup policies of ``size``."""
 
 
 def _limit(case, quantity, bound, required=True):
@@ -51,7 +58,11 @@ def _takes_doublets(plant):
 
 
 def _doublets(plant, case, peak, notes):
-    """Return the plant on the smallest number of doublets that covers ``peak``, flows set."""
+    """Return ``(plant, heat)``: the plant on the smallest number of doublets that covers ``peak``.
+
+    ``heat`` is the heat [W] of all its doublets at the flow limit and the brine cooling limit.
+    Each doublet is rated for the largest flow the case lets it run: the flow limit.
+    """
     density = require(case, "environment.fluid.density")
     flow_max = _limit(case, "production_flow", "max")
     cooling_max = _limit(case, "brine_cooling", "max")
@@ -75,38 +86,103 @@ def _doublets(plant, case, peak, notes):
             f"of {peak:.4g} W",
         }
     )
-    need = peak / (count * heat_capacity_rate(density, FluidProperties().cp_l) * cooling_max)
-    flow = min(flow_max, need)
-    flow_min = _limit(case, "production_flow", "min", required=False)
-    if flow_min is not None:
-        flow = max(flow_min, flow)
     for path in units_of(design, "doublet"):
-        design.set_params(path, {"nominal_flow": units.Quantity(flow, "m3/s")})
-        _note(
-            notes, f"{path}.nominal_flow", flow, "m3/s", "the heating peak shared by the doublets"
-        )
-    return design
+        design.set_params(path, {"nominal_flow": units.Quantity(flow_max, "m3/s")})
+        _note(notes, f"{path}.nominal_flow", flow_max, "m3/s", "the flow limit of the case")
+    return design, count * heat
 
 
-def _capacities(design, case, notes):
+def _closes_series(design, path):
+    """Whether the chiller at ``path`` is the last of its chilled-water circuit."""
+    module = design.get_submodule(path)
+    port = "source_out" if hasattr(module, "source_out") else "chilled_out"
+    chillers = set(units_of(design, "chiller")) - {path}
+    return not chillers.intersection(design.feeds(f"{path}.{port}"))
+
+
+def _drive_heat(design, case):
+    """Return the drive heat [W] each step of the demand asks of the boilers for sorption chillers.
+
+    A sorption chiller (a unit with a ``thermal_cop``) whose generator is fed by a boiler turns
+    the cooling demand into evaporator duty, upstream units first, each up to its capacity, and
+    draws that duty over its ``thermal_cop`` from the heating side. The chillers must be sized.
+    """
+    applied = apply_case(design, case)
+    chillers = units_of(design, "chiller")
+    fed = set()
+    for boiler in units_of(design, "boiler"):
+        fed.update(design.feeds(f"{boiler}.fluid_out"))
+    drive = [
+        path
+        for path in chillers
+        if path in fed and getattr(applied.get_submodule(path), "thermal_cop", None) is not None
+    ]
+
+    def downstream(path):
+        return len(set(chillers) & set(design.feeds(f"{path}.chilled_out")))
+
+    left = case.demand.frame["cooling_demand"].to_numpy(dtype=float).copy()
+    heat = np.zeros_like(left)
+    for path in sorted(drive, key=downstream, reverse=True):
+        module = applied.get_submodule(path)
+        duty = np.minimum(left, module.capacity)
+        left -= duty
+        heat += duty / module.thermal_cop
+    return heat
+
+
+def _boiler_peak(design, case, backup, cover):
+    """Return the heat [W] the boilers are rated for under the policy ``backup``.
+
+    The step where the heating demand and the drive heat of the sorption chillers peak together
+    sets it. ``"peak"`` rates for all of it; ``"none"`` for what the doublets cannot reach: that
+    step less the heat of the doublets, at least the part of it the reservoir temperature
+    cannot reach.
+    """
+    heating = case.demand.frame["heating_demand"].to_numpy(dtype=float)
+    total = float((heating + _drive_heat(design, case)).max())
+    if backup == "peak" or not units_of(design, "doublet"):
+        return total
+    return max(total - cover, _lift_share(design, case) * total)
+
+
+def _capacities(design, case, notes, backup, cover):
     """Set the capacity of each heat pump, boiler and chiller from the demand peaks."""
-    for role, service in (("boiler", "heating"), ("heat_pump", "heating"), ("chiller", "cooling")):
+    for role, service in (("chiller", "cooling"), ("boiler", "heating"), ("heat_pump", "heating")):
         paths = units_of(design, role)
         if not paths:
             continue
         peak = _peak(case, service)
-        part = _lift_share(design, case) if role == "heat_pump" else 1.0
-        if part <= 0:
-            _skip(notes, paths, "the reservoir is hotter than the heating supply temperature")
-            continue
-        share = part * peak / len(paths)
-        for path in paths:
-            design.set_params(path, {"capacity": units.Quantity(share, "W")})
-            reason = (
-                f"{part:.3g} of the {service} peak of {peak:.4g} W "
-                f"shared by {len(paths)} {role} unit(s)"
+        if role == "heat_pump":
+            part = _lift_share(design, case)
+            duty = part * peak
+        elif role == "boiler":
+            duty = _boiler_peak(design, case, backup, cover)
+            part = duty / peak
+        else:
+            part, duty = 1.0, peak
+        if duty <= 0:
+            why = (
+                "the reservoir is hotter than the heating supply temperature"
+                if role == "heat_pump"
+                else "the doublets cover the whole heating peak"
             )
-            _note(notes, f"{path}.capacity", share, "W", reason)
+            _skip(notes, paths, why)
+            continue
+        for path in paths:
+            if role == "chiller" and _closes_series(design, path):
+                value, reason = (
+                    peak,
+                    f"the whole {service} peak of {peak:.4g} W: it closes the series",
+                )
+            else:
+                value = duty / len(paths)
+                reason = (
+                    f"{part:.3g} of the {service} peak of {peak:.4g} W "
+                    f"shared by {len(paths)} {role} unit(s)"
+                )
+            design.set_params(path, {"capacity": units.Quantity(value, "W")})
+            _note(notes, f"{path}.capacity", value, "W", reason)
     for role in ("chp", "heat_exchanger"):
         _skip(notes, units_of(design, role), "not sized from the demand")
 
@@ -203,7 +279,26 @@ def _lift_share(design, case):
     return min(1.0, max(0.0, (supply - reservoir) / (supply - back)))
 
 
-def size(plant, case):
+def _check(design, case, notes):
+    """Simulate the sized plant once and note each constraint it breaks."""
+    notes["broken"] = []
+    try:
+        results = simulate(design, case)
+    except (ValidationError, PhysicsError, RunError) as error:
+        notes["simulation"] = f"not simulated: {error.code}: {error}"
+        return
+    notes["simulation"] = "simulated"
+    for item in constraints(design, case, results):
+        if item["passed"] is False:
+            notes["broken"].append(
+                {
+                    key: item[key]
+                    for key in ("unit_path", "role", "quantity", "value", "limit", "worst_step")
+                }
+            )
+
+
+def size(plant, case, backup=None):
     """Return a new plant with first sizes from the case; the plant itself is not changed.
 
     The sizes use gemini physics only. In order:
@@ -211,16 +306,17 @@ def size(plant, case):
     - the number of doublets, the smallest in ``case.choices.doublets`` whose heat at the flow
       limit and the brine cooling limit of the case's constraints covers the heating peak (the
       largest, with a note, when none does), for a plant class that takes the structural size
-      ``doublets``; the nominal flow of each doublet, the heating peak shared by them, kept
-      within the flow limits;
-    - the capacity of each ``boiler``: the whole heating peak shared by the units of the role, so
-      that the boiler alone carries the peak when a doublet is out (it is the one unit that does
-      not depend on the doublets); the capacity of each ``heat_pump``: the part of the heating
-      peak the reservoir cannot reach, ``(supply - reservoir) / (supply - return)`` of it, shared
-      by the units of the role, the reservoir temperature taken at the depth of the plant and
-      the temperatures from ``demand.heating`` (a heat pump is left unsized, with a note, when
-      the reservoir is hotter than the supply temperature); the capacity of each ``chiller``: the
-      cooling peak shared likewise;
+      ``doublets``; the nominal flow of each doublet is the flow limit, the largest flow the case
+      lets it run, so that its share in ``gm.evaluate.capacities`` is at most one;
+    - the capacity of each ``boiler`` by the policy ``backup`` (below); the capacity of each
+      ``heat_pump``: the part of the heating peak the reservoir cannot reach, ``(supply -
+      reservoir) / (supply - return)`` of it, shared by the units of the role, the reservoir
+      temperature taken at the depth of the plant and the temperatures from ``demand.heating`` (a
+      heat pump is left unsized, with a note, when the reservoir is hotter than the supply
+      temperature); the capacity of each ``chiller``: the cooling peak shared by the units, except
+      the chiller that closes the chilled-water series, which gets the whole peak because a
+      sorption unit delivers less than its rating when its characteristic map says so at the peak
+      conditions and the last chiller makes up the difference;
     - the ``nominal_flow`` and ``nominal_head`` of each ``InjectionPump``: the total nominal flow
       of the doublets its brine reaches, and the largest pressure rise one of them asks, the
       wellhead pressure that injects its flow less ``nominal_wellhead_pressure`` as the best
@@ -229,12 +325,13 @@ def size(plant, case):
       of a ``NodalDoublet``, or whose doublet lacks a depth or a wellhead pressure, is left
       unsized with a note.
 
-    The exchanger is taken as ideal for the heat pump share: a finite approach leaves the water
-    colder at the heat pump, which a boiler downstream makes up; a plant with a heat pump and no
-    boiler may then fall short of its supply temperature at the peak.
+    The heat pump share assumes an ideal exchanger: a finite approach leaves the water colder at
+    the heat pump, which a boiler downstream makes up; a plant with a heat pump and no boiler may
+    then fall short of its supply temperature at the peak.
 
     A size that is not computed for a module kind (``chp``, ``heat_exchanger``, a heat pump that
-    is not needed) leaves it unchanged and lists it.
+    is not needed) leaves it unchanged and lists it. The sized plant is then simulated once on the
+    case and every constraint it breaks is listed: size never hides an infeasible start.
 
     Parameters
     ----------
@@ -243,27 +340,51 @@ def size(plant, case):
     case : Case
         The demand, the constraints on each doublet (a maximum production flow and brine cooling),
         the choices of doublets, the reservoir and the fluid.
+    backup : str
+        The design policy of the top-up units, required (it has no default):
+
+        - ``"none"``: a boiler covers only the heat the doublets cannot reach, the larger of the
+          step of the heating plus the drive heat of the sorption chillers less the heat of the
+          doublets at their limits and the part of it that the reservoir temperature cannot
+          reach; a plant without doublets gets the peak;
+        - ``"peak"``: a boiler covers the whole heating plus drive heat of the sorption chillers
+          (the unit that draws heat from the boiler) at the step where they peak together, with
+          the doublets off, so that it carries the peak when a doublet is out.
 
     Returns
     -------
     Plant
-        A new plant. Its attribute ``sizing`` holds the note: ``{"sized": [...], "unchanged":
-        [...]}``, each size ``{path, value, reason}`` with a ``Quantity`` value and each unit left
-        unchanged ``{path, reason}``.
+        A new plant. Its attribute ``sizing`` holds the notes: ``{"sized": [...], "unchanged":
+        [...], "broken": [...], "simulation": str}``. Each size is ``{path, value, reason}`` with a
+        ``Quantity`` value, each unit left unchanged ``{path, reason}``, each broken constraint
+        ``{unit_path, role, quantity, value, limit, worst_step}`` as ``gm.evaluate.constraints``
+        gives it, and ``simulation`` says ``simulated``, or ``not simulated: <code>: <reason>``
+        when the sized plant cannot run (a value it still lacks, a design the case refuses).
 
     Raises
     ------
     ValidationError
-        ``missing_value`` naming the path of what a size needs and the case or plant lacks;
-        ``invalid_design`` for a plant that has doublets but whose class takes no structural size
-        ``doublets``.
+        ``missing_value`` naming ``backup`` or the path of what a size needs and the case or plant
+        lacks; ``invalid_value`` for a ``backup`` that is not a policy; ``invalid_design`` for a
+        plant that has doublets but whose class takes no structural size ``doublets``.
     """
+    if backup is None:
+        raise ValidationError(
+            f"backup is missing; expected one of {POLICIES} (it has no default)",
+            path="backup",
+            code="missing_value",
+        )
+    if backup not in POLICIES:
+        raise ValidationError(
+            f"backup = {backup!r}; expected one of {POLICIES}", path="backup", code="invalid_value"
+        )
     require(case, "demand")
     notes = {"sized": [], "unchanged": []}
-    design = deepcopy(plant)
+    design, cover = deepcopy(plant), 0.0
     if units_of(plant, "doublet"):
-        design = _doublets(plant, case, _peak(case, "heating"), notes)
-    _capacities(design, case, notes)
+        design, cover = _doublets(plant, case, _peak(case, "heating"), notes)
+    _capacities(design, case, notes, backup, cover)
     _injection_pumps(design, case, notes)
+    _check(design, case, notes)
     design.sizing = notes
     return design

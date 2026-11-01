@@ -81,6 +81,10 @@ def mean_velocity(mass_flow: float, density: float, diameter: float) -> float:
     return mass_flow / density / circle_area(diameter)
 
 
+VERTICAL = math.pi / 2
+"""The inclination of a vertical well [rad]."""
+
+
 class PipeSection(BaseModel):
     """A constant-diameter pipe interval, ordered from surface to bottom."""
 
@@ -135,23 +139,56 @@ class PipePath(BaseModel):
                 return i
         return len(self.sections) - 1
 
-    def subpath(self, start_md: float, end_md: float) -> "PipePath":
-        """Slice at arbitrary depths [m], retaining the intersected section geometry."""
-        low, high = sorted((start_md, end_md))
-        if low < 0 or high > self.total_length:
-            raise PhysicsError(
-                f"PipePath: depth interval = [{low}, {high}] m; "
-                f"expected an interval inside [0, {self.total_length}]"
+
+def path_of(lengths, inclinations, diameters, roughnesses) -> PipePath:
+    """Return the validated path of sections given by parallel lists, surface to bottom [m, rad]."""
+    return PipePath(
+        sections=[
+            PipeSection(length=length, inclination=angle, inner_diameter=diameter, roughness=rough)
+            for length, angle, diameter, rough in zip(lengths, inclinations, diameters, roughnesses)
+        ]
+    )
+
+
+def section_values(path) -> dict:
+    """Return the section lists of a well, ``section_<field>`` of each parameter, from a path."""
+    return {
+        "section_length": [section.length for section in path.sections],
+        "section_inclination": [section.inclination for section in path.sections],
+        "section_diameter": [section.inner_diameter for section in path.sections],
+        "section_roughness": [section.roughness for section in path.sections],
+    }
+
+
+def path_between(lengths, inclinations, diameters, roughnesses, start_md, end_md) -> PipePath:
+    """Return the sections cut to the interval between two measured depths [m], in either order.
+
+    Every section is kept, with the length of its overlap with the interval (zero outside it), so
+    the path has the shape of the whole one whatever the depths, and the lengths, depths and the
+    other values may all be traced numbers. A depth outside the path raises ``PhysicsError``; the
+    sections are not validated models, because their values may be traced.
+    """
+    low, high = ops.minimum(start_md, end_md), ops.maximum(start_md, end_md)
+    total = sum(lengths)
+    ops.check(
+        ops.logical_and(low >= 0, high <= total),
+        PhysicsError,
+        "PipePath: depth interval = [{low}, {high}] m; expected an interval inside [0, {total}]",
+        low=low,
+        high=high,
+        total=total,
+    )
+    sections, depth = [], 0.0
+    for length, angle, diameter, rough in zip(lengths, inclinations, diameters, roughnesses):
+        end = depth + length
+        overlap = ops.maximum(ops.minimum(high, end) - ops.maximum(low, depth), 0.0)
+        sections.append(
+            PipeSection.model_construct(
+                length=overlap, inclination=angle, inner_diameter=diameter, roughness=rough
             )
-        depth = 0.0
-        selected = []
-        for section in self.sections:
-            end = depth + section.length
-            length = min(high, end) - max(low, depth)
-            if length > 0:
-                selected.append(section.model_copy(update={"length": length}))
-            depth = end
-        return PipePath(sections=selected)
+        )
+        depth = end
+    return PipePath.model_construct(sections=sections)
 
 
 def vertical_path(depth: float, diameter: float, roughness: float) -> PipePath:
@@ -177,7 +214,7 @@ def vertical_path(depth: float, diameter: float, roughness: float) -> PipePath:
     Source: Geometry; no published source is needed.
     """
     section = PipeSection(
-        length=depth, inclination=math.pi / 2, inner_diameter=diameter, roughness=roughness
+        length=depth, inclination=VERTICAL, inner_diameter=diameter, roughness=roughness
     )
     return PipePath(sections=[section])
 

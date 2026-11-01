@@ -468,7 +468,7 @@ def _well_params(properties, prefix, base_path):
         for row in properties.get(f"{prefix}_tally_table", [])
     ]
     return dict(
-        pipe_path=geometry.build_path(table, tally),
+        **geometry.section_values(geometry.build_path(table, tally)),
         friction_correlation=stated_or_default(properties, kind, f"{prefix}_friction_correlation"),
         two_phase_friction_correlation=stated_or_default(
             properties, kind, f"{prefix}_friction_correlation_2p"

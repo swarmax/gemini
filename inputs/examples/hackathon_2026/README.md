@@ -96,6 +96,21 @@ adsorption chiller and compression chiller 0.3 EUR/W, heat exchanger 0.5 EUR/(W/
 0.1 EUR/W, pipe 500 EUR/m, flare 100000 EUR, gas makeup 50000 EUR; fixed opex per kind of 0.5 to
 2 %/yr of its capex (heat exchanger 1, drilling 1) except the three kinds cited below.
 
+### Uncertainty of the example
+
+Six values carry an `uncertainty` next to their value in `case.json`. The ranges are assumptions of
+the example, not from a source, chosen wide around the cited or placeholder value; `gm.study.sample` draws
+them and `gm.study.sensitivity` runs each at its ends. A normal run, `size` and `minimize` use only the value.
+
+| Value | Value in the case | Distribution (assumption) |
+| --- | --- | --- |
+| `opex.electricity` | 105.75 EUR/MWh | uniform 80 to 140 EUR/MWh |
+| `opex.gas` | 39.92 EUR/MWh | triangular 25 to 70 EUR/MWh, mode 39.92 |
+| `opex.co2` | 57.03 EUR/t | triangular 30 to 110 EUR/t, mode 57.03 |
+| `environment.reservoir.permeability` | 200 mD | triangular 100 to 400 mD, mode 200 |
+| `environment.ground.gradient` | 30 K/km | normal, std 2 K/km, cut to 25 to 35 K/km |
+| `finance.discount_rate` | 0.05 | normal, std 0.01, cut to 0.02 to 0.08 |
+
 Cited, price year 2015, currency EUR. Conversions to 2015 use the euro-area HICP annual average
 index, all items (Eurostat `prc_hicp_aind`, `INX_A_AVG`, EA, 2015 = 100: 2015 100.00, 2020 105.06,
 2025 128.75, update of 2026-02-06). The catalogue below is Danish Energy Agency, Technology Data for

@@ -12,6 +12,7 @@ import gemini as gm
 from gemini._utils import paths
 from gemini.modules import Module
 from tests.cpu_budget import BUDGET_S, exceeds_budget, measure_cpu
+from tests.fixtures.sample_cases import example_plant
 
 TIER_MARKERS = {
     "unit": pytest.mark.unit,
@@ -76,7 +77,7 @@ def shared_plant():
     """Load and validate one read-only shared plant design."""
     with warnings.catch_warnings(record=True) as warnings_seen:
         warnings.simplefilter("always")
-        plant = gm.plants.example("DoubletHeatPlant")
+        plant = example_plant("DoubletHeatPlant")
     assert not warnings_seen
     return plant
 

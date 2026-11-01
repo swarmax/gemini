@@ -9,76 +9,10 @@
     "reservoir.top_depth": {"value": 1800, "unit": "m"},
     "reservoir.productivity_index": {"value": 5.833333333333333e-08, "unit": "m3/s/Pa"},
     "reservoir.wellbore_radius": {"value": 0.0765, "unit": "m"},
-    "well.pipe_path": {
-      "sections": [
-        {
-          "length": 400.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 150.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 150.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 362.0,
-          "inclination": 1.312662130424935,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 188.0,
-          "inclination": 0.9238027730805987,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 100.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 250.0,
-          "inclination": 0.9272934315845873,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 550.0,
-          "inclination": 0.814370628980554,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 250.0,
-          "inclination": 0.9272934315845873,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 100.0,
-          "inclination": 0.5235987755982988,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 300.0,
-          "inclination": 0.5235987755982988,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        }
-      ]
-    },
+    "well.section_length": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0],
+    "well.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988],
+    "well.section_diameter": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778],
+    "well.section_roughness": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05],
     "well.soil_temperature": {"value": 15, "unit": "degC"},
     "well.segment": "below_esp",
     "well.esp_depth": {"value": 600, "unit": "m"},
@@ -105,101 +39,17 @@
     "esp.maximum_flow": {"value": 178, "unit": "m3/h"},
     "esp.best_efficiency_flow": {"value": 129.98, "unit": "m3/h"},
     "esp.tubing": {"value": 0.1778, "unit": "m"},
-    "riser.pipe_path": {
-      "sections": [
-        {
-          "length": 400.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 150.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 150.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 362.0,
-          "inclination": 1.312662130424935,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 188.0,
-          "inclination": 0.9238027730805987,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 100.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 250.0,
-          "inclination": 0.9272934315845873,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 550.0,
-          "inclination": 0.814370628980554,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 250.0,
-          "inclination": 0.9272934315845873,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 100.0,
-          "inclination": 0.5235987755982988,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 300.0,
-          "inclination": 0.5235987755982988,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        }
-      ]
-    },
+    "riser.section_length": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0],
+    "riser.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988],
+    "riser.section_diameter": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778],
+    "riser.section_roughness": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05],
     "riser.soil_temperature": {"value": 15, "unit": "degC"},
     "riser.segment": "above_esp",
     "riser.esp_depth": {"value": 600, "unit": "m"},
-    "injector.pipe_path": {
-      "sections": [
-        {
-          "length": 500.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 500.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 1000.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        }
-      ]
-    },
+    "injector.section_length": [500.0, 500.0, 1000.0],
+    "injector.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966],
+    "injector.section_diameter": [0.1778, 0.1778, 0.1778],
+    "injector.section_roughness": [2e-05, 2e-05, 2e-05],
     "injector.soil_temperature": {"value": 15, "unit": "degC"},
     "sink.pressure": {"value": 220, "unit": "bar"},
     "sink.temperature": {"value": 80, "unit": "degC"},
@@ -354,76 +204,10 @@
       {
         "valid_from": "2020-01-01T00:00:00Z",
         "params": {
-          "pipe_path": {
-            "sections": [
-              {
-                "length": 400.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              },
-              {
-                "length": 150.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              },
-              {
-                "length": 150.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 362.0,
-                "inclination": 1.312662130424935,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 188.0,
-                "inclination": 0.9238027730805987,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 100.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 250.0,
-                "inclination": 0.9272934315845873,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 550.0,
-                "inclination": 0.814370628980554,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 250.0,
-                "inclination": 0.9272934315845873,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 100.0,
-                "inclination": 0.5235987755982988,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              },
-              {
-                "length": 300.0,
-                "inclination": 0.5235987755982988,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              }
-            ]
-          },
+          "section_length": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0],
+          "section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988],
+          "section_diameter": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778],
+          "section_roughness": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05],
           "friction_correlation": "darcy_weisbach",
           "two_phase_friction_correlation": "BeggsBrill",
           "correction_factors": [
@@ -477,76 +261,10 @@
       {
         "valid_from": "2020-01-01T00:00:00Z",
         "params": {
-          "pipe_path": {
-            "sections": [
-              {
-                "length": 400.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              },
-              {
-                "length": 150.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              },
-              {
-                "length": 150.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 362.0,
-                "inclination": 1.312662130424935,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 188.0,
-                "inclination": 0.9238027730805987,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 100.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 250.0,
-                "inclination": 0.9272934315845873,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 550.0,
-                "inclination": 0.814370628980554,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 250.0,
-                "inclination": 0.9272934315845873,
-                "inner_diameter": 0.273,
-                "roughness": 2e-05
-              },
-              {
-                "length": 100.0,
-                "inclination": 0.5235987755982988,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              },
-              {
-                "length": 300.0,
-                "inclination": 0.5235987755982988,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              }
-            ]
-          },
+          "section_length": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0],
+          "section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988],
+          "section_diameter": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778],
+          "section_roughness": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05],
           "friction_correlation": "darcy_weisbach",
           "two_phase_friction_correlation": "BeggsBrill",
           "correction_factors": [
@@ -564,28 +282,10 @@
       {
         "valid_from": "2020-01-01T00:00:00Z",
         "params": {
-          "pipe_path": {
-            "sections": [
-              {
-                "length": 500.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              },
-              {
-                "length": 500.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              },
-              {
-                "length": 1000.0,
-                "inclination": 1.5707963267948966,
-                "inner_diameter": 0.1778,
-                "roughness": 2e-05
-              }
-            ]
-          },
+          "section_length": [500.0, 500.0, 1000.0],
+          "section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966],
+          "section_diameter": [0.1778, 0.1778, 0.1778],
+          "section_roughness": [2e-05, 2e-05, 2e-05],
           "friction_correlation": "darcy_weisbach",
           "two_phase_friction_correlation": "BeggsBrill",
           "correction_factors": [

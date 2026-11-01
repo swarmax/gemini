@@ -12,7 +12,7 @@ from gemini.errors import PhysicsError, ValidationError
 from gemini.modules.pumps import ESP, InjectionPump
 from gemini.modules.subsurface import InjectionReservoir, ProductionReservoir
 from gemini.modules.wells import InjectionWell, ProductionWell
-from gemini.physics.geometry import build_path
+from gemini.physics.geometry import build_path, section_values
 from gemini.types.flows import Stream
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
@@ -45,6 +45,16 @@ def vertical_path(depth):
     return build_path(rows)
 
 
+def segment_of(path, segment):
+    """Return the values of an upstream producer well of ``path``, cut at the ESP at 650 m."""
+    return {
+        **section_values(path),
+        "soil_temperature": 293.15,
+        "segment": segment,
+        "esp_depth": 650,
+    }
+
+
 @pytest.fixture(scope="module")
 def producer():
     """Return reservoir, lower well, ESP and riser of the upstream producer."""
@@ -52,14 +62,8 @@ def producer():
         "", {"pressure": 250e5, "productivity_index": INDEX, "top_depth": 2400, **RESERVOIR}
     )
     path = vertical_path(2400)
-    well = ProductionWell().set_params(
-        "",
-        {"pipe_path": path, "soil_temperature": 293.15, "segment": "below_esp", "esp_depth": 650},
-    )
-    riser = ProductionWell().set_params(
-        "",
-        {"pipe_path": path, "soil_temperature": 293.15, "segment": "above_esp", "esp_depth": 650},
-    )
+    well = ProductionWell().set_params("", segment_of(path, "below_esp"))
+    riser = ProductionWell().set_params("", segment_of(path, "above_esp"))
     esp = ESP().set_params(
         "",
         {
@@ -89,7 +93,7 @@ def producer():
 def injector():
     """Return the upstream injection well and receiving aquifer."""
     well = InjectionWell().set_params(
-        "", {"pipe_path": vertical_path(3100), "soil_temperature": 293.15}
+        "", {**section_values(vertical_path(3100)), "soil_temperature": 293.15}
     )
     sink = InjectionReservoir().set_params(
         "", {"pressure": 240e5, "injectivity_index": INDEX, "top_depth": 3100, **RESERVOIR}
@@ -136,7 +140,7 @@ def test_production_rate_without_esp():
         "", {"pressure": 250e5, "productivity_index": INDEX, "top_depth": 2400, **RESERVOIR}
     )
     well = ProductionWell().set_params(
-        "", {"pipe_path": vertical_path(2400), "soil_temperature": 293.15}
+        "", {**section_values(vertical_path(2400)), "soil_temperature": 293.15}
     )
     rate = nodal.solve_production_rate(reservoir, well, 3e5, (1, 60))
     arrived = well(bottom_in=reservoir.sandface_stream(rate)).outlets.wellhead_out
@@ -155,7 +159,7 @@ def test_injection_rate_balances_well_and_aquifer(injector):
 def test_injection_pressure_balances_a_shallow_injector():
     """A 2000 m injector into a 230 bar aquifer needs a pump; the solved pressure balances."""
     well = InjectionWell().set_params(
-        "", {"pipe_path": vertical_path(2000), "soil_temperature": 293.15}
+        "", {**section_values(vertical_path(2000)), "soil_temperature": 293.15}
     )
     sink = InjectionReservoir().set_params(
         "", {"pressure": 230e5, "injectivity_index": INDEX, "top_depth": 2000, **RESERVOIR}
@@ -219,7 +223,7 @@ def test_injection_pressure_gap_to_upstream_is_the_friction_sign():
     ]
     rows = [dict(MD=md, TVD=tvd, ID=bore, roughness=2e-5) for md, tvd, bore in stations]
     well = InjectionWell().set_params(
-        "", {"pipe_path": build_path(rows), "soil_temperature": 293.15}
+        "", {**section_values(build_path(rows)), "soil_temperature": 293.15}
     )
     sink = InjectionReservoir().set_params(
         "", {"pressure": 180e5, "injectivity_index": 2.3 / 3.6e8, "top_depth": 1883, **RESERVOIR}

@@ -20,34 +20,10 @@
     "doublet.reservoir.skin": 0.0,
     "doublet.reservoir.wellbore_radius": {"value": 0.1, "unit": "m"},
     "doublet.reservoir.decline_threshold": 0.15,
-    "doublet.well.pipe_path": {
-      "sections": [
-        {
-          "length": 300.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 100.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 200.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 1800.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        }
-      ]
-    },
+    "doublet.well.section_length": [300.0, 100.0, 200.0, 1800.0],
+    "doublet.well.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.5707963267948966],
+    "doublet.well.section_diameter": [0.15, 0.15, 0.15, 0.15],
+    "doublet.well.section_roughness": [0.01, 0.01, 0.01, 0.01],
     "doublet.well.friction_correlation": "darcy_weisbach",
     "doublet.well.two_phase_friction_correlation": "BeggsBrill",
     "doublet.well.correction_factors": [
@@ -87,34 +63,10 @@
     ],
     "doublet.esp.tubing": null,
     "doublet.esp.drift_threshold": 0.1,
-    "doublet.riser.pipe_path": {
-      "sections": [
-        {
-          "length": 300.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 100.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 200.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 1800.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        }
-      ]
-    },
+    "doublet.riser.section_length": [300.0, 100.0, 200.0, 1800.0],
+    "doublet.riser.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.5707963267948966],
+    "doublet.riser.section_diameter": [0.15, 0.15, 0.15, 0.15],
+    "doublet.riser.section_roughness": [0.01, 0.01, 0.01, 0.01],
     "doublet.riser.friction_correlation": "darcy_weisbach",
     "doublet.riser.two_phase_friction_correlation": "BeggsBrill",
     "doublet.riser.correction_factors": [
@@ -130,34 +82,10 @@
     "doublet.injection_pump.efficiency": 0.8,
     "doublet.injection_pump.head_coefficients": null,
     "doublet.injection_pump.power_coefficients": null,
-    "doublet.injector.pipe_path": {
-      "sections": [
-        {
-          "length": 300.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 100.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 200.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 2500.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        }
-      ]
-    },
+    "doublet.injector.section_length": [300.0, 100.0, 200.0, 2500.0],
+    "doublet.injector.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.5707963267948966],
+    "doublet.injector.section_diameter": [0.15, 0.15, 0.15, 0.15],
+    "doublet.injector.section_roughness": [0.01, 0.01, 0.01, 0.01],
     "doublet.injector.friction_correlation": "darcy_weisbach",
     "doublet.injector.two_phase_friction_correlation": "BeggsBrill",
     "doublet.injector.correction_factors": [

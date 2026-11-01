@@ -24,7 +24,7 @@ from gemini.runtime import settings
 from gemini.units import Quantity
 from tests.fixtures.errors import raises
 from tests.fixtures.parity import BACKENDS
-from tests.fixtures.sample_cases import template_dict
+from tests.fixtures.sample_cases import example_plant, template_dict
 
 DESIGN = {
     "depth": {"value": 2500, "unit": "m"},
@@ -598,7 +598,7 @@ def test_a_plan_keeps_the_unit_of_the_demand():
 
 def test_the_doublet_heat_plant_runs_a_plan_within_its_pump_curve():
     """Its bindings read m3/s and a plan is in kg/s: the flow is what was planned, in range."""
-    plant = gm.plants.example("DoubletHeatPlant")
+    plant = example_plant("DoubletHeatPlant")
     wide = constraint("production_flow", min=(50, "m3/h"), max=(165, "m3/h"), when="running")
     case = case_of(demand(5e6, 3e7), limits=[wide, CONSTRAINTS[1]])
     results = gm.simulate(plant, case, on_error="record")

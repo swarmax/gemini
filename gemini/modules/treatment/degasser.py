@@ -49,18 +49,42 @@ class Degasser(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.outlet_pressure = Parameter(Pressure | None, default=None)
-        self.nominal_pressure_drop = Parameter(
-            PressureDifference, default=_physics.DEFAULT_DEGASSER_DROP, ge=0
+        self.outlet_pressure = Parameter(
+            Pressure | None,
+            default=None,
+            description=(
+                "Pressure of the vessel and both outlets; empty keeps the inlet pressure less the "
+                "pressure drop"
+            ),
         )
-        self.heat_transfer_coefficient = Parameter(float, default=0, ge=0)
-        self.separation_efficiency = Parameter(Fraction, default=0, structural=True)
+        self.nominal_pressure_drop = Parameter(
+            PressureDifference,
+            default=_physics.DEFAULT_DEGASSER_DROP,
+            ge=0,
+            description="Pressure drop across the vessel at the nominal flow",
+        )
+        self.heat_transfer_coefficient = Parameter(
+            float,
+            default=0,
+            ge=0,
+            description="Heat loss of the vessel per unit of temperature difference",
+        )
+        self.separation_efficiency = Parameter(
+            Fraction,
+            default=0,
+            structural=True,
+            description="Share of the inlet free gas that leaves through the gas outlet",
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="brine")
 
         # Outputs
-        self.pressure_drop = Output(PressureDifference, soft_sensor=True)
+        self.pressure_drop = Output(
+            PressureDifference,
+            soft_sensor=True,
+            description="Pressure lost by the stream through the unit",
+        )
 
         # Outlets
         self.liquid_out = Outlet(Stream, kind="brine")

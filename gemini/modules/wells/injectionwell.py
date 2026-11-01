@@ -27,10 +27,19 @@ class InjectionWell(_Well):
         self.wellhead_in = Inlet(Stream, kind="brine")
 
         # Outputs
-        self.friction_pressure_drop = Output(PressureDifference)
-        self.gravity_pressure_drop = Output(PressureDifference)
-        self.section_pressure = Output(list[Pressure])
-        self.section_temperature = Output(list[Temperature])
+        self.friction_pressure_drop = Output(
+            PressureDifference, description="Pressure drop caused by friction along the well"
+        )
+        self.gravity_pressure_drop = Output(
+            PressureDifference,
+            description="Pressure change caused by the weight of the fluid column",
+        )
+        self.section_pressure = Output(
+            list[Pressure], description="Pressure at each section of the well"
+        )
+        self.section_temperature = Output(
+            list[Temperature], description="Temperature at each section of the well"
+        )
 
         # Outlets
         self.bottom_out = Outlet(Stream, kind="brine")
@@ -42,7 +51,7 @@ class InjectionWell(_Well):
         # Outlets
         wellhead = inlets.wellhead_in
         stream = self._traversal_stream(wellhead)
-        result = self.traverse(stream, 0, self.pipe_path.total_length, "down")
+        result = self.traverse(stream, 0, self.total_length, "down")
         slope, offset = self.correction_factors
 
         bottom = stream.with_(

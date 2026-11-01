@@ -8,9 +8,10 @@ import pytest
 import gemini as gm
 from gemini import units
 from gemini.analysis import wells
-from gemini.physics.geometry import vertical_path
+from gemini.physics.geometry import section_values, vertical_path
 from gemini.types.flows import Stream
 from tests.fixtures.errors import raises
+from tests.fixtures.sample_cases import example_plant
 
 BAR = 1e5
 CASE = {"wellhead_pressure": {"value": 4.6, "unit": "bar"}, "rates": [20, 45], "frequency": 55.484}
@@ -72,7 +73,7 @@ def test_the_plant_is_not_changed(shared_plant, doublet_curves):
 
 def test_a_bracket_outside_the_well_model_fails_that_case_only():
     """Rates up to 200 kg/s drive the pressure below zero: the case carries the error."""
-    plant = gm.plants.example("DoubletHeatPlant")
+    plant = example_plant("DoubletHeatPlant")
     cases = [dict(CASE, rates=[20, 200]), CASE]
     with raises(gm.errors.PhysicsError, "out_of_range"):
         wells.nodal(plant, "doublet", cases)
@@ -108,11 +109,11 @@ def injector():
         {"well": gm.modules.InjectionWell(), "sink": gm.modules.InjectionReservoir()}
     )
     plant._add_module("limb", limb)
-    path = vertical_path(DEPTH, WIDE, 2e-5).model_dump()
+    path = section_values(vertical_path(DEPTH, WIDE, 2e-5))
     limb["well"].set_params(
         "",
         {
-            "pipe_path": path,
+            **path,
             "soil_temperature": {"value": 50, "unit": "degC"},
             "heat_transfer_coefficient": 0.0,
         },
@@ -255,14 +256,6 @@ def test_pump_curve_needs_an_esp(shared_plant):
     """A path that is not an ESP is refused."""
     with pytest.raises(gm.errors.ValidationError, match="ESP"):
         wells.pump_curve(shared_plant, "doublet.well")
-
-
-def test_injectivity_and_pump_calibration_are_not_built_yet():
-    """Both keep their final signature and say so."""
-    with pytest.raises(gm.errors.NotImplementedYet):
-        wells.injectivity(None, "doublet.injector")
-    with pytest.raises(gm.errors.NotImplementedYet):
-        wells.calibrate_pump(None, "doublet.esp", None)
 
 
 def test_nodal_takes_units_for_its_curves_and_point(shared_plant):

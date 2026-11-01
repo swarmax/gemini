@@ -5,10 +5,12 @@ import json
 import pytest
 
 import gemini as gm
+from gemini.evaluate.report import Report
 from gemini.units import SECONDS_PER_YEAR, Quantity
 from tests.fixtures.cases import costed_finance, make_case
 from tests.fixtures.costed_plants import day, heating_plant
 from tests.fixtures.result_tables import make_results
+from tests.unit.evaluate.test_capacities import boiler_plant, boiler_run
 
 KEYS = {
     "heat_delivered",
@@ -26,6 +28,7 @@ KEYS = {
     "constraints",
     "passed",
     "failed_steps",
+    "failures",
     "services",
 }
 
@@ -56,6 +59,7 @@ def test_the_report_holds_the_energy_the_costs_the_checks_and_the_failed_steps()
     assert report["opex"].value == pytest.approx(10.0 + 2e-8 * 100.0 * SECONDS_PER_YEAR)
     assert report["co2"].value == pytest.approx(100.0 * 24 * 3600 * 1e-7)
     assert report["failed_steps"] == 0
+    assert report["failures"].to_dict() == {"total": 0, "groups": []}
     assert report["boiler_heat"].value is None
     assert [item["name"] for item in report["constraints"]] == ["heat.unmet_demand"]
     assert report["passed"] is True
@@ -74,7 +78,8 @@ def test_to_dict_is_plain_json():
     report = gm.evaluate.report(heating_plant(), case(), day())
     plain = report.to_dict()
     json.dumps(plain, allow_nan=False)
-    assert plain["capex"]["unit"] == "currency" and plain["capex"]["value"] == 1000.0
+    assert plain["capex"]["unit"] == "MEUR" and plain["capex"]["value"] == pytest.approx(1e-3)
+    assert report["capex"].value == 1000.0
     assert plain["constraints"][0]["role"] == "heating_supply"
     assert plain["failed_steps"] == 0
 
@@ -94,3 +99,25 @@ def test_the_report_lists_the_services_the_case_asks_for():
     assert gm.evaluate.report(heating_plant(), case(), day())["services"] == []
     asked = make_case(supply={"heating": Quantity(60, "degC")})
     assert gm.evaluate.report(heating_plant(), asked, day())["services"] == ["heating"]
+
+
+def test_to_dict_shows_display_units_or_the_ones_given_and_the_report_stays_si():
+    """Energy in MWh, power in MW; units replace one metric; the print is the display dict."""
+    report = gm.evaluate.report(heating_plant(), case(), day())
+    plain = report.to_dict()
+    assert plain["heat_delivered"]["unit"] == "MWh"
+    assert plain["heat_delivered"]["value"] == pytest.approx(0.024)
+    assert plain["capacities"] == {}
+    sized = Report(
+        capacities=gm.evaluate.capacities(boiler_plant(), make_case(count=3), boiler_run())
+    )
+    boiler = sized.to_dict()["capacities"]["boiler"]
+    assert boiler["capacity"] == {"value": pytest.approx(0.01), "unit": "MW"}
+    assert boiler["share"]["unit"] == "-"
+    given = report.to_dict(units={"heat_delivered": "GWh", "capex": "EUR"})
+    assert given["heat_delivered"]["unit"] == "GWh" and given["capex"]["unit"] == "EUR"
+    assert given["capex"]["value"] == pytest.approx(1000.0)
+    assert report["heat_delivered"].unit == "J" and report["capex"].unit == "currency"
+    assert json.loads(str(report)) == plain
+    with pytest.raises(gm.errors.ValidationError):
+        report.to_dict(units={"heat_delivered": "kt"})

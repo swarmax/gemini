@@ -42,21 +42,34 @@ class Valve(Module):
         super().__init__()
 
         # Parameters
-        self.flow_coefficient = Parameter(FlowCoefficient, gt=0)
-        self.characteristic = Parameter(
-            Literal["linear", "equal_percentage"], default="equal_percentage"
+        self.flow_coefficient = Parameter(
+            FlowCoefficient, gt=0, description="Valve flow coefficient Kv at full opening"
         )
-        self.rangeability = Parameter(Ratio, default=hydraulics.DEFAULT_VALVE_RANGEABILITY, gt=1)
+        self.characteristic = Parameter(
+            Literal["linear", "equal_percentage"],
+            default="equal_percentage",
+            description="Inherent flow characteristic of the valve",
+        )
+        self.rangeability = Parameter(
+            Ratio,
+            default=hydraulics.DEFAULT_VALVE_RANGEABILITY,
+            gt=1,
+            description="Ratio of the largest to the smallest controllable flow coefficient",
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream)
 
         # Controls
-        self.opening = Control(Fraction)
+        self.opening = Control(Fraction, description="Valve opening as a share of full travel")
 
         # Outputs
-        self.pressure_drop = Output(PressureDifference)
-        self.effective_flow_coefficient = Output(FlowCoefficient)
+        self.pressure_drop = Output(
+            PressureDifference, description="Pressure lost through the valve"
+        )
+        self.effective_flow_coefficient = Output(
+            FlowCoefficient, description="Flow coefficient at the current opening"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream)

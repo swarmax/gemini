@@ -11,7 +11,11 @@ from gemini.modules.declarations import Boundary
 from gemini.types import Fluid
 from gemini.types.quantities import MassFlow, Pressure, Temperature
 
-FIELDS = {"m_dot": Boundary(MassFlow), "T": Boundary(Temperature), "p": Boundary(Pressure)}
+FIELDS = {
+    "m_dot": Boundary(MassFlow, description="Mass flow of the stream entering the plant"),
+    "T": Boundary(Temperature, description="Temperature of the stream entering the plant"),
+    "p": Boundary(Pressure, description="Pressure of the stream entering the plant"),
+}
 """The declarations of a plant inlet field; ``fluid`` is the one field that is no number."""
 FLUID = "fluid"
 

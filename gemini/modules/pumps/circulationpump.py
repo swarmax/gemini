@@ -38,17 +38,25 @@ class CirculationPump(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.flow = Parameter(MassFlow, gt=0)
-        self.pressure_rise = Parameter(PressureDifference, ge=0)
-        self.loop_pressure = Parameter(Pressure, gt=0)
-        self.efficiency = Parameter(Efficiency, default=pumps.DEFAULT_CIRCULATION_PUMP_EFFICIENCY)
+        self.flow = Parameter(MassFlow, gt=0, description="Mass flow the circuit carries")
+        self.pressure_rise = Parameter(
+            PressureDifference, ge=0, description="Design pressure rise of the circulation pump"
+        )
+        self.loop_pressure = Parameter(
+            Pressure, gt=0, description="Static pressure the circuit is held at"
+        )
+        self.efficiency = Parameter(
+            Efficiency,
+            default=pumps.DEFAULT_CIRCULATION_PUMP_EFFICIENCY,
+            description="Overall efficiency of the pump: hydraulic power over electric power",
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream)
         self.power_in = Inlet(Power, kind="electricity")
 
         # Outputs
-        self.pumping_power = Output(HydraulicPower)
+        self.pumping_power = Output(HydraulicPower, description="Electric power drawn by the pump")
 
         # Outlets
         self.fluid_out = Outlet(Stream)

@@ -38,7 +38,7 @@ import pandas as pd
 
 import gemini as gm
 
-plant = gm.plants.example("DoubletHeatPlant")
+plant = gm.Plant.from_json("inputs/doublet_heat/plant.json")
 design = {name: parameter.value for name, parameter in plant.doublet.esp.named_parameters()}
 esp = gm.modules.ESP().set_params("", design)
 stream = gm.Stream(flow={"value": 150, "unit": "m3/h"}, T={"value": 80, "unit": "C"}, p={"value": 20, "unit": "bar"})
@@ -73,21 +73,21 @@ while assignment (`esp.frequency = 50.0`) persists them.
 
 A leaf module computes and a plant connects: every composite is a `Plant` class that declares its
 children, ports and connections, and `gm.Plant(name)` builds one with `add` and `connect`.
-`gm.plants.names()` lists the plant classes, `gm.plants.example(name)` returns one with real values,
+`gm.plants.names()` lists the plant classes, `gm.plants.get(name)` returns one without values,
 and `gm.Plant.from_legacy(folder)` turns an old project folder into a plant. The plant dict is the
 JSON form agents read and write: `plant.to_dict()`, `gm.Plant.from_dict`, `gm.plants.schema()`, and
 `plant.to_json(path)`, `gm.Plant.from_json(path)` for a file. `gm.data` reads your demand, from a CSV
 file (`gm.data.from_csv`) or from values (`from_values`). Readers are `from_<format>` and writers
 `to_<format>` everywhere.
 
-gemini holds no data file. `gm.plants.example` reads `inputs/`, which is in a
-source checkout and not installed, and outside one it raises `inputs_missing`:
+gemini holds no data file. The example values of the plants are in `inputs/`, which is in a
+source checkout and not installed; read a stored plant with `gm.Plant.from_json(path)`:
 
 ```text
 inputs/             # repository only
   examples/         # sample cases: case.json, demand CSV, plant dicts; examples and tests only
   plants/           # example values of plants
-  doublet_heat/     # measured data
+  doublet_heat/     # measured data and the plant dict that fits it
   legacy_project/   # an old project folder
 ```
 
@@ -100,7 +100,7 @@ sizes a design and searches the choices of the case:
 ```python
 case = gm.Case.from_json("inputs/examples/shallow_district/case.json")
 plant = gm.Plant.from_json("inputs/examples/shallow_district/plant.json")
-sized = gm.study.size(plant, case)
+sized = gm.study.size(plant, case, backup="peak")
 results = gm.simulate(sized, case)
 checks = gm.evaluate.constraints(sized, case, results)
 print([check["name"] for check in checks if check["passed"] is False])

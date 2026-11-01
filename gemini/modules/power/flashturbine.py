@@ -41,19 +41,31 @@ class FlashTurbine(Module):
 
         # Parameters
         self.isentropic_efficiency = Parameter(
-            Efficiency, default=_physics.DEFAULT_TURBINE_EFFICIENCY
+            Efficiency,
+            default=_physics.DEFAULT_TURBINE_EFFICIENCY,
+            description="Dry-steam isentropic efficiency of the turbine",
         )
-        self.baumann_factor = Parameter(Ratio, default=1)
-        self.condenser_pressure = Parameter(Pressure, gt=0)
-        self.generator_efficiency = Parameter(Efficiency)
+        self.baumann_factor = Parameter(
+            Ratio,
+            default=1,
+            description="Baumann coefficient: efficiency loss per unit of exhaust moisture",
+        )
+        self.condenser_pressure = Parameter(Pressure, gt=0, description="Pressure in the condenser")
+        self.generator_efficiency = Parameter(
+            Efficiency, description="Efficiency of the generator: electric power over shaft power"
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="gas")
 
         # Outputs
-        self.gross_power = Output(Power)
-        self.condenser_duty = Output(Power)
-        self.exhaust_quality = Output(Fraction)
+        self.gross_power = Output(
+            Power, description="Electric power generated before parasitic loads"
+        )
+        self.condenser_duty = Output(Power, description="Heat rejected in the condenser")
+        self.exhaust_quality = Output(
+            Fraction, description="Steam quality (vapour share) at the turbine exhaust"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="gas")

@@ -19,10 +19,18 @@ class Formation(Module):
 
         # Parameters
         self.geothermal_gradient = Parameter(
-            TemperatureGradient | None, default=None, case="environment.ground.gradient"
+            TemperatureGradient | None,
+            default=None,
+            case="environment.ground.gradient",
+            description=(
+                "Increase of undisturbed rock temperature with depth; empty takes it from the case"
+            ),
         )
         self.surface_temperature = Parameter(
-            Temperature | None, default=None, case="environment.ground.surface_temperature"
+            Temperature | None,
+            default=None,
+            case="environment.ground.surface_temperature",
+            description="Ground temperature at the surface; empty takes it from the case",
         )
 
         # Inlets

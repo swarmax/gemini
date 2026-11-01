@@ -20,64 +20,10 @@
     "doublet.reservoir.skin": 0.0,
     "doublet.reservoir.wellbore_radius": {"value": 0.1, "unit": "m"},
     "doublet.reservoir.decline_threshold": 0.15,
-    "doublet.well.pipe_path": {
-      "sections": [
-        {
-          "length": 400.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 150.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 150.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 204.0,
-          "inclination": 1.3725269237683408,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 158.0,
-          "inclination": 1.2512265407547347,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 181.0,
-          "inclination": 0.9768607823412263,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 105.0,
-          "inclination": 1.261000384565903,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 286.0,
-          "inclination": 0.774402589109884,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 518.0,
-          "inclination": 0.8822639368831335,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        }
-      ]
-    },
+    "doublet.well.section_length": [400.0, 150.0, 150.0, 204.0, 158.0, 181.0, 105.0, 286.0, 518.0],
+    "doublet.well.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.3725269237683408, 1.2512265407547347, 0.9768607823412263, 1.261000384565903, 0.774402589109884, 0.8822639368831335],
+    "doublet.well.section_diameter": [0.1778, 0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273],
+    "doublet.well.section_roughness": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05],
     "doublet.well.friction_correlation": "darcy_weisbach",
     "doublet.well.two_phase_friction_correlation": "BeggsBrill",
     "doublet.well.correction_factors": [
@@ -117,64 +63,10 @@
     ],
     "doublet.esp.tubing": null,
     "doublet.esp.drift_threshold": 0.1,
-    "doublet.riser.pipe_path": {
-      "sections": [
-        {
-          "length": 400.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 150.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 150.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1778,
-          "roughness": 2e-05
-        },
-        {
-          "length": 204.0,
-          "inclination": 1.3725269237683408,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 158.0,
-          "inclination": 1.2512265407547347,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 181.0,
-          "inclination": 0.9768607823412263,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 105.0,
-          "inclination": 1.261000384565903,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 286.0,
-          "inclination": 0.774402589109884,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 518.0,
-          "inclination": 0.8822639368831335,
-          "inner_diameter": 0.273,
-          "roughness": 2e-05
-        }
-      ]
-    },
+    "doublet.riser.section_length": [400.0, 150.0, 150.0, 204.0, 158.0, 181.0, 105.0, 286.0, 518.0],
+    "doublet.riser.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.3725269237683408, 1.2512265407547347, 0.9768607823412263, 1.261000384565903, 0.774402589109884, 0.8822639368831335],
+    "doublet.riser.section_diameter": [0.1778, 0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273],
+    "doublet.riser.section_roughness": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05],
     "doublet.riser.friction_correlation": "darcy_weisbach",
     "doublet.riser.two_phase_friction_correlation": "BeggsBrill",
     "doublet.riser.correction_factors": [
@@ -190,34 +82,10 @@
     "doublet.injection_pump.efficiency": 0.8,
     "doublet.injection_pump.head_coefficients": null,
     "doublet.injection_pump.power_coefficients": null,
-    "doublet.injector.pipe_path": {
-      "sections": [
-        {
-          "length": 148.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.1616964,
-          "roughness": 2e-05
-        },
-        {
-          "length": 949.0,
-          "inclination": 1.204451716801287,
-          "inner_diameter": 0.25273,
-          "roughness": 2e-05
-        },
-        {
-          "length": 1012.0,
-          "inclination": 0.7749261878854823,
-          "inner_diameter": 0.1616964,
-          "roughness": 2e-05
-        },
-        {
-          "length": 218.0,
-          "inclination": 0.7033676885537148,
-          "inner_diameter": 0.0995668,
-          "roughness": 2e-05
-        }
-      ]
-    },
+    "doublet.injector.section_length": [148.0, 949.0, 1012.0, 218.0],
+    "doublet.injector.section_inclination": [1.5707963267948966, 1.204451716801287, 0.7749261878854823, 0.7033676885537148],
+    "doublet.injector.section_diameter": [0.1616964, 0.25273, 0.1616964, 0.0995668],
+    "doublet.injector.section_roughness": [2e-05, 2e-05, 2e-05, 2e-05],
     "doublet.injector.friction_correlation": "darcy_weisbach",
     "doublet.injector.two_phase_friction_correlation": "BeggsBrill",
     "doublet.injector.correction_factors": [

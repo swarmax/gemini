@@ -61,14 +61,29 @@ class BoreholeField(Module):
         super().__init__()
 
         # Parameters
-        self.borehole_count = Parameter(Count)
-        self.borehole_depth = Parameter(Length, gt=0)
-        self.borehole_radius = Parameter(Length, gt=0)
-        self.borehole_spacing = Parameter(Length, gt=0)
-        self.borehole_resistance = Parameter(LinearThermalResistance, calibratable=True)
-        self.ground_conductivity = Parameter(ThermalConductivity, calibratable=True)
-        self.ground_volumetric_heat_capacity = Parameter(VolumetricHeatCapacity)
-        self.undisturbed_ground_temperature = Parameter(Temperature)
+        self.borehole_count = Parameter(Count, description="Number of boreholes in the field")
+        self.borehole_depth = Parameter(Length, gt=0, description="Length of a borehole")
+        self.borehole_radius = Parameter(Length, gt=0, description="Radius of a borehole")
+        self.borehole_spacing = Parameter(
+            Length, gt=0, description="Distance between neighbouring boreholes"
+        )
+        self.borehole_resistance = Parameter(
+            LinearThermalResistance,
+            calibratable=True,
+            description=(
+                "Effective thermal resistance between the fluid and the borehole wall per unit "
+                "length"
+            ),
+        )
+        self.ground_conductivity = Parameter(
+            ThermalConductivity, calibratable=True, description="Thermal conductivity of the ground"
+        )
+        self.ground_volumetric_heat_capacity = Parameter(
+            VolumetricHeatCapacity, description="Volumetric heat capacity of the ground"
+        )
+        self.undisturbed_ground_temperature = Parameter(
+            Temperature, description="Ground temperature before the field is operated"
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="hot_water")
@@ -77,8 +92,12 @@ class BoreholeField(Module):
         self.ground_temperature_change = State(TemperatureDifference, default=0)
 
         # Outputs
-        self.fluid_mean_temperature = Output(Temperature)
-        self.ground_temperature = Output(Temperature)
+        self.fluid_mean_temperature = Output(
+            Temperature, description="Mean temperature of the fluid in the boreholes"
+        )
+        self.ground_temperature = Output(
+            Temperature, description="Mean ground temperature of the field volume"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="hot_water")

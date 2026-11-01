@@ -6,10 +6,13 @@ import pytest
 import gemini as gm
 from gemini import analysis, units
 from gemini.analysis import wells
+from gemini.errors import PhysicsError
 from gemini.modules.pumps import ESP
 from gemini.ops import kernels
 from gemini.types.flows import Stream
 from tests.fixtures.equivalence import assert_health_matches, assert_module_matches
+from tests.fixtures.errors import raises
+from tests.fixtures.sample_cases import example_plant
 
 ESP_PARAMS = {
     "pump_type": "HC27000",
@@ -85,7 +88,7 @@ def _health_rows(pump, flows_kg_s):
 
 def test_health_on_arrays_equals_one_call_per_row():
     """Worst key, drift, window and message of every row match, with and without drifts."""
-    pump = ESP().set_params("", {**ESP_PARAMS, "maximum_flow": 0.05})
+    pump = ESP().set_params("", {**ESP_PARAMS, "minimum_flow": 0.03, "maximum_flow": 0.07})
     results = _health_rows(pump, [20.0, 40.0, 40.0, 60.0, 30.0])
     outputs = [result.outputs for result in results]
     scales = [(1.0, 1.3), (1.2, 0.5), (1.0, 1.0), (0.8, 1.5), (1.05, 0.99)]
@@ -102,14 +105,14 @@ def test_traced_call_matches_one_call_per_row_on_every_backend():
     """Low, nominal and high flow, a trickle and a low frequency, on every backend."""
     rows = [
         dict(fluid_in=Stream(m_dot=m_dot, T=300, p=1e5), frequency=frequency)
-        for m_dot, frequency in ((5, 60), (60, 60), (200, 50), (500, 60), (1e-3, 60), (60, 35))
+        for m_dot, frequency in ((5, 60), (60, 60), (200, 50), (60, 60), (1e-3, 60), (60, 35))
     ]
     assert_module_matches(ESP().set_params("", ESP_PARAMS), rows)
 
 
 def _design():
     """Return an ESP with the values of the example doublet."""
-    design = gm.plants.example("Doublet").esp
+    design = example_plant("Doublet").esp
     values = {name: parameter.value for name, parameter in design.named_parameters()}
     return ESP().set_params("", values)
 
@@ -117,7 +120,7 @@ def _design():
 def test_keyword_mapping_and_positional_calls_agree():
     """Every way to pass the inlet gives one head, and a persisted command is that of the call."""
     esp, stream = _design(), Stream(
-        flow={"value": 150, "unit": "m3/h"},
+        flow={"value": 140, "unit": "m3/h"},
         T={"value": 80, "unit": "degC"},
         p={"value": 20, "unit": "bar"},
     )
@@ -131,7 +134,7 @@ def test_keyword_mapping_and_positional_calls_agree():
 def test_no_outputs_keeps_the_outlet_of_a_full_call():
     """Skipping the outputs leaves the outlet stream as it was."""
     esp, stream = _design(), Stream(
-        flow={"value": 150, "unit": "m3/h"},
+        flow={"value": 140, "unit": "m3/h"},
         T={"value": 80, "unit": "degC"},
         p={"value": 20, "unit": "bar"},
     )
@@ -145,6 +148,40 @@ def test_no_outputs_keeps_the_outlet_of_a_full_call():
 def test_a_new_esp_names_what_it_misses():
     """A new pump is not initialized and lists its parameters until they are assigned."""
     esp = ESP()
-    assert not esp.is_initialized and "stage_count" in esp.missing_parameters()
+    missing = [item["path"] for item in esp.missing_parameters()]
+    assert not esp.is_initialized and "stage_count" in missing
     esp.stage_count = 120
-    assert esp.stage_count == 120 and "stage_count" not in esp.missing_parameters()
+    missing = [item["path"] for item in esp.missing_parameters()]
+    assert esp.stage_count == 120 and "stage_count" not in missing
+
+
+def test_a_flow_where_the_curves_extrapolate_is_a_failed_row_with_the_code():
+    """A head or power below zero is the polynomial outside its range: ``out_of_range``."""
+    pump = ESP().set_params("", ESP_PARAMS)
+    inside = pump(frequency=60, fluid_in=Stream(m_dot=55.0, T=300, p=1e5)).outputs
+    assert inside.power > 0
+    with raises(PhysicsError, "out_of_range", match=r"esp: flow = .*head and power at least 0"):
+        pump(frequency=60, fluid_in=Stream(m_dot=90.0, T=300, p=1e5))
+
+
+def test_a_negative_power_is_outside_the_curve():
+    """A power polynomial below zero is the curve outside its range."""
+    curves = {**ESP_PARAMS, "power_coefficients": [-10.0, 0, 0, 0, 0, 0]}
+    with raises(PhysicsError, "out_of_range", match="head and power at least 0"):
+        ESP().set_params("", curves)(frequency=60, fluid_in=Stream(m_dot=40.0, T=300, p=1e5))
+
+
+def test_a_stopped_pump_is_inside_its_curve():
+    """No flow is no extrapolation."""
+    pump = ESP().set_params("", ESP_PARAMS)
+    assert pump(frequency=60, fluid_in=Stream(m_dot=0.0, T=300, p=1e5)).outputs.efficiency == 0
+
+
+def test_a_flow_above_the_speed_scaled_maximum_flow_is_a_failed_row_with_the_range():
+    """The curves are valid up to ``maximum_flow`` scaled by the speed; above, the row fails."""
+    pump = ESP().set_params("", {**ESP_PARAMS, "maximum_flow": 0.05})
+    assert pump(frequency=60, fluid_in=Stream(m_dot=45.0, T=300, p=1e5)).outputs.power > 0
+    with raises(PhysicsError, "out_of_range", match=r"esp: flow = 0\.06.*0\.05"):
+        pump(frequency=60, fluid_in=Stream(m_dot=60.0, T=300, p=1e5))
+    with raises(PhysicsError, "out_of_range"):
+        pump(frequency=30, fluid_in=Stream(m_dot=30.0, T=300, p=1e5))

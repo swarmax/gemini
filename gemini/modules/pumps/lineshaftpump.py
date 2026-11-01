@@ -51,30 +51,55 @@ class LineShaftPump(Module):
         super().__init__()
 
         # Parameters
-        self.stage_count = Parameter(Count)
+        self.stage_count = Parameter(Count, description="Number of stages of the pump")
         self.head_coefficients = Parameter(
-            list[float], shape=(pumps.POLYNOMIAL_COEFFICIENT_COUNT,), calibratable=True
+            list[float],
+            shape=(pumps.POLYNOMIAL_COEFFICIENT_COUNT,),
+            calibratable=True,
+            description="Polynomial coefficients of the head curve of one stage",
         )
         self.power_coefficients = Parameter(
-            list[float], shape=(pumps.POLYNOMIAL_COEFFICIENT_COUNT,), calibratable=True
+            list[float],
+            shape=(pumps.POLYNOMIAL_COEFFICIENT_COUNT,),
+            calibratable=True,
+            description="Polynomial coefficients of the power curve of one stage",
         )
-        self.setting_depth = Parameter(Length)
-        self.shaft_friction_loss = Parameter(LinearPower, ge=0)
-        self.motor_efficiency = Parameter(Efficiency)
+        self.setting_depth = Parameter(
+            Length, description="Depth at which the pump is set, the length of the line shaft"
+        )
+        self.shaft_friction_loss = Parameter(
+            LinearPower, ge=0, description="Friction power lost per unit of shaft length at 60 Hz"
+        )
+        self.motor_efficiency = Parameter(
+            Efficiency,
+            description="Efficiency of the electric motor: shaft power over electric power drawn",
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="brine")
         self.power_in = Inlet(Power, kind="electricity")
 
         # Controls
-        self.frequency = Control(Frequency)
+        self.frequency = Control(Frequency, description="Operating frequency of the pump motor")
 
         # Outputs
-        self.head = Output(PressureDifference, soft_sensor=True)
-        self.pump_power = Output(Power)
-        self.shaft_friction_power = Output(Power)
-        self.shaft_power = Output(Power, soft_sensor=True)
-        self.efficiency = Output(Dimensionless)
+        self.head = Output(
+            PressureDifference,
+            soft_sensor=True,
+            description="Pressure rise given to the stream by the pump stages",
+        )
+        self.pump_power = Output(
+            Power, description="Mechanical power given to the fluid by the pump stages"
+        )
+        self.shaft_friction_power = Output(
+            Power, description="Power lost to friction in the line shaft"
+        )
+        self.shaft_power = Output(
+            Power, soft_sensor=True, description="Mechanical power on the pump shaft"
+        )
+        self.efficiency = Output(
+            Dimensionless, description="Pump efficiency: hydraulic power over shaft power"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="brine")

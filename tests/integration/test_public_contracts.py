@@ -7,12 +7,13 @@ import pytest
 import gemini as gm
 from gemini._utils.jsonable import to_plain
 from tests.fixtures.cases import make_case
+from tests.fixtures.sample_cases import example_plant
 
 
 @pytest.fixture(scope="module")
 def plant():
     """Give the example plant, not shared with tests that mutate it."""
-    return gm.plants.example("DoubletHeatPlant")
+    return example_plant("DoubletHeatPlant")
 
 
 @pytest.fixture(scope="module")
@@ -38,7 +39,6 @@ CALLS = {
     "plants.validate": lambda plant, results: gm.plants.validate({"format": 2}, on_error="record"),
     "schema": lambda plant, results: gm.plants.schema(),
     "profile_schema": lambda plant, results: gm.data.profile_schema(),
-    "to_spec": lambda plant, results: plant.to_dict(),
     "plant.validate": lambda plant, results: plant.validate(),
     "bindable": lambda plant, results: plant.bindable("heat_exchanger"),
     "params_at": lambda plant, results: plant.params_at("heat_exchanger"),

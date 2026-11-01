@@ -282,7 +282,7 @@ class Column(Plant):
 of this call, in SI, so a dated call derives from the design of its date. A value that has not been
 given yet derives nothing: the values may arrive one call at a time. `_keep_derived(derived, params)`
 does the bookkeeping: an explicit child value in the call wins, now and in later calls
-(`{"depth": {"value": 3000, "unit": "m"}, "well.pipe_path": [...]}` keeps the given pipe path), and it records the names
+(`{"depth": {"value": 3000, "unit": "m"}, "well.section_length": [2600.0], ...}` keeps the given pipe path), and it records the names
 it keeps.
 
 Every route that sets parameters reaches this method: `add(..., params=)`, `from_dict`,
@@ -304,8 +304,12 @@ Parameters, controls and boundaries are set by attribute assignment or in bulk:
   time)` returns the values active at an instant.
 - `module.frequency = 50` persists one control or boundary, and `module.stage_count = 12` sets a
   parameter as an override that wins over every date.
-- `missing_parameters()` lists uninitialized parameters and `is_initialized` is true when there
-  are none.
+- `missing_parameters()` lists the uninitialized parameters as JSON dicts `{path, type, quantity,
+  unit, units, minimum, maximum, enum, description}` (`units` are the accepted units) and
+  `is_initialized` is true when there are none. A run, `size` or a read of an unset value raises
+  `missing_value` listing every missing path with its description at once (`problems` holds one
+  item per path). Every `Parameter`, `Control`, `Boundary` and `Output` declares a short
+  `description` of its physical meaning, never a default; a quality test enforces it.
 - `state_dict()` returns JSON-safe parameter values and the fluid of every module path, and
   `set_state_dict(state, strict=True)` validates all of them before applying any. With
   `strict=False` only the modules named in `state` are filled; unknown paths are always rejected.

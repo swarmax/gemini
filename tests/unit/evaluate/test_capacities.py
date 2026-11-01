@@ -17,7 +17,7 @@ def boiler_plant():
     return plant
 
 
-def boiler_run(duty):
+def boiler_run(duty=(1e3, 4e3, 2e3)):
     """Return a run whose boiler heats its water by ``duty`` [W] in each step."""
     return make_results(
         {

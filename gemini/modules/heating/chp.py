@@ -49,22 +49,40 @@ class CHP(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.electric_capacity = Parameter(Power, gt=0)
-        self.electric_efficiency = Parameter(Efficiency)
-        self.thermal_efficiency = Parameter(Efficiency)
-        self.no_load_fuel_fraction = Parameter(Fraction, default=0, lt=1)
-        self.maximum_outlet_temperature = Parameter(Temperature)
+        self.electric_capacity = Parameter(Power, gt=0, description="Maximum electric output")
+        self.electric_efficiency = Parameter(
+            Efficiency, description="Electric output over fuel energy at full load"
+        )
+        self.thermal_efficiency = Parameter(
+            Efficiency, description="Useful heat output over fuel energy"
+        )
+        self.no_load_fuel_fraction = Parameter(
+            Fraction,
+            default=0,
+            lt=1,
+            description="Fuel use at zero load as a share of the full-load fuel use",
+        )
+        self.maximum_outlet_temperature = Parameter(
+            Temperature, description="Highest water temperature at the unit outlet"
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="hot_water")
         self.fuel_in = Inlet(Stream, kind="gas", drawn=True)
 
         # Controls
-        self.load_fraction = Control(Fraction)
+        self.load_fraction = Control(
+            Fraction,
+            description=(
+                "Electric output as a share of the electric capacity; zero switches the engine off"
+            ),
+        )
 
         # Outputs
-        self.fuel = Output(Fuel)
-        self.dumped_heat = Output(Power)
+        self.fuel = Output(Fuel, description="Fuel power burned (lower heating value)")
+        self.dumped_heat = Output(
+            Power, description="Heat rejected because the circuit could not take all of it"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="hot_water")

@@ -13,7 +13,7 @@ from gemini.errors import ValidationError
 from gemini.ops.backend import settings as backend_setting
 from gemini.types.fluid import BRINE, Fluid
 
-_DEFAULTS = {"precision": "float64", "display_units": "si", "default_fluid": BRINE}
+_DEFAULTS = {"precision": "float64", "display_units": "si", "default_fluid": BRINE, "processes": 1}
 _CHOICES = {"precision": ("float64", "float32"), "display_units": ("si", "field")}
 
 KEEP = object()
@@ -41,6 +41,12 @@ def _validated(values):
                 f"runtime: {name} = {values[name]!r}; expected one of {join_names(choices)}",
                 code="unknown_name",
             )
+    processes = values["processes"]
+    if isinstance(processes, bool) or not isinstance(processes, int) or processes < 1:
+        raise ValidationError(
+            f"runtime: processes = {processes!r}; expected a whole number of at least 1",
+            code="invalid_value",
+        )
     return values | {"default_fluid": Fluid.model_validate(values["default_fluid"])}
 
 
@@ -66,13 +72,20 @@ def get_display_units():
     return _state.get()["display_units"]
 
 
+def get_processes():
+    """Return the number of worker processes a study runs its independent trials in."""
+    return _state.get()["processes"]
+
+
 def settings(backend=KEEP, **changes):
     """Apply settings inside a ``with`` block or a decorated function, then restore them.
 
-    The names are ``backend``, ``precision``, ``display_units`` and ``default_fluid``. ``backend``
-    selects the kernels of the ops by name, and ``None`` restores the automatic choice from the
-    values; the other three are merged into the settings current at entry. Unknown names are
-    rejected at once and values are validated.
+    The names are ``backend``, ``precision``, ``display_units``, ``default_fluid`` and
+    ``processes``.
+    ``backend`` selects the kernels of the ops by name, and ``None`` restores the automatic choice
+    from the values; ``processes`` is the number of worker processes the trials of a study run
+    in, 1 for a serial run; the others are merged into the settings current at entry. Unknown
+    names are rejected at once and values are validated.
     """
     _check_names(changes)
     setting = ContextSetting(_state, lambda current: _validated(current | changes))

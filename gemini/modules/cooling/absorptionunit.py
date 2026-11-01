@@ -59,16 +59,49 @@ class AbsorptionUnit(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.mode = Parameter(Literal["chiller", "heat_pump"])
-        self.capacity = Parameter(Power, gt=0)
-        self.characteristic_slope = Parameter(ThermalConductance, gt=0)
-        self.minimum_driving_difference = Parameter(TemperatureDifference)
-        self.rejection_coefficient = Parameter(Dimensionless)
-        self.evaporator_coefficient = Parameter(Dimensionless)
-        self.thermal_cop = Parameter(Ratio, default=_physics.ABSORPTION_THERMAL_COP, gt=0)
-        self.auxiliary_power_ratio = Parameter(Ratio)
+        self.mode = Parameter(
+            Literal["chiller", "heat_pump"],
+            description=(
+                "Operating mode: chiller (evaporator duty) or heat pump (absorber plus condenser "
+                "heat)"
+            ),
+        )
+        self.capacity = Parameter(Power, gt=0, description="Largest useful duty of the unit")
+        self.characteristic_slope = Parameter(
+            ThermalConductance,
+            gt=0,
+            description=(
+                "Slope of the duty against the driving temperature difference in the characteristic"
+                " map"
+            ),
+        )
+        self.minimum_driving_difference = Parameter(
+            TemperatureDifference,
+            description=(
+                "Smallest driving-to-chilled temperature difference at which the machine delivers"
+            ),
+        )
+        self.rejection_coefficient = Parameter(
+            Dimensionless,
+            description="Slope of the heat rejection relation of the characteristic map",
+        )
+        self.evaporator_coefficient = Parameter(
+            Dimensionless,
+            description="Offset of the evaporator duty relation of the characteristic map",
+        )
+        self.thermal_cop = Parameter(
+            Ratio,
+            default=_physics.ABSORPTION_THERMAL_COP,
+            gt=0,
+            description="Thermal coefficient of performance: useful duty over driving heat",
+        )
+        self.auxiliary_power_ratio = Parameter(
+            Ratio, description="Auxiliary electric power as a share of the useful duty"
+        )
         self.minimum_driving_temperature = Parameter(
-            Temperature, default=_physics.ABSORPTION_MINIMUM_DRIVING_TEMPERATURE
+            Temperature,
+            default=_physics.ABSORPTION_MINIMUM_DRIVING_TEMPERATURE,
+            description="Lowest driving hot-water temperature at which the machine operates",
         )
 
         # Inlets
@@ -78,12 +111,23 @@ class AbsorptionUnit(Equipment, Module):
         self.power_in = Inlet(Power, kind="electricity")
 
         # Controls
-        self.temperature_setpoint = Control(Temperature)
+        self.temperature_setpoint = Control(
+            Temperature, description="Outlet temperature the unit regulates the stream to"
+        )
 
         # Outputs
-        self.cop = Output(Ratio | None)
-        self.driving_temperature_difference = Output(TemperatureDifference)
-        self.is_capped = Output(bool)
+        self.cop = Output(
+            Ratio | None,
+            description=(
+                "Coefficient of performance: useful duty over driving energy; empty when the unit "
+                "is off"
+            ),
+        )
+        self.driving_temperature_difference = Output(
+            TemperatureDifference,
+            description="Driving hot-water temperature above its minimum operating temperature",
+        )
+        self.is_capped = Output(bool, description="True when the duty was limited by the capacity")
 
         # Outlets
         self.generator_out = Outlet(Stream, kind="hot_water")

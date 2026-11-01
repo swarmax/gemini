@@ -20,7 +20,8 @@ class BoilerChpPlant(Plant):
     filter, the heat exchanger and a second filter, and the injector is solved for the pump head
     it needs. The secondary water is split in two: one part is heated by the exchanger and topped
     up by a gas boiler, the other is heated by a gas-engine CHP, and both are mixed again.
-    ``gm.plants.example`` carries the well, reservoir and ESP data of the upstream example.
+    ``inputs/plants/BoilerChpPlant.json`` carries the well, reservoir and ESP data of the
+    upstream example.
 
     Not schedulable: its doublet is a ``NodalDoublet``, solved for its wellhead pressure, and a run
     sets its setpoints.

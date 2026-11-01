@@ -4,8 +4,10 @@ Every stored candidate, the hand design included, is sized, searched on LCTS wit
 variables in ``<role>.<parameter>`` names, simulated and reported. A candidate is feasible when no
 step fails and every constraint of the case passes; the table gives each one's reasons, the
 variables the plant could not take, the metrics in readable units and the Pareto front of the
-feasible designs only. Shows ``gm.study.size``, ``minimize``, ``sensitivity`` and
-``gm.evaluate.compare``.
+feasible designs only. Sizes with the backup policy ``"peak"``. The best design is then sampled
+over the values the case declares uncertain. The candidates are searched in ``PROCESSES`` processes
+(``gm.runtime.settings``); the numbers equal a serial run. Shows ``gm.study.size``, ``minimize``,
+``sensitivity``, ``sample`` and ``gm.evaluate.compare``.
 
 Run with ``python examples/hackathon.py``.
 """
@@ -21,14 +23,13 @@ EVALUATIONS = 20
 """Simulations of the search for each doublet count: five for each of four variables, the least."""
 SHARE = (0.1, 1.0)
 """A capacity is searched from a tenth of the peak it serves to the whole peak, an assumption."""
+PROCESSES = 8
+"""Worker processes of the search: one per doublet count and trial; an assumption, the cores."""
+DRAWS = 5
+"""Simulations of the sample of the best design: few, a year of simulation each."""
+SEED = 1
+"""The seed of the draws: the same seed gives the same draws."""
 Q = gm.units.Quantity
-PARAMETERS = {
-    "case.assumptions.finance.opex.electricity": {
-        "low": Q(70, "EUR/MWh"),
-        "high": Q(160, "EUR/MWh"),
-    },
-    "case.environment.reservoir.permeability": {"low": Q(150, "mD"), "high": Q(250, "mD")},
-}
 
 
 def variable(path, parameter, lower, upper):
@@ -61,7 +62,7 @@ def variables(case):
 
 def design(plant, case):
     """Return ``(searched design, search result)``; the sized plant and ``None`` if not searched."""
-    sized = gm.study.size(plant, case)
+    sized = gm.study.size(plant, case, backup="peak")
     try:
         found = gm.study.minimize(sized, case, "lcts", variables(case), evaluations=EVALUATIONS)
     except gm.errors.ValidationError as error:
@@ -80,8 +81,8 @@ def print_candidate(name, report, found):
         print(f"  fixed {item['name']} = {item['value']}: {item['reason']}")
 
 
-def main():
-    """Search every candidate, print the table and the Pareto front, write the reports."""
+def study():
+    """Search every candidate, print the table, the front and the spread, write the reports."""
     case = gm.Case.from_json(SAMPLE / "case.json")
     found = {}
     for path in sorted((SAMPLE / "plants").glob("*.json")):
@@ -97,13 +98,25 @@ def main():
     feasible = {name: found[name] for name in frame.index[frame["feasible"]]}
     best, _ = min(feasible.values(), key=lambda item: item[1]["lcts"].si)
     print(
-        gm.study.sensitivity(best, case, PARAMETERS, ["lcts"])
+        gm.study.sensitivity(best, case, ["lcts"])
         .to_frame()
         .to_string(float_format="{:.4g}".format)
     )
+    spread = gm.study.sample(best, case, ["lcts", "co2"], DRAWS, SEED)
+    print(f"Draws of the best design: {len(spread['samples'])}")
+    for name, unit in (("lcts", "EUR/MWh"), ("co2", "kt")):
+        stats = spread["summary"][name]
+        mean, low, high = (stats[key].to(unit).value for key in ("mean", "p5", "p95"))
+        print(f"{name:<5} mean {mean:8.2f}  p5 {low:8.2f}  p95 {high:8.2f} {unit}")
     (ROOT / ".tmp").mkdir(exist_ok=True)
     for name, (_, report) in found.items():
         (ROOT / ".tmp" / f"{name}.json").write_text(json.dumps(report.to_dict(), indent=2))
+
+
+def main():
+    """Run the study with the trials spread over ``PROCESSES`` processes."""
+    with gm.runtime.settings(processes=PROCESSES):
+        study()
 
 
 if __name__ == "__main__":

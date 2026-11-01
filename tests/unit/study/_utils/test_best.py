@@ -4,12 +4,12 @@ import gemini as gm
 from gemini.study._utils.best import Best
 
 
-def test_the_plant_is_a_key_and_no_part_of_the_json():
-    """``best["plant"]`` is the plant, the other keys are the parts of the value."""
+def test_the_plant_is_a_key_and_its_plant_dict_in_the_json():
+    """``best["plant"]`` is the plant, the rest are parts; the JSON holds its plant dict."""
     plant = gm.Plant("Empty")
     best = Best(3.0, "W", None, {"parameters": {}}, plant)
     assert best["plant"] is plant and best["parameters"] == {}
-    assert "plant" not in best.to_dict()
+    assert best.to_dict()["plant"] == plant.to_dict()
 
 
 def test_a_conversion_keeps_the_plant():

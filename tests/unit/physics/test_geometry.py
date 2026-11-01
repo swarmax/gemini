@@ -54,19 +54,26 @@ def test_build_path_rejects_invalid_trajectories():
         geometry.build_path([TRAJECTORY[0], {"MD": 10, "TVD": 20, "ID": 0.2, "roughness": 0}])
 
 
-def test_index_at_measured_depth_and_subpath():
-    """Joints select the deeper section; slices conserve length and keep geometry."""
+def cut(path, start, end):
+    """Return the path between two measured depths, from the section lists of the path."""
+    lists = geometry.section_values(path)
+    return geometry.path_between(*lists.values(), start, end)
+
+
+def test_index_at_measured_depth_and_path_between():
+    """Joints select the deeper section; cuts conserve length, keep every section and geometry."""
     path = geometry.build_path(TRAJECTORY)
     assert path.index_at_measured_depth(0) == 0
     assert path.index_at_measured_depth(100) == 1
     assert path.index_at_measured_depth(300) == 1
     with pytest.raises(PhysicsError, match="measured depth = 301"):
         path.index_at_measured_depth(301)
-    piece = path.subpath(250, 50)
+    piece = cut(path, 250, 50)
     assert [s.length for s in piece.sections] == [50, 150]
     assert piece.sections[1].inner_diameter == 0.15
+    assert [s.length for s in cut(path, 150, 160).sections] == [0, 10]
     with pytest.raises(PhysicsError, match="depth interval"):
-        path.subpath(-1, 10)
+        cut(path, -1, 10)
 
 
 def test_project_trajectory_slices():
@@ -74,7 +81,7 @@ def test_project_trajectory_slices():
     table = pd.read_csv(OLD_PROJECT / "well_trajectory.csv", sep=";").to_dict("records")
     path = geometry.build_path(table)
     assert path.total_length == 2800
-    assert path.subpath(600, 2800).total_length + path.subpath(0, 600).total_length == 2800
+    assert cut(path, 600, 2800).total_length + cut(path, 0, 600).total_length == 2800
     assert path.index_at_measured_depth(600) == 2
 
 

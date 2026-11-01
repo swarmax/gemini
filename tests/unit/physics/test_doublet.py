@@ -35,9 +35,9 @@ def test_each_group_adds_its_values():
     """The column gives temperatures, the flow paths the wells, the pump the curves."""
     column = design(COLUMN)
     assert column["reservoir.temperature"] == pytest.approx(283.15 + 0.03 * 2500)
-    assert "well.pipe_path" not in column
+    assert "well.section_length" not in column
     flow = design(COLUMN, FLOW_PATH)
-    assert column.keys() < flow.keys() and "well.pipe_path" in flow
+    assert column.keys() < flow.keys() and "well.section_length" in flow
     assert "esp.head_coefficients" not in flow
     assert "esp.head_coefficients" in design(COLUMN, FLOW_PATH, PUMP)
 

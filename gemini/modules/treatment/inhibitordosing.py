@@ -32,17 +32,19 @@ class InhibitorDosing(Module):
         super().__init__()
 
         # Parameters
-        self.product_concentration = Parameter(Fraction, gt=0)
+        self.product_concentration = Parameter(
+            Fraction, gt=0, description="Mass fraction of active substance in the inhibitor product"
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="brine")
         self.chemical_in = Inlet(Stream, kind="chemical", drawn=True)
 
         # Controls
-        self.dose = Control(Fraction)
+        self.dose = Control(Fraction, description="Mass of product per mass of treated fluid")
 
         # Outputs
-        self.active_mass_flow = Output(MassFlow)
+        self.active_mass_flow = Output(MassFlow, description="Mass flow of active substance dosed")
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="brine")

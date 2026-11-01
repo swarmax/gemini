@@ -40,7 +40,6 @@ from gemini._utils.strings import (
     split_path,
 )
 from gemini.errors import DefinitionError, PhysicsError, ValidationError
-from gemini.errors.base import problem
 from gemini.errors.lookup import UnknownMember
 from gemini.modules._utils import description, design
 from gemini.modules.declarations import (
@@ -351,12 +350,12 @@ class Module:
         object.__setattr__(self, "_hooks", {})
         object.__setattr__(self, "_input_values", {})
         object.__setattr__(self, "_path", "")
+        object.__setattr__(self, "_parent", None)
         object.__setattr__(self, "_fluid", runtime.get_default_fluid())
         object.__setattr__(self, "bindings", {})
         object.__setattr__(self, "boundary", {})
         object.__setattr__(self, "_param_history", [DatedParams(params={})])
         object.__setattr__(self, "_param_overrides", {})
-        object.__setattr__(self, "_executor_cache", None)
 
     @property
     def name(self):
@@ -483,6 +482,7 @@ class Module:
             raise DefinitionError(f"{self.path}.{name}: module ownership cannot contain a cycle")
         self._children[name] = module
         object.__setattr__(self, name, module)
+        object.__setattr__(module, "_parent", self)
         module._set_path(join_path(self._path, name))
 
     def _set_path(self, path):
@@ -533,9 +533,8 @@ class Module:
     def _parameter_value(self, name):
         parameter = self._parameters[name]
         if not parameter.initialized:
-            raise ValidationError(
-                f"{parameter.path}: parameter is uninitialized", code="missing_value"
-            )
+            root = self._root()
+            raise root._missing_error(root._missing_paths())
         return parameter.value
 
     def _input_value(self, name):
@@ -700,30 +699,54 @@ class Module:
         """Raise ``missing_value`` for each design value the tree lacks, before a run starts."""
         missing = self._missing_designs()
         if missing:
-            raise ValidationError.of(
-                [
-                    problem(path, "missing_value", f"{path}: no value; expected one before a run")
-                    for path in missing
-                ]
-            )
+            raise self._missing_error(missing)
+
+    def _missing_error(self, paths):
+        """Return the one ``missing_value`` error that lists every path with its meaning."""
+        items = [
+            description.missing_item(description.missing_entry(path, self.get(path)))
+            for path in paths
+        ]
+        listed = "; ".join(f"{item['path']}: {item['message']}" for item in items)
+        return ValidationError(
+            f"{self.path}: uninitialized parameters: {listed}",
+            path=items[0]["path"],
+            code="missing_value",
+            problems=items,
+        )
+
+    def _root(self):
+        """Return the module at the top of the tree this module belongs to."""
+        module = self
+        while module._parent is not None:
+            module = module._parent
+        return module
+
+    def _missing_paths(self):
+        """Return the dotted paths of what the tree lacks: design values, then parameters."""
+        uninitialized = [name for name, value in self.named_parameters() if not value.initialized]
+        return list(dict.fromkeys(self._missing_designs() + uninitialized))
 
     def missing_parameters(self):
-        """Return dotted paths of what the tree lacks: design values, then parameters."""
-        uninitialized = [name for name, value in self.named_parameters() if not value.initialized]
-        return self._missing_designs() + uninitialized
+        """Return what the tree still needs, as JSON: one entry per unset parameter.
+
+        Each entry has ``path`` (dotted, from this module), ``type``, ``quantity``, ``unit`` (SI),
+        ``units`` (every unit a value may be given in), ``minimum``, ``maximum``, ``enum`` and
+        ``description`` (the physical meaning). Design values a module still waits for come
+        first. An empty list means the tree can run.
+        """
+        return [description.missing_entry(path, self.get(path)) for path in self._missing_paths()]
 
     def _prepare(self):
         """Reject uninitialized parameters, before any call."""
-        missing = self.missing_parameters()
+        missing = self._missing_paths()
         if missing:
-            raise ValidationError(
-                f"{self.path}: uninitialized parameters: {', '.join(missing)}", code="missing_value"
-            )
+            raise self._missing_error(missing)
 
     @property
     def is_initialized(self):
         """Whether every parameter in this module tree has a value."""
-        return not self.missing_parameters()
+        return not self._missing_paths()
 
     def _override_params(self, values):
         """Set parameters by local or dotted path as overrides, which win over every date."""

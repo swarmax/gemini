@@ -30,7 +30,9 @@ class Atmosphere(Module):
         super().__init__()
 
         # Parameters
-        self.pressure = Parameter(Pressure, default=gas.NORMAL_PRESSURE, gt=0)
+        self.pressure = Parameter(
+            Pressure, default=gas.NORMAL_PRESSURE, gt=0, description="Ambient air pressure"
+        )
 
         # Inlets
         self.air_in = Inlet(Stream, kind="air", many=True)
@@ -38,12 +40,20 @@ class Atmosphere(Module):
         self.gas_in = Inlet(Stream, kind="gas", many=True)
 
         # Boundaries
-        self.temperature = Boundary(Temperature)
-        self.wet_bulb_temperature = Boundary(Temperature | None, default=None)
+        self.temperature = Boundary(Temperature, description="Ambient dry-bulb air temperature")
+        self.wet_bulb_temperature = Boundary(
+            Temperature | None,
+            default=None,
+            description="Wet-bulb temperature of the air; empty when no wet cooler is connected",
+        )
 
         # Outputs
-        self.co2_emission = Output(MassFlow)
-        self.methane_emission = Output(MassFlow)
+        self.co2_emission = Output(
+            MassFlow, description="Mass flow of CO2 released into the air by the whole plant"
+        )
+        self.methane_emission = Output(
+            MassFlow, description="Mass flow of methane released into the air by the whole plant"
+        )
 
         # Outlets
         self.air_out = Outlet(Stream, kind="air", many=True, offered=True)

@@ -2,6 +2,7 @@
 
 from typing import Literal
 
+from gemini import ops
 from gemini.errors import ValidationError
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.wells.well import _Well
@@ -15,9 +16,11 @@ class ProductionWell(_Well):
     ``segment`` selects the traversed interval: the full well, the part below an internal ESP
     (sandface to intake) or the part above it (discharge to wellhead).
 
-    NOTE(refactor): ``esp_depth`` is structural: it cuts the pipe path. The ``section_pressure``
-    and ``section_temperature`` list outputs are vector outputs of the graph, one item per
-    section.
+    NOTE(refactor): ``esp_depth`` cuts the pipe path as a number, so one graph serves any ESP
+    depth: every section stays in the traversal, with the length that lies in the segment. The
+    ``section_pressure`` and ``section_temperature`` list outputs are vector outputs of the graph,
+    one item per section of the path, a section outside the segment giving the pressure and
+    temperature it was entered at.
     """
 
     repr_fields = ("segment", "esp_depth", "soil_temperature", "heat_transfer_coefficient")
@@ -27,17 +30,34 @@ class ProductionWell(_Well):
         super().__init__()
 
         # Parameters
-        self.segment = Parameter(Literal["full", "below_esp", "above_esp"], default="full")
-        self.esp_depth = Parameter(Length | None, default=None, structural=True)
+        self.segment = Parameter(
+            Literal["full", "below_esp", "above_esp"],
+            default="full",
+            description="Interval of the well traversed: the full well, below the pump or above it",
+        )
+        self.esp_depth = Parameter(
+            Length | None,
+            default=None,
+            description="Depth of the pump that splits the well; empty when the well is not split",
+        )
 
         # Inlets
         self.bottom_in = Inlet(Stream, kind="brine")
 
         # Outputs
-        self.friction_pressure_drop = Output(PressureDifference)
-        self.gravity_pressure_drop = Output(PressureDifference)
-        self.section_pressure = Output(list[Pressure])
-        self.section_temperature = Output(list[Temperature])
+        self.friction_pressure_drop = Output(
+            PressureDifference, description="Pressure drop caused by friction along the well"
+        )
+        self.gravity_pressure_drop = Output(
+            PressureDifference,
+            description="Pressure change caused by the weight of the fluid column",
+        )
+        self.section_pressure = Output(
+            list[Pressure], description="Pressure at each section of the well"
+        )
+        self.section_temperature = Output(
+            list[Temperature], description="Temperature at each section of the well"
+        )
 
         # Outlets
         self.wellhead_out = Outlet(Stream, kind="brine")
@@ -70,7 +90,7 @@ class ProductionWell(_Well):
 
     def intake_conditions(self, bottom_stream):
         """Traverse from the sandface to ESP intake, returning a stream in SI units."""
-        result = self.traverse(bottom_stream, self.pipe_path.total_length, self._esp_depth(), "up")
+        result = self.traverse(bottom_stream, self.total_length, self._esp_depth(), "up")
         return self.corrected(bottom_stream, result)
 
     def wellhead_from_discharge(self, discharge_stream):
@@ -91,17 +111,26 @@ class ProductionWell(_Well):
     def _segment_interval(self):
         """Return the measured-depth interval [m] the selected segment traverses upward."""
         if self.segment == "below_esp":
-            return self.pipe_path.total_length, self._esp_depth()
+            return self.total_length, self._esp_depth()
         if self.segment == "above_esp":
             return self._esp_depth(), 0
-        return self.pipe_path.total_length, 0
+        return self.total_length, 0
 
     def _esp_depth(self):
         depth = self.esp_depth
-        if depth is None or depth > self.pipe_path.total_length:
+        if depth is None:
             raise ValidationError(
-                f"{self.path}: esp_depth = {depth} m is not configured within the "
-                f"{self.pipe_path.total_length} m path",
+                f"{self.path}: esp_depth = None is not configured within the "
+                f"{self.total_length} m path",
                 code="invalid_design",
             )
+        ops.check(
+            depth <= self.total_length,
+            ValidationError,
+            "{path}: esp_depth = {depth} m is not configured within the {total} m path",
+            code="invalid_design",
+            path=self.path,
+            depth=depth,
+            total=self.total_length,
+        )
         return depth

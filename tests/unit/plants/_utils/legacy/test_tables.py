@@ -39,4 +39,4 @@ def test_trajectory_file_is_read_as_utf8_with_bom(tmp_path):
         base_path=tmp_path,
     )
     assert params["soil_temperature"] == pytest.approx(288.15)
-    assert params["pipe_path"] is not None
+    assert params["section_length"] == [1000.0]

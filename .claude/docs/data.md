@@ -85,8 +85,7 @@ at any constant step and of any length, one column per quantity in W, and `frame
 and `quantities`. Both validate through one check: a monotonic index with no gaps or repeats, a
 constant step, no negative or missing value, a known quantity. `profile_schema()` is the JSON Schema
 of the same frame as a document: `columns` (unit and quantity), `time` and `values`.
-`gm.data.synthesize(heating, cooling, start, step, ...)` will make a demand from a few figures and
-raises `NotImplementedYet`. A profile column becomes a run input when a plant binding names it as
+A profile column becomes a run input when a plant binding names it as
 its `column`.
 
 The committed CSVs under `inputs/doublet_heat/` are immutable source data. Two
@@ -124,6 +123,18 @@ Sections of `case.json`, in order:
 | `choices` | what a study may vary: `doublets` and `depth`, each `{min, max}` |
 | `constraints` | a list of `{on, quantity, min, max, equals, over, when}`: a limit on a **role** and a **quantity** of it, from the closed table `gm.case.roles()` (`doublet`: `production_flow`, `brine_cooling`, `pump_efficiency`, `volume_imbalance`, ...; `heat_pump`, `boiler`, `chp`, `chiller`, `heat_exchanger`, `heating_supply`, `cooling_supply`). It applies to every unit of its role on its own. `over` is `each`, `sum`, `mean`, `max`, `min` or `duration`; `when` is `always` or `running`; these two are the only defaults of the case |
 | `assumptions` | `finance` (`currency`, `discount_rate`, `lifetime`, `price_year`, `capex.<kind>`, `opex.fixed.<kind>` as `%/yr`, `opex.electricity`, `gas`, `chemical`, `waste_disposal`, `co2`, `revenue.heat`, `revenue.cold`, `allocation.heat_cost_share`) and `emissions` (`CO2.electricity`, `CH4.gwp`) |
+
+**Uncertainty.** Any number under `environment` or `assumptions` may carry an `uncertainty` next to
+its value, in the value's unit: `{"value": 105.75, "unit": "EUR/MWh", "uncertainty": {"kind":
+"uniform", "min": 80, "max": 140}}`; a dimensionless value is `{"value": 0.05, "uncertainty": {...}}`.
+`kind` is required: `uniform` and `triangular` (mode = value) need `min` and `max`; `normal` (mean =
+value) needs `std` and may be cut by `min` and `max`. The value lies inside `[min, max]`, and `min`
+and `max` respect the bounds of the field. An unknown or missing key raises with its path
+(`assumptions.finance.opex.electricity.uncertainty.max`); `time`, `demand`, `choices` and
+`constraints` cannot carry one, nor can a profile. The case stores each as a frozen
+`gm.case.Uncertainty` in SI in `case.uncertainty`, by dotted path, and `to_dict` writes it back next
+to the value. A run, `size` and `minimize` use only `value`; `gm.study.sample` and
+`gm.study.sensitivity` read the declarations and nothing else.
 
 The kinds of `capex` and `opex.fixed` are the 19 of `gm.case.Capex` (the list is in
 [economics.md](economics.md#costs)); a plant needs a factor and a share for each kind it contains.

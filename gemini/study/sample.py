@@ -1,120 +1,163 @@
-"""Spread of metrics when uncertain parameters are drawn at random."""
+"""Spread of metrics when the uncertain values of the case are drawn at random."""
 
 import numpy as np
 
-from gemini._utils.strings import close_matches, join_names
+from gemini import units
+from gemini._utils.jsonable import to_plain
 from gemini.errors import ValidationError
-from gemini.study._utils.target import check_name, quantities, value_si
-from gemini.study._utils.trial import checked_metric, run_trial
+from gemini.study._utils.parallel import mapped
+from gemini.study._utils.target import quantities
+from gemini.study._utils.trial import checked_metric, drawn_trial
+from gemini.study._utils.uncertain import declared
 from gemini.types.shapes import measure
 
-DISTRIBUTIONS = {
-    "normal": ("mean", "std"),
-    "uniform": ("lower", "upper"),
-    "triangular": ("lower", "mode", "upper"),
-}
-"""The fields of each distribution, in the order of the method of its name of the generator."""
+ATTEMPTS = 10000
+"""Draws of a truncated normal before its bounds are judged out of reach."""
+SUMMARY = ("mean", "p5", "p50", "p95")
+"""The statistics of a summary; ``failed`` is the number of draws left out, beside them."""
 
 
-def _checked_distribution(plant, case, name, distribution):
-    """Refuse a distribution that does not fit: the parameter, the kind or a missing field."""
-    check_name(plant, case, name)
-    kind = distribution.get("kind")
-    if kind not in DISTRIBUTIONS:
-        raise ValidationError(
-            f"study.sample: {name}: kind = {kind!r}; expected one of {join_names(DISTRIBUTIONS)}",
-            path=name,
-            code="unknown_name",
-            suggestions=close_matches(str(kind), list(DISTRIBUTIONS)),
-        )
-    missing = set(DISTRIBUTIONS[kind]) - set(distribution)
-    if missing:
-        raise ValidationError(
-            f"study.sample: {name}: expected {join_names(sorted(missing))} for {kind}",
-            path=name,
-            code="missing_value",
-        )
+class Sample(dict):
+    """The result of ``sample``: ``{samples, summary}``, with ``to_dict`` and ``from_dict``."""
+
+    def to_dict(self):
+        """Return the result as plain JSON: quantities and values as ``{"value", "unit"}``."""
+        samples = [
+            {
+                "parameters": to_plain(draw["parameters"]),
+                "metrics": to_plain(draw["metrics"]),
+                **({"reason": draw["reason"]} if "reason" in draw else {}),
+            }
+            for draw in self["samples"]
+        ]
+        summary = {metric: to_plain(spread) for metric, spread in self["summary"].items()}
+        return {"samples": samples, "summary": summary}
+
+    @classmethod
+    def from_dict(cls, data):
+        """Return the result of a dictionary of ``to_dict``."""
+        samples = [
+            {
+                "parameters": {
+                    k: units.Quantity.from_dict(v) for k, v in draw["parameters"].items()
+                },
+                "metrics": {k: value_of(v) for k, v in draw["metrics"].items()},
+                **({"reason": draw["reason"]} if "reason" in draw else {}),
+            }
+            for draw in data["samples"]
+        ]
+        summary = {
+            metric: {key: value_of(item) for key, item in spread.items()}
+            for metric, spread in data["summary"].items()
+        }
+        return cls(samples=samples, summary=summary)
 
 
-def _draw(generator, plant, case, name, distribution):
-    """Return one random value of a parameter, in SI."""
-    kind = distribution["kind"]
-    fields = [
-        value_si(plant, case, name, distribution[field], difference=field == "std")
-        for field in DISTRIBUTIONS[kind]
-    ]
-    try:
-        return float(getattr(generator, kind)(*fields))
-    except ValueError as error:
-        raise ValidationError(f"study.sample: {name}: {error}", path=name) from error
+def _is_value(item):
+    """Whether ``item`` is the JSON form of a value."""
+    return isinstance(item, dict) and {"value", "unit"} <= set(item)
+
+
+def value_of(data):
+    """Return the ``Value`` of the JSON value ``{value, unit}`` with its ``reason`` and parts."""
+    parts = {
+        key: value_of(item) if _is_value(item) else item
+        for key, item in data.items()
+        if key not in ("value", "unit", "reason")
+    }
+    return measure(data["value"], data["unit"], data.get("reason"), **parts)
+
+
+def _draw(generator, name, uncertainty, value):
+    """Return one random value in SI of a declared number, whose value in the case is ``value``."""
+    kind = uncertainty.kind
+    if kind == "uniform":
+        return float(generator.uniform(uncertainty.min, uncertainty.max))
+    if kind == "triangular":
+        return float(generator.triangular(uncertainty.min, value, uncertainty.max))
+    low = -np.inf if uncertainty.min is None else uncertainty.min
+    high = np.inf if uncertainty.max is None else uncertainty.max
+    for _ in range(ATTEMPTS):
+        number = float(generator.normal(value, uncertainty.std))
+        if low <= number <= high:
+            return number
+    raise ValidationError(
+        f"study.sample: {name}: no draw of the normal inside [{low}, {high}] in {ATTEMPTS} tries; "
+        "expected bounds that the distribution reaches",
+        path=name,
+        code="out_of_bounds",
+    )
 
 
 def _spread(samples, name):
     """Return ``{mean, p5, p50, p95}``, each a ``Value``, of a metric over the samples giving it."""
     metrics = [item["metrics"][name] for item in samples if name in item["metrics"]]
     numbers = [item.value for item in metrics if item.value is not None]
-    unit = metrics[0].unit if metrics else "-"
+    unit = next((item.unit for item in metrics if item.value is not None), "-")
+    failed = measure(len([item for item in samples if "reason" in item]), "-")
     if not numbers:
         reason = "no sample gives this metric"
-        return {key: measure(None, unit, reason) for key in ("mean", "p5", "p50", "p95")}
+        return {key: measure(None, unit, reason) for key in SUMMARY} | {"failed": failed}
     low, middle, high = np.percentile(numbers, (5, 50, 95))
     spread = {"mean": np.mean(numbers), "p5": low, "p50": middle, "p95": high}
-    return {key: measure(number, unit) for key, number in spread.items()}
+    return {key: measure(number, unit) for key, number in spread.items()} | {"failed": failed}
 
 
-def sample(plant, case, distributions, metrics, count, seed=0, *, plan=None):
-    """Return the spread of metrics when uncertain parameters are drawn at random.
+def sample(plant, case, metrics, count, seed, *, plan=None):
+    """Return the spread of metrics when the uncertain values of the case are drawn at random.
 
-    Each draw copies the plant and the case, sets the drawn values, simulates the copy on the case
-    (``gm.simulate`` plans the demand on that design) and reads the metrics. The plant and the case
-    themselves are not changed. A draw that breaks the bounds of a value of the case, such as a
-    negative price, is a draw whose run failed.
+    The distributions are only those the case declares (``uncertainty`` next to a number of
+    ``environment`` or ``assumptions`` in ``case.json``); a case with none raises
+    ``missing_value``. Plant parameters are design decisions and are never drawn. Each draw copies
+    the plant and the case, sets the drawn values on the copy of the case, simulates the copy
+    (``gm.simulate`` plans the demand on that design) and reads the metrics. The plant and the
+    case themselves are not changed. With ``gm.runtime.settings(processes=n)`` the draws run in
+    ``n`` worker processes and give the same result. A draw that breaks the bounds of a value of
+    the case, such as a negative price, is a draw whose run failed.
 
     Parameters
     ----------
     plant : Plant
         A plant with parameter values.
     case : Case
-        What the plant is asked to do, as for ``minimize``.
-    distributions : dict
-        For each uncertain value, its distribution. A key is ``"path.parameter"`` for a parameter
-        of the plant, or ``"case.<path>"`` for a number of the case, with the path of its place in
-        ``case.json``, for example ``case.assumptions.finance.opex.electricity`` or
-        ``case.environment.reservoir.permeability``; a profile of the case becomes the drawn
-        constant. The distribution is
-        ``{"kind": "normal", "mean", "std"}``, ``{"kind": "uniform", "lower", "upper"}`` or
-        ``{"kind": "triangular", "lower", "mode", "upper"}``, each field a ``Quantity`` or its dict
-        (a plain number only for a value without a dimension).
+        What the plant is asked to do, with the ``uncertainty`` of the values to draw. A
+        ``uniform`` is drawn between its ``min`` and ``max``, a ``triangular`` with the value of
+        the case as mode, a ``normal`` around the value, redrawn until inside its bounds if it
+        has any. A profile of the case becomes the drawn constant.
     metrics : list of str
         The metrics to record, as the ``objective`` of ``minimize`` without a sign.
     count : int
         The number of random draws, one simulation each.
     seed : int
-        Seed of ``numpy.random.default_rng``; the same seed gives the same draws.
+        Seed of ``numpy.random.default_rng``; the same seed gives the same draws. A seed is a
+        reproducibility choice, so there is no default.
     plan : DataFrame, optional
         The run input held fixed over the draws, as for ``minimize``.
 
     Returns
     -------
-    dict
-        ``{samples, summary}``: ``samples`` lists each draw's ``parameters``, ``Quantity`` values
-        in SI, and ``metrics``, a ``Value`` per metric, with a ``reason`` for a draw whose run
-        failed; ``summary`` gives, for each metric, ``{mean, p5, p50, p95}`` over the draws that
-        give it, each a ``Value`` that is ``None`` with a ``reason`` when none does.
+    Sample
+        A dict ``{samples, summary}``: ``samples`` lists each draw's ``parameters``, ``Quantity``
+        values in SI by ``case.<path>``, and ``metrics``, a ``Value`` per metric, with a
+        ``reason`` for a draw whose run failed; ``summary`` gives, for each metric,
+        ``{mean, p5, p50, p95}`` over the draws that give it, each a ``Value`` that is ``None``
+        with a ``reason`` when none does, and ``failed``, the number of draws left out because
+        their run had failed steps (their ``reason`` names the count and the most frequent
+        failure). ``to_dict()`` is plain JSON; ``Sample.from_dict`` reads it back.
     """
     if count < 1:
         raise ValidationError(f"study.sample: count = {count}; expected at least 1", path="count")
     names = [checked_metric(name) for name in metrics]
-    for name, distribution in distributions.items():
-        _checked_distribution(plant, case, name, distribution)
+    found = declared(case, "sample")
     generator = np.random.default_rng(seed)
+    draws = [
+        {name: _draw(generator, name, uncertainty, value) for name, uncertainty, value in found}
+        for _ in range(count)
+    ]
+    runs = mapped(drawn_trial, (plant, case, plan, names), draws)
     samples = []
-    for _ in range(count):
-        drawn = {
-            key: _draw(generator, plant, case, key, item) for key, item in distributions.items()
-        }
-        found, reason = run_trial(plant, case, plan, drawn, names)
+    for drawn, (run, reason) in zip(draws, runs):
         failed = {"reason": reason} if reason else {}
-        samples.append({"parameters": quantities(plant, case, drawn), "metrics": found, **failed})
+        samples.append({"parameters": quantities(plant, case, drawn), "metrics": run, **failed})
     summary = {name: _spread(samples, name) for name in names}
-    return {"samples": samples, "summary": summary}
+    return Sample(samples=samples, summary=summary)

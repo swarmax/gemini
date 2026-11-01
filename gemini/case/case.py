@@ -4,10 +4,10 @@ import json
 from pathlib import Path
 
 import numpy as np
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from gemini._utils.strings import join_path
-from gemini.case._utils import profile
+from gemini.case._utils import declared, profile
 from gemini.case._utils.section import Section
 from gemini.case.assumptions import Assumptions
 from gemini.case.choices import Choices
@@ -15,6 +15,7 @@ from gemini.case.constraint import Constraint
 from gemini.case.demand import NAMES, Demand
 from gemini.case.environment import Environment
 from gemini.case.time import Time
+from gemini.case.uncertainty import Uncertainty
 from gemini.errors import ValidationError
 
 
@@ -39,6 +40,12 @@ class Case(Section):
     choices : Choices or None
     constraints : tuple of Constraint or None
     assumptions : Assumptions or None
+    uncertainty : dict or None
+        The ``Uncertainty`` of each number of ``environment`` and ``assumptions`` that declares
+        one in ``case.json``, by its dotted path (``assumptions.finance.opex.electricity``). A
+        number carries it next to its value: ``{"value", "unit", "uncertainty": {"kind": ...}}``.
+        A run, ``size`` and ``minimize`` use only the value; ``gm.study.sample`` and
+        ``gm.study.sensitivity`` read the declarations.
     """
 
     where = ""
@@ -48,6 +55,9 @@ class Case(Section):
     choices: Choices | None = None
     constraints: tuple[Constraint, ...] | None = None
     assumptions: Assumptions | None = None
+    uncertainty: dict[str, Uncertainty] | None = Field(
+        default=None, json_schema_extra={"hidden": True}
+    )
 
     @model_validator(mode="after")
     def _on_the_time(self):
@@ -74,11 +84,26 @@ class Case(Section):
         """
         if not isinstance(data, dict):
             return super().from_dict(data)
-        data = dict(data)
+        data, found = declared.extract(data)
         if isinstance(data.get("demand"), dict) and "file" in data["demand"]:
             file = Path(folder or ".") / data["demand"]["file"]
             data["demand"] = {**data["demand"], "file": str(file)}
-        return cls(**_with_profiles(data, folder))
+        case = cls(**_with_profiles(data, folder))
+        if not found:
+            return case
+        return case.model_copy(update={"uncertainty": declared.resolve(case, found)})
+
+    def to_dict(self):
+        """Return the case as plain data, each uncertainty next to its value."""
+        return declared.attach(super().to_dict(), self.uncertainty or {})
+
+    @classmethod
+    def schema(cls):
+        """Return the JSON Schema of ``to_dict``, a number accepting its ``uncertainty``."""
+        found = super().schema()
+        for name in declared.CARRIERS:
+            found["properties"][name] = declared.with_schema(found["properties"][name])
+        return found
 
     @classmethod
     def from_json(cls, path):
