@@ -6,6 +6,7 @@ import pickle
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
+import numpy as np
 import pytest
 
 import gemini as gm
@@ -644,6 +645,47 @@ def test_a_forced_numpy_backend_keeps_plain_division_silent():
 
     with runtime.settings(backend="numpy"):
         assert Divider()().outputs.ratio == 2.0
+
+
+def _rows_stream(flows):
+    return Stream(m_dot=np.array(flows), T=np.full(len(flows), 300.0), p=np.full(len(flows), 1e5))
+
+
+class ColumnOutputs(Module):
+    """Outputs that hold the rows of an array call: a list of arrays and an optional with NaN."""
+
+    def __init__(self):
+        """Declare an inlet and the outputs."""
+        super().__init__()
+        self.fluid_in = Inlet(Stream)
+        self.sections = Output(list[float])
+        self.share = Output(float | None)
+
+    def forward(self, inlets):
+        """Record a list of columns and a share that is ``None`` where the level is zero."""
+        level = inlets.fluid_in.m_dot
+        self.sections = [level + 1.0, level * 2.0]
+        self.share = ops.where(level > 0, 1.0 / ops.maximum(level, 1e-9), None)
+        return dict()
+
+
+def test_an_array_call_validates_the_rows_of_a_list_and_a_nan_that_stands_for_none():
+    """Each row is accepted as a row call accepts it: lists of columns and NaN of ``X | None``."""
+    result = ColumnOutputs()(fluid_in=_rows_stream([0.0, 2.0, 2.0]))
+    assert result.outputs.share[1] == 0.5 and np.isnan(result.outputs.share[0])
+    assert [item.tolist() for item in result.outputs.sections] == [[1.0, 3.0, 3.0], [0.0, 4.0, 4.0]]
+
+
+def test_an_array_call_refuses_the_row_a_row_call_refuses():
+    """A row of a list output that is not valid fails the call, as in the row call."""
+
+    class Refusing(ColumnOutputs):
+        def forward(self, inlets):
+            self.sections = [inlets.fluid_in.m_dot, "text"]
+            return dict()
+
+    with pytest.raises(gm.errors.ValidationError):
+        Refusing()(fluid_in=_rows_stream([1.0, 2.0]))
 
 
 PUBLIC_METHODS = {

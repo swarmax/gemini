@@ -61,6 +61,14 @@ def _floats(values):
     return numbers
 
 
+class _Window(NamedTuple):
+    """The rows of the dataset inside one chunk: nanosecond times, the 2D values, numeric flags."""
+
+    times: np.ndarray
+    values: np.ndarray
+    numeric: tuple
+
+
 class Loader:
     """Align raw rows to any finite tick iterable with bounded source reads.
 
@@ -124,14 +132,18 @@ class Loader:
         return Aligned(times, durations, columns)
 
     def _blocks(self):
-        """Yield the ``Aligned`` arrays of each chunk of ticks, reading the chunk once."""
+        """Yield the ``Aligned`` arrays of each chunk of ticks."""
         align = self._mean if self.align == "mean" else self._previous
-        for frame, selected, seconds in self._frames():
-            times = [t.to_pydatetime() for t in selected]
-            yield Aligned(times, np.asarray(seconds, dtype=float), align(frame, selected, seconds))
+        for window, stamps, times, seconds in self._windows():
+            yield Aligned(times, np.asarray(seconds, dtype=float), align(window, stamps, seconds))
 
-    def _frames(self):
-        """Yield ``(frame, ticks, seconds)`` for each chunk of ticks, reading it once."""
+    def _windows(self):
+        """Yield ``(window, stamps, times, seconds)`` of each chunk, from one read of the data.
+
+        ``stamps`` are the ticks of the chunk as nanosecond integers and ``times`` as datetimes;
+        ``window`` holds the rows of the dataset from ``max_gap`` before the first tick to the end
+        of the last one, cut from the one conversion of the dataset to arrays.
+        """
         ticks = pd.DatetimeIndex(list(self.ticks))
         if not len(ticks):
             return
@@ -139,62 +151,68 @@ class Loader:
         seconds = self.durations
         if seconds is None:
             seconds = interval_seconds(ticks, self.dataset.native_step or DEFAULT_STEP)
-        for offset, stop in self._chunks(ticks):
-            selected = ticks[offset:stop]
-            end = selected[-1] + pd.Timedelta(seconds=float(seconds[stop - 1]))
-            frame = self.dataset.read(selected[0] - self.max_gap, end, self.columns)
-            yield frame, selected, seconds[offset:stop]
+        frame = self.dataset.read(ticks[0] - self.max_gap, None, self.columns)
+        rows = frame.index.as_unit("ns").asi8
+        values = frame.to_numpy()
+        numeric = tuple(pd.api.types.is_numeric_dtype(dtype) for dtype in frame.dtypes)
+        stamps = ticks.asi8
+        times = [t.to_pydatetime() for t in ticks]
+        for offset, stop in self._chunks(stamps):
+            end = stamps[stop - 1] + pd.Timedelta(seconds=float(seconds[stop - 1])).value
+            left = np.searchsorted(rows, stamps[offset] - self.max_gap.value, side="left")
+            right = np.searchsorted(rows, end, side="right")
+            window = _Window(rows[left:right], values[left:right], numeric)
+            yield window, stamps[offset:stop], times[offset:stop], seconds[offset:stop]
 
-    def _chunks(self, ticks):
+    def _chunks(self, stamps):
         """Yield ``(offset, stop)`` positions of consecutive tick chunks of at most ``chunk``."""
         offset = 0
-        while offset < len(ticks):
-            stop = max(offset + 1, ticks.searchsorted(ticks[offset] + self.chunk, side="left"))
+        while offset < len(stamps):
+            limit = stamps[offset] + self.chunk.value
+            stop = max(offset + 1, np.searchsorted(stamps, limit, side="left"))
             yield offset, stop
             offset = stop
 
-    def _previous(self, frame, ticks, seconds):
+    def _previous(self, window, stamps, seconds):
         """Hold the latest row at or before each tick (``exact``: only a row at the tick).
 
         Row times are compared as nanosecond integers, the unit of ``Timestamp.value``, whatever
         the resolution of the dataset index (pandas 3 parses text as microseconds).
         """
-        held, gaps = self._hold(frame, ticks)
+        held, gaps = self._hold(window, stamps)
         held[gaps] = np.nan
         return {column: held[:, index] for index, column in enumerate(self.columns)}
 
-    def _positions(self, frame, ticks):
+    def _positions(self, window, stamps):
         """Return the held row position of each tick and whether the tick is a gap.
 
         A tick is a gap without a row at or before it, when the hold is older than ``max_gap``
         or, for ``exact`` alignment, when the row is not at the tick itself.
         """
-        times = frame.index.as_unit("ns").asi8
-        positions = np.searchsorted(times, ticks.asi8, side="right") - 1
+        times = window.times
+        positions = np.searchsorted(times, stamps, side="right") - 1
         if not len(times):
-            return positions, np.ones(len(ticks), dtype=bool)
+            return positions, np.ones(len(stamps), dtype=bool)
         held = times[positions]
-        gaps = (positions < 0) | (ticks.asi8 - held > self.max_gap.value)
+        gaps = (positions < 0) | (stamps - held > self.max_gap.value)
         if self.align == "exact":
-            gaps |= held != ticks.asi8
+            gaps |= held != stamps
         return positions, gaps
 
-    def _hold(self, frame, ticks):
+    def _hold(self, window, stamps):
         """Return the held rows as one 2D array (a copy) and the gap mask."""
-        positions, gaps = self._positions(frame, ticks)
-        values = frame.to_numpy()
+        positions, gaps = self._positions(window, stamps)
+        values = window.values
         if values.dtype.kind in "iub":
             values = values.astype(float)
         if not len(values):
-            return np.full((len(ticks), len(self.columns)), np.nan), gaps
+            return np.full((len(stamps), len(self.columns)), np.nan), gaps
         return values[positions], gaps
 
-    def _mean(self, frame, ticks, seconds):
+    def _mean(self, window, stamps, seconds):
         """Average each numeric column over ``[tick, tick + dt)``; text keeps its last value."""
-        times = frame.index.as_unit("ns").asi8
-        values = frame.to_numpy()
-        numeric = [pd.api.types.is_numeric_dtype(frame[column]) for column in self.columns]
-        starts = ticks.asi8
+        times, values, numeric = window
+        starts = stamps
         lefts = np.searchsorted(times, starts, side="left")
         lengths = np.round(np.asarray(seconds) * 1e9).astype(np.int64)
         rights = np.searchsorted(times, starts + lengths, side="left")

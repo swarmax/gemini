@@ -20,6 +20,7 @@ from contextvars import ContextVar
 from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import partial
+from itertools import repeat
 
 import numpy as np
 from pydantic_core import to_jsonable_python
@@ -217,6 +218,34 @@ def _scalar_output(declaration, value):
     if is_scalar_array and declaration.accepts_none() and value != value:
         return None
     return value
+
+
+def _row_output(declaration, item):
+    """Return one row of an array output: a NaN is the ``None`` of ``X | None``."""
+    if isinstance(item, float) and item != item and declaration.accepts_none():
+        return None
+    return item
+
+
+def _is_column(item):
+    """Return whether ``item`` is an array of rows."""
+    return isinstance(item, np.ndarray) and item.ndim > 0
+
+
+def _output_rows(value):
+    """Return the rows of an array output (a column's values once) or of a list holding arrays.
+
+    A call that made one row returns ``None``.
+    """
+    if not isinstance(value, list):
+        if not _is_column(value):
+            return None
+        rows = value.tolist()
+        return list(dict.fromkeys(rows)) if value.ndim == 1 else rows
+    if not any(_is_column(item) for item in value):
+        return None
+    columns = [item.tolist() if _is_column(item) else repeat(item) for item in value]
+    return [list(row) for row in zip(*columns)]
 
 
 def _plain_outlet(value):
@@ -432,9 +461,10 @@ class Module:
             call.outputs[name] = value
             return
         declaration = self._outputs[name]
-        if isinstance(value, np.ndarray) and value.ndim:
-            for item in value.tolist():
-                declaration.validate(_scalar_output(declaration, item))
+        rows = _output_rows(value)
+        if rows is not None:
+            for item in rows:
+                declaration.validate(_row_output(declaration, item))
             call.outputs[name] = value
             return
         call.outputs[name] = declaration.validate(_scalar_output(declaration, value))

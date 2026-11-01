@@ -2,9 +2,10 @@
 
 ``record_break`` records one ``break`` node for the call of a stateful, pre-hooked or
 untraceable leaf child. Its operands are the fields of the inlets and the supplied control and
-boundary values, flattened; its attributes are the module and the layout of the operands. Every
-output and outlet field is a ``break_output`` node of it. ``evaluate_break`` runs the module row
-by row on the plain path (``module(**arguments)``, so a stateful module starts from its initial
+boundary values, flattened; its attributes are the path of the module below the root of the call
+(a graph holds no module) and the layout of the operands. Every output and outlet field is a
+``break_output`` node of it. ``evaluate_break`` runs the module of the root it is given row by
+row on the plain path (``module(**arguments)``, so a stateful module starts from its initial
 states, exactly like a call outside ``Module.step``) and stacks the results. A row that raises
 is NaN and fails a check guarding every output of the node: the row carries an error code like
 any failed check, and ``Evaluation.raise_first`` re-raises the exception of the first failing row.
@@ -53,12 +54,13 @@ class BreakResult:
         return values[0].item() if self.scalar else values
 
 
-def record_break(graph, module, inlets, supplied, call_outputs, reason):
+def record_break(graph, module, path, inlets, supplied, call_outputs, reason):
     """Record a break node for ``module`` and return its outlets, output values and inputs.
 
-    ``inlets`` are the traced inlets of the call, ``supplied`` the control and boundary values
-    the caller passed, ``call_outputs`` whether outputs are recorded. The outlet fluids come from
-    a probe of ``forward``. The returned ``Ports`` and ``dict`` hold traced values.
+    ``path`` is the path of ``module`` below the root of the call, empty for the root. ``inlets``
+    are the traced inlets of the call, ``supplied`` the control and boundary values the caller
+    passed, ``call_outputs`` whether outputs are recorded. The outlet fluids come from a probe of
+    ``forward``. The returned ``Ports`` and ``dict`` hold traced values.
     """
     inputs = _probe_inputs(module, supplied)
     fluids = _probe_fluids(module, inlets, inputs)
@@ -70,7 +72,7 @@ def record_break(graph, module, inlets, supplied, call_outputs, reason):
     keys.extend(("outlets", port) for port in _power_outlets(module))
     keys.extend(("outputs", name) for name in (module._outputs if call_outputs else ()))
     attributes = {
-        "module": module,
+        "path": path,
         "inlets": tuple((port, stream.fluid) for port, stream in streams.items()),
         "names": names,
         "fluids": fluids,
@@ -157,9 +159,10 @@ def _probe_fluids(module, inlets, inputs):
     }
 
 
-def evaluate_break(node, operands):
-    """Run the module of a break node on every row and return a ``BreakResult``."""
+def evaluate_break(node, operands, root):
+    """Run the module of a break node, below ``root``, on every row; return a ``BreakResult``."""
     attributes = node.attributes
+    module = root.get_submodule(attributes["path"])
     arrays = [np.asarray(operand) for operand in operands]
     scalar = all(array.ndim == 0 for array in arrays)
     rows = 1 if scalar else max(array.size for array in arrays)
@@ -167,7 +170,9 @@ def evaluate_break(node, operands):
     for row in range(rows):
         try:
             with runtime.settings(backend=None):
-                values[row] = _call_row(attributes, [row_item(array, row) for array in arrays])
+                values[row] = _call_row(
+                    attributes, module, [row_item(array, row) for array in arrays]
+                )
         except Exception as error:
             exceptions[row] = error
     columns = {
@@ -178,9 +183,8 @@ def evaluate_break(node, operands):
     return BreakResult(columns, ok, exceptions, scalar)
 
 
-def _call_row(attributes, items):
+def _call_row(attributes, module, items):
     """Call the module with one row and return its output and outlet values by key."""
-    module = attributes["module"]
     fields = iter(items)
     arguments = row_streams(dict(attributes["inlets"]), lambda port, field: next(fields))
     arguments.update(zip(attributes["names"], fields))

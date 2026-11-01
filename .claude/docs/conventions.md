@@ -405,17 +405,22 @@ reason it is needed:
   selected one, like the graph's error codes. A `Failed` carries through every op, raises when used
   as a number (`bool`, `float`, `int`, `format`, a `Stream`, a `Declaration`) and raises its error
   when it leaves the outermost scope. A failing `check` on an eager array raises at once, for the
-  first failing row; tests compare arrays through `gemini.compiler.graph.run_function`. In a trace the graph
+  first failing row, unless the caller runs under `ops.failures.marking()` (the eager executor does):
+  the failing rows of a physics function then mark its results, which become `FailedRows` (an `ndarray`
+  with the failures of its rows, only when a row failed) and carry them through ops and NumPy
+  arithmetic, lowest check number first; `where` keeps the marks of the selected branch per row; a
+  row already marked is not checked again; an inline check outside every physics function raises
+  with `error.failures` of all its rows. A mark that reaches a result fails that row with the row
+  call's exact exception. Tests compare arrays through `gemini.compiler.graph.run_function`. In a trace the graph
   does the same: a check recorded in a physics function guards that function's traced results (all
   of them, through an `identity` node for a passed-through argument) and reaches an outer function
   through data, and a check outside any physics function (inline in `forward`) guards every graph
   output, as it raises at once when eager. Never put the `repr`
   of a physical value in a message (it reads `np.float64(1.0)`) and use `ops.round`, not `round`.
-- A module holds its `GraphCache` in `_graph_cache` (`None` until `gemini.compiler.graph.graph_cache` first
-  asks for it), so traced graphs outlive an engine and a run function does not trace the plant
-  again. It sits on the module because a graph refers to its module, so a cache outside would keep
-  the module alive; a copied or pickled module starts with an empty cache
-  (`GraphCache.__reduce__`).
+- Traced graphs live in the one `GraphCache` of the process (`gemini.compiler.graph.graph_cache`),
+  keyed by structure, so an engine, a run function and a copy of a plant with other numeric values
+  trace nothing again. A graph holds no module (a break node holds a path, `evaluate` is given the
+  module), and the cache is bounded and locked: plants are not shared across threads, the cache is.
 - During a trace the `_Call` record carries the traced parameter values, which
   `Module.__getattr__` returns instead of the stored values, and records outputs without
   validating them (`gemini/compiler/graph/tracer.py`).

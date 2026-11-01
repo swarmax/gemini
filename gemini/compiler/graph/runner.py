@@ -51,12 +51,12 @@ def run(module, inlets, inputs=None, *, backend="numpy", cache=None):
     graph = (cache or GraphCache()).graph(module, fluids)
     feeds = graph_feeds(graph, module, inlets, inputs)
     with runtime.settings(backend=backend):
-        evaluation = evaluate(graph, feeds, rows)
+        evaluation = evaluate(graph, feeds, rows, module=module)
     evaluation.raise_first()
     result = evaluation.result
     outlets = {port: _fields(result.outlets[port]) for port in module._given_outlets()}
     outlets |= {port: _fields(result.inlets[port]) for port in module._drawn_inlets()}
-    breaks = [reason for _, reason in graph.breaks] if graph.root is not None else []
+    breaks = [reason for _, reason in graph.breaks] if graph.root_break else []
     return Run(outputs=dict(result.outputs.items()), outlets=outlets, breaks=breaks, graph=graph)
 
 
@@ -93,7 +93,7 @@ def graph_feeds(graph, module, inlets, inputs):
         owner, local = _owner(module, name)
         if name in inputs:
             value = inputs[name]
-        elif graph.root is None:
+        elif not graph.root_break:
             value = owner._input_value(local)
         else:
             continue

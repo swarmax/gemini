@@ -14,6 +14,7 @@ import dataclasses
 import numpy as np
 
 from gemini.ops import Constant
+from gemini.ops.failures import stripped
 from gemini.types.results import Values
 
 DTYPES = {"number": float, "boolean": bool, "integer": np.int64}
@@ -63,7 +64,7 @@ def converter(rows, traced=(), column=None):
             return np.full(rows, value)
         if isinstance(value, np.ndarray) and not value.ndim:
             return np.full(rows, value[()])
-        return value
+        return stripped(value)
 
     return convert
 

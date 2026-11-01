@@ -30,7 +30,7 @@ def _evaluate(module, inputs, rows, stepped=False, context=None, backend=None):
     graph = GraphCache().graph(module, {"fluid_in": gm.WATER}, stepped)
     feeds = graph_feeds(graph, module, inlets, inputs)
     with runtime.settings(backend=backend):
-        return graph, evaluate(graph, feeds, rows, context)
+        return graph, evaluate(graph, feeds, rows, context, module)
 
 
 @pytest.mark.parametrize("backend", [None, "python"])
@@ -38,7 +38,7 @@ def test_a_composite_root_break_gives_real_trees(backend):
     """Children, outputs and the sum over the leaves are those of direct calls."""
     chain = Chain(Opaque())
     graph, evaluation = _evaluate(chain, {"drive": 1.0}, 3, backend=backend)
-    assert graph.root is chain and {node.op for node in graph.nodes} == {"input"}
+    assert graph.root_break and {node.op for node in graph.nodes} == {"input"}
     assert evaluation.failed.tolist() == [False] * 3
     assert evaluation.result.children.keys() == {"first", "middle", "last"}
     assert evaluation.result.children["middle"].children.keys() == {"meter"}
@@ -76,7 +76,7 @@ def test_a_stepped_break_carries_the_states_row_to_row():
     tank = Tank()
     context = {"dt": 60.0, "states": None}
     graph, evaluation = _evaluate(tank, {}, 3, stepped=True, context=context)
-    assert graph.root is tank and graph.stepped
+    assert graph.root_break and graph.stepped
     assert evaluation.result.outputs["content"].tolist() == [1.0, 3.0, 6.0]
     assert evaluation.states == {"level": 6.0}
     again = {"dt": 60.0, "states": {"level": 6.0}}

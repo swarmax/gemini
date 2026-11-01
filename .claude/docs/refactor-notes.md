@@ -275,13 +275,12 @@ decisions outlast the move.
   flow; `HeatExchanger` no longer refuses a reversed pair of inlets at zero flow. Every value of the
   old plant is bit-identical in both seasons. The storage's `injection_in` now shows the pressure
   that arrives, not `groundwater_pressure`; `production_out` still does.
-- A plant with a loop or a constraint is a root break, as `close_loop` and the nodal solves were:
-  not one node of a graph, the same row by row on every backend.
-- A year on a plant with a loop runs row by row, 59 module calls a step on the sample plant with treatment: 6 s, and
-  9 s on `HeatingCoolingPlant`, on the same profile as any eager call, with no one hot spot. A trial
-  of `gm.study` therefore takes 6 to 9 s on a plant with a heat-driven chiller, not the 1 s asked for,
-  and 0.4 s on one without. Reading the run
-  takes 0.15 s of it, down from 3.9 s. Tracing a loop into the graph is what would close the gap.
+- A plant with a constraint is a root break, as the nodal solves were: not one node of a graph, the
+  same row by row on every backend. A plant with a loop ran row by row too, until the loop became
+  arrays (eager) and one `fixed_point` node (compiled), with the same Wegstein step, clamp, tolerance
+  and passes per row: the numbers of a year stay within 1e-9 of the row-by-row ones
+  (`scripts/bench_check.py`). A daily year of `HeatingCoolingPlant` takes 0.34 s eager (median of 5
+  after a warm-up, i5-8257U, load average 15), against 9 s row by row.
 - `DoubletHeatPlant` keeps its measured values, which `tests/fixtures/module_api_baseline` and
   `convert_legacy` hold. Its ESP curve at 60 Hz gives 37 bar at 149 m3/h, 17 bar at 200 m3/h and -34
   bar at 300 m3/h, so it runs a schedule up to 165 m3/h. A sized pump needs a decision on those
@@ -293,5 +292,4 @@ decisions outlast the move.
 - The drive water of a chiller returns through a bypass, so the supply stays at its setpoint. On the
   hackathon year the supply at the users rises from 66.3 to 100.0 degC at its lowest (216 days were
   below 99.9), and heat, cold, boiler and electricity stay the same to within rounding: the same
-  water, the same split, a different place for the mixer. The plant becomes a root break: a year of
-  it runs row by row, about 10 s against 2 s.
+  water, the same split, a different place for the mixer.

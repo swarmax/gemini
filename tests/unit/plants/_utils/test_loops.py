@@ -1,13 +1,15 @@
 """Closing a loop: Wegstein's iteration on the tear stream of a plant."""
 
+import numpy as np
 import pytest
 
 import gemini as gm
-from gemini import runtime
+from gemini import ops, runtime
 from gemini.compiler.graph.tracer import Tracer
 from gemini.modules import CirculationPump, Module
 from gemini.modules.declarations import Inlet, Outlet, Output
 from gemini.modules.storage import ThermalStorage
+from gemini.ops.failures import failures_of, marking
 from gemini.plants._utils import loops
 from gemini.plants._utils.plan import Loop
 from gemini.plants.plant import Plant
@@ -28,6 +30,7 @@ class Relaxer(Module):
     target = 340.0
     start = 300.0
     limits = (None, None)
+    flow = None
 
     def __init__(self):
         """Declare the circuit ports and the count of the calls."""
@@ -48,6 +51,8 @@ class Relaxer(Module):
         # Outlets
         inlet = inlets.fluid_in
         outlet = inlet.with_(T=self.slope * inlet.T + (1 - self.slope) * self.target)
+        if self.flow is not None:
+            outlet = outlet.with_(m_dot=self.flow)
 
         # Outputs
         self.drop = inlet.T - outlet.T
@@ -172,10 +177,10 @@ def test_a_trial_keeps_the_runtime_settings_and_is_not_recorded():
 
 
 def test_a_loop_runs_the_same_on_every_backend():
-    """A plant that iterates is a root break: the same calls row by row on every backend."""
+    """A plant that iterates is traced with its loop; every backend gives the plain numbers."""
     plant = circuit()
     graph = Tracer().trace(plant, {})
-    assert graph.root is plant and "closes a loop" in graph.breaks[0][1]
+    assert not graph.root_break and graph.breaks == []
     results = {}
     for backend in BACKENDS:
         with runtime.settings(backend=backend):
@@ -183,28 +188,250 @@ def test_a_loop_runs_the_same_on_every_backend():
     assert all(result == results[BACKENDS[0]] for result in results.values())
 
 
-@pytest.mark.parametrize(
-    ("current", "image", "previous", "previous_image", "expected"),
-    [
-        (10.0, 20.0, None, None, 20.0),
-        (10.0, 20.0, 10.0, 15.0, 20.0),
-        (10.0, 15.0, 0.0, 10.0, 20.0),
-        (10.0, 30.0, 0.0, 10.0, 30.0),
-    ],
-)
-def test_wegstein_accelerates_a_slope_below_one(current, image, previous, previous_image, expected):
-    """No history is substitution, a slope of one or more too, otherwise the secant root."""
-    assert loops.proposal(current, image, previous, previous_image) == expected
-
-
 def test_a_tear_stream_without_flow_has_no_temperature_to_converge():
     """A limit may hold the iterate away from the image: at no flow that carries no energy."""
-    tear = loops._Tear(gm.Stream(m_dot=0.0, T=350.0, p=1e5, fluid=gm.WATER), None, 360.0)
+    tear = loops.Tear(gm.Stream(m_dot=0.0, T=350.0, p=1e5, fluid=gm.WATER), None, 360.0)
     image = gm.Stream(m_dot=0.0, T=373.15, p=2e5, fluid=gm.WATER)
-    assert tear.advance(image, 1e-9)
+    assert tear.advance(image, 1e-9, True)
 
 
 def test_a_tear_stream_with_flow_still_converges_on_every_field():
     """Only a stream that stands still gives up its temperature."""
-    tear = loops._Tear(gm.Stream(m_dot=1.0, T=350.0, p=1e5, fluid=gm.WATER), None, 360.0)
-    assert not tear.advance(gm.Stream(m_dot=1.0, T=373.15, p=1e5, fluid=gm.WATER), 1e-9)
+    tear = loops.Tear(gm.Stream(m_dot=1.0, T=350.0, p=1e5, fluid=gm.WATER), None, 360.0)
+    assert not tear.advance(gm.Stream(m_dot=1.0, T=373.15, p=1e5, fluid=gm.WATER), 1e-9, True)
+
+
+class Curved(Relaxer):
+    """A relaxer with a saturating rule, so the loop needs several accelerated steps."""
+
+    abstract = True
+    scale = 20.0
+
+    def forward(self, inlets):
+        """Move towards the target along a ``tanh``, ``slope`` times as far."""
+        inlet = inlets.fluid_in
+        step = np.tanh((inlet.T - self.target) / self.scale) * self.scale
+        outlet = inlet.with_(T=self.target + self.slope * step * 1.9)
+        if self.flow is not None:
+            outlet = outlet.with_(m_dot=self.flow)
+        self.drop = inlet.T - outlet.T
+        return dict(fluid_out=outlet)
+
+
+ROWS = {
+    "slope": np.array([0.5, 0.5, 0.9, 0.5, 0.5, 0.7]),
+    "target": np.array([340.0, 300.0, 350.0, 340.0, 320.0, 310.0]),
+    "start": np.array([300.0, 300.0, 280.0, 300.0, 400.0, 500.0]),
+    "flow": np.array([2.0, 2.0, 3.0, 0.0, 2.0, 1.0]),
+    "upper": np.array([1e3, 1e3, 1e3, 1e3, 330.0, 1e3]),
+}
+
+
+def _ring(rows, curved=False, **rule):
+    """Return the circuit of the ``rows`` of ``ROWS``: a float each, or the arrays themselves."""
+    attributes = {name: rows[name] for name in ("slope", "target", "start", "flow")}
+    attributes |= {"limits": (None, rows["upper"]), "abstract": True} | rule
+    base = Curved if curved else Relaxer
+    relaxer = type("Rule", (base,), attributes)
+    return type("Ring", (Circuit,), {"relaxer_class": relaxer})()
+
+
+def _row(row):
+    return {name: values[row].item() for name, values in ROWS.items()}
+
+
+def _answer(plant):
+    result = plant()
+    tear = result.children["pump"].inlets.fluid_in
+    return np.array([tear.m_dot, tear.T, tear.p]), result.children["relaxer"].outputs.drop
+
+
+@pytest.mark.parametrize("curved", [False, True], ids=["linear", "curved"])
+def test_an_array_loop_gives_the_numbers_of_each_row_alone(curved):
+    """Rows that settle early, late, at zero flow or against a limit keep their own iterates."""
+    tear, drop = _answer(_ring(ROWS, curved))
+    for row in range(len(ROWS["slope"])):
+        alone, alone_drop = _answer(_ring(_row(row), curved))
+        assert tear[:, row].tolist() == alone.tolist()
+        assert drop[row] == alone_drop
+
+
+@ops.physics
+def _cooled(temperature, target):
+    """Return a temperature half way to the target, which has to be positive."""
+    ops.check(target > 0, gm.errors.PhysicsError, "relaxer: target = {target} K", target=target)
+    return 0.5 * temperature + 0.5 * target
+
+
+class Guarded(Relaxer):
+    """A relaxer whose rule is a physics function that refuses a negative target."""
+
+    abstract = True
+
+    def forward(self, inlets):
+        """Move half way to the target."""
+        outlet = inlets.fluid_in.with_(T=_cooled(inlets.fluid_in.T, self.target))
+        self.drop = inlets.fluid_in.T - outlet.T
+        return dict(fluid_out=outlet)
+
+
+def _guarded(target):
+    start = np.full(target.shape, 300.0) if np.ndim(target) else 300.0
+    attributes = {"abstract": True, "target": target, "start": start}
+    return type("Ring", (Circuit,), {"relaxer_class": type("Rule", (Guarded,), attributes)})()
+
+
+def test_a_row_that_fails_a_check_in_a_pass_fails_as_alone_and_the_others_survive():
+    """The failing row is marked with the error of its own call; the others keep their numbers."""
+    targets = np.array([340.0, -5.0, 320.0])
+    with marking():
+        tear = _guarded(targets)().children["relaxer"].outlets.fluid_out.T
+    failures = failures_of(tear)
+    assert failures.mask.tolist() == [False, True, False]
+    with raises(gm.errors.PhysicsError, "out_of_range", match="target = -5.0 K") as alone:
+        _guarded(-5.0)()
+    assert str(failures.error(1)) == str(alone.value)
+    assert tear[[0, 2]].tolist() == [
+        _guarded(340.0)().children["pump"].inlets.fluid_in.T,
+        _guarded(320.0)().children["pump"].inlets.fluid_in.T,
+    ]
+
+
+def test_a_row_that_does_not_converge_is_marked_with_its_own_temperature():
+    """Rows that close keep their results; the one that drifts gets ``loop_not_converged``."""
+    drift = np.array([0.0, 1.0, 0.0])
+    relaxer = type(
+        "Drifting", (Relaxer,), {"forward": _drifting_by, "abstract": True, "drift": drift}
+    )
+    plant = type("Ring", (Circuit,), {"relaxer_class": relaxer, "loop_passes": 4})()
+    with marking():
+        tear = plant().children["pump"].inlets.fluid_in.T
+    failures = failures_of(tear)
+    assert failures.mask.tolist() == [False, True, False]
+    error = failures.error(1)
+    assert error.code == "loop_not_converged" and error.path == "relaxer.fluid_out"
+    alone = type(
+        "Ring",
+        (Circuit,),
+        {
+            "relaxer_class": type(
+                "D", (Relaxer,), {"forward": _drifting_by, "abstract": True, "drift": 1.0}
+            ),
+            "loop_passes": 4,
+        },
+    )()
+    with raises(gm.errors.PhysicsError, "loop_not_converged") as caught:
+        alone()
+    assert str(error) == str(caught.value)
+
+
+def _drifting_by(self, inlets):
+    """Warm the stream by ``drift`` kelvin on every pass."""
+    outlet = inlets.fluid_in.with_(T=inlets.fluid_in.T + self.drift)
+    self.drop = -self.drift
+    return dict(fluid_out=outlet)
+
+
+@ops.physics
+def _watched(temperature):
+    """Return the temperature, which must be outside the window of 310 to 330 K."""
+    inside = ops.logical_and(temperature > 310.0, temperature < 330.0)
+    ops.check(
+        ops.logical_not(inside),
+        gm.errors.PhysicsError,
+        "probe: T = {temperature} K",
+        temperature=temperature,
+    )
+    return temperature
+
+
+class Probed(Relaxer):
+    """A relaxer with a second outlet, checked in the window and connected to nothing."""
+
+    abstract = True
+
+    def __init__(self):
+        """Declare the second outlet."""
+        super().__init__()
+        self.return_out = Outlet(Stream)
+
+    def forward(self, inlets):
+        """Relax as the base class does and probe the entering temperature on the side."""
+        outlets = super().forward(inlets)
+        outlets["return_out"] = inlets.fluid_in.with_(T=_watched(inlets.fluid_in.T))
+        return outlets
+
+
+class ProbedCircuit(Circuit):
+    """The circuit with the side outlet of its relaxer named a port of the plant."""
+
+    def __init__(self):
+        """Name the side outlet."""
+        super().__init__()
+        self.return_out = Outlet(Stream)
+        self.connect("relaxer.return_out", "return_out")
+
+
+def _probed(target):
+    start = np.full(target.shape, 300.0) if np.ndim(target) else 300.0
+    attributes = {"abstract": True, "target": target, "start": start}
+    relaxer = type("Rule", (Probed,), attributes)
+    return type("Ring", (ProbedCircuit,), {"relaxer_class": relaxer})()
+
+
+def test_a_row_that_fails_in_a_step_off_the_tear_at_a_passing_iterate_fails_as_alone():
+    """The row fails at the pass its check fails, though its converged iterate would pass."""
+    targets = np.array([340.0, 300.0, 340.0, 360.0])
+    with marking():
+        side = _probed(targets)().outlets.return_out.T
+    failures = failures_of(side)
+    assert failures is not None
+    errors = {}
+    for row, target in enumerate(targets.tolist()):
+        try:
+            _probed(target)()
+        except gm.errors.PhysicsError as error:
+            errors[row] = error
+    assert failures.mask.tolist() == [row in errors for row in range(4)]
+    assert errors
+    for row, error in errors.items():
+        assert type(failures.error(row)) is type(error) and str(failures.error(row)) == str(error)
+        assert failures.error(row).code == error.code
+
+
+@ops.physics
+def _bounded(temperature):
+    """Return the temperature, which must be at least 325 K."""
+    ops.check(
+        temperature >= 325.0,
+        gm.errors.PhysicsError,
+        "bound: T = {temperature} K",
+        temperature=temperature,
+    )
+    return temperature
+
+
+class DoubleProbed(Probed):
+    """A relaxer that also fails a second check on the side outlet, after the first."""
+
+    abstract = True
+
+    def forward(self, inlets):
+        """Probe the window, then the bound."""
+        outlets = super().forward(inlets)
+        bound = _bounded(inlets.fluid_in.T)
+        outlets["return_out"] = outlets["return_out"].with_(p=bound * 1e3)
+        return outlets
+
+
+def test_a_row_that_fails_two_checks_in_a_pass_reports_the_first_as_alone():
+    """From 320 K the window check runs first and fails first, as alone, not the bound."""
+    attributes = {"abstract": True, "target": np.array([340.0, 340.0]), "start": np.full(2, 320.0)}
+    relaxer = type("Rule", (DoubleProbed,), attributes)
+    with marking():
+        side = type("Ring", (ProbedCircuit,), {"relaxer_class": relaxer})()().outlets.return_out.T
+    failures = failures_of(side)
+    alone = type("Rule", (DoubleProbed,), {"abstract": True, "target": 340.0, "start": 320.0})
+    with pytest.raises(gm.errors.PhysicsError, match="probe") as caught:
+        type("Ring", (ProbedCircuit,), {"relaxer_class": alone})()()
+    assert str(failures.error(0)) == str(caught.value) and "probe" in str(failures.error(1))

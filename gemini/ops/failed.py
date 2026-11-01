@@ -12,19 +12,17 @@ error, so a structural ``if``, a ``Stream`` or a ``Declaration`` surface it, and
 the outermost scope (``ops.scope.plain``).
 """
 
-from itertools import count
-
 from gemini.ops.dispatch import Operators, Symbolic
+from gemini.ops.failures import next_order
 
 MARK = "_gemini_check"
 ORDER = "_gemini_order"
-_creation = count()
 
 
 def mark(error):
     """Mark ``error`` as raised by a failing ``ops.check`` and return it."""
     setattr(error, MARK, True)
-    setattr(error, ORDER, next(_creation))
+    setattr(error, ORDER, next_order())
     return error
 
 

@@ -248,8 +248,9 @@ stream converges, the same way for every plant:
 - `plant.loop_tolerance` (1e-9, SI) and `plant.loop_passes` (50) are the settings. A loop that does
   not converge raises `PhysicsError` with code `loop_not_converged` and the tear path.
 
-A plant with a loop or a constraint is a root break: it runs for real, row by row, the same on every
-backend ([engine](engine.md#the-runner)).
+A compiled plant traces its loops as a `fixed_point` node that iterates on arrays, masked per row,
+with the numbers of a plain call. A plant with a constraint is a root break: it runs for real, row by
+row, the same on every backend ([engine](engine.md#the-runner)).
 
 A connection with `"type": "state"` reads the value of the previous step. State connections are
 valid in the plant dict, the schema and validation; **running such a plant raises

@@ -57,6 +57,7 @@ def run_rows(module, fluids, feeds, rows, context, stepped):
     for the initial states); the returned states are those after the last row that did not fail.
     """
     state = context.get("states")
+    feeds = {name: _column(value) for name, value in feeds.items()}
     steps = np.broadcast_to(np.asarray(context.get("dt", np.nan), dtype=float), (rows,))
     results, errors = {}, {}
     for row in range(rows):
@@ -69,11 +70,22 @@ def run_rows(module, fluids, feeds, rows, context, stepped):
     return results, errors, state if stepped else None
 
 
+def _column(value):
+    """Return a column as a list of plain Python values, a scalar as its one value."""
+    array = np.asarray(value)
+    return array.tolist() if array.ndim else array.item()
+
+
+def _at(column, row):
+    """Return row ``row`` of a column made by ``_column``."""
+    return column[row] if type(column) is list else column
+
+
 def _call_row(module, fluids, feeds, row, dt, state, stepped):
-    """Return the result of one row and the states after it."""
-    streams = row_streams(fluids, lambda port, field: row_item(feeds[f"{port}.{field}"], row))
+    """Return the result of one row and the states after it; ``feeds`` are ``_column`` values."""
+    streams = row_streams(fluids, lambda port, field: _at(feeds[f"{port}.{field}"], row))
     fields = {f"{port}.{field}" for port in fluids for field in STREAM_FIELDS}
-    inputs = {name: row_item(value, row) for name, value in feeds.items() if name not in fields}
+    inputs = {name: _at(value, row) for name, value in feeds.items() if name not in fields}
     with runtime.settings(backend=None), applied(module, inputs):
         if not stepped:
             return module(streams), state
@@ -106,9 +118,13 @@ def applied(module, inputs):
 
 
 def _validated(declaration, value):
-    """Return ``value`` validated by ``declaration``; a column stays a column."""
+    """Return ``value`` validated by ``declaration``; a column stays a column.
+
+    A numeric column is validated at each distinct value once: the rule has no other input.
+    """
     if np.ndim(value):
-        for item in np.asarray(value).tolist():
+        array = np.asarray(value)
+        for item in (np.unique(array) if array.dtype.kind in "biuf" else array).tolist():
             _validated(declaration, item)
         return value
     if declaration.accepts_none() and value != value:
@@ -125,17 +141,11 @@ def stacked(results, rows):
     if not results:
         return None
     first = next(iter(results.values()))
-    columns = {row: _flatten(result) for row, result in results.items()}
-    position = iter(range(len(columns[next(iter(columns))])))
-
-    def stack(_):
-        index = next(position)
-        missing = _missing(next(iter(columns.values()))[index])
-        return stack_column(
-            [columns[row][index] if row in columns else missing for row in range(rows)]
-        )
-
-    return first.mapped(stack)
+    flat = {row: _flatten(result) for row, result in results.items()}
+    absent = [_missing(value) for value in flat[next(iter(flat))]]
+    table = [flat.get(row, absent) for row in range(rows)]
+    columns = iter(stack_column(column) for column in zip(*table))
+    return first.mapped(lambda _: next(columns))
 
 
 def _missing(value):

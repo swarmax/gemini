@@ -21,7 +21,7 @@ def _break_graph(tank):
             )
         }
     )
-    outlets, outputs, _, _ = record_break(graph, tank, inlets, {}, True, "stateful")
+    outlets, outputs, _, _ = record_break(graph, tank, "", inlets, {}, True, "stateful")
     graph.output("content", outputs["content"])
     graph.output("p", outlets.fluid_out.p)
     return graph
@@ -42,7 +42,7 @@ def test_evaluate_break_stacks_rows_and_marks_failures(tank):
     graph = _break_graph(tank)
     node = graph.nodes[3]
     operands = [np.array([1.0, 5.0, 2.0]), np.array([300.0, -1.0, 300.0]), np.full(3, 1e5)]
-    result = evaluate_break(node, operands)
+    result = evaluate_break(node, operands, tank)
     assert result.ok.tolist() == [True, False, True]
     assert result.column(("outputs", "content"))[[0, 2]].tolist() == [1.0, 2.0]
     assert np.isnan(result.column(("outputs", "content"))[1]) and 1 in result.exceptions
@@ -52,5 +52,5 @@ def test_interpreter_gives_scalar_results_for_scalar_operands(tank):
     """On the Python backend the break node returns plain numbers."""
     graph = _break_graph(tank)
     feeds = {"fluid_in.m_dot": 2.0, "fluid_in.T": 300.0, "fluid_in.p": 1e5}
-    values = graph_outputs(graph, feeds, "python")
+    values = graph_outputs(graph, feeds, "python", tank)
     assert values["content"] == 2.0 and values["p"] == 1e5

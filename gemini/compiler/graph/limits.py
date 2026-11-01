@@ -59,6 +59,6 @@ def _check_value(declaration, value):
 def certain(graph, checks):
     """Guard every output of ``graph`` with ``checks``, so each reaches an output on its rows."""
     alive = set(graph.checks)
-    kept = [check for check in checks if check in alive]
+    kept = [check for check in checks if check in alive and check.body is None]
     for node in {node for node in graph.outputs.values() if hasattr(node, "guards")}:
         node.guards.extend(check for check in kept if check not in node.guards)

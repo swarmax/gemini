@@ -25,8 +25,16 @@ exports `from_csv` and `from_values` from it.
 The run works without it: `executor_for(plant, compile)` (`gemini/engine/executor.py`) takes the
 compiled executor when `compile=True` and one is registered, else the eager one. The eager executor
 (`gemini/engine/eager.py`) runs `forward` on arrays over a chunk, and row by row
-(`gemini/engine/rows.py`) for a module with state, a loop or a pre-hook, on the python backend, at a
-precision other than float64, or when the array call raises. `gm.simulate(..., compile=False)` and
+(`gemini/engine/rows.py`) for a plant with a constraint (`Solve`), a module with state or a
+pre-hook, on the python backend, at a precision other than float64, or when the array call raises
+something no row can be blamed for (then `Evaluation.breaks` keeps the exception). A plant with a
+loop is not on that list: eager, it runs on arrays and `loops.iterate` keeps one Wegstein iterate
+per row, masked so that a row that settled or failed stops moving; compiled, the loop is one
+`fixed_point` node that runs the same iteration. A row that fails a check is a failed row of the
+array call, not a reason to leave it: the executor runs the call under `ops.failures.marking`, so the
+failing rows of a physics function travel with its results (`FailedRows`) and fail those rows
+with the row call's exception; an inline check in `forward` raises with the failures of all its
+rows and the call runs again on the others. `gm.simulate(..., compile=False)` and
 `Engine(..., compile=False)` force eager. The numbers are the same either way.
 
 ## Functions or engine
@@ -52,11 +60,14 @@ unless a `plan` is given and runs the plan. A building block has no demand: `cas
 only with a `plan`, else `ValidationError` (code `missing_value`).
 
 No object is kept between calls of the functions, except the traced graphs of the compiled
-executor, which the plant holds (`gemini.compiler.graph.graph_cache`): calling a function hundreds
-of times on one plant traces it once, and an `Engine` built on the plant shares the same graphs. The
-guards of [`GraphCache`](native-engine.md) decide: a changed numeric parameter does not retrace, a
-changed structure does. A copied or pickled plant starts with an empty cache. The eager executor
-keeps nothing.
+executor, which the process holds (`gemini.compiler.graph.graph_cache`, at most 16 graphs, the least
+recently used dropped): calling a function hundreds of times with other parameter values, on one
+plant or on copies of it (`Problem.apply_site` and a design study copy the plant), traces its
+structure once, and an `Engine` shares the same graphs. The key of [`GraphCache`](native-engine.md)
+decides: a changed numeric parameter does not retrace, a changed structure does (a class, a
+connection, a hook, a fluid, a non-numeric or structural value, a path). A graph holds no module:
+each call evaluates it for its own plant, so a copy never sees the values of another. The eager
+executor keeps nothing.
 
 The arguments are those of `Engine` and of the matching method, with `plant` first. On `simulate`
 and `replay`, `checkpoint=path` writes a checkpoint at the end of the run, also one that stops
@@ -305,10 +316,15 @@ equipment twins of a replay; the plant in simulate) evaluated over **chunks** of
   the Python backend, or when the call on arrays raises, which finds the rows whose health fails:
   they are errors), and the columns are spread over the chunk (`PathColumns.spread`).
 - **Breaks.** A leaf that is stateful, pre-hooked, untraceable or has a hook that only reads is a
-  break node. A root that cannot be traced as a whole (a plant with a loop or a constraint, float32
+  break node. A root that cannot be traced as a whole (a plant with a constraint, float32
   precision, or a stateful module in a stepped run) is one **root break**: the real module, called
   row by row with its states, so its results are real `ModuleResult` trees (children and
-  combinations exact). There is one implementation of a break, used by every mode.
+  combinations exact). There is one implementation of a break, used by every mode. A loop is no
+  break: compiled, it is one `fixed_point` node whose interpreter runs the same iteration
+  (`loops.iterate`) on arrays, masked per row (native-engine.md, Loops); eager, the plant runs on
+  arrays with the same iteration. Eager has no graph: it goes by rows for a constraint, state or
+  pre-hook without a record, and records in `Evaluation.breaks` (kept per twin path in
+  `engine.graph_breaks`) only a fall back to rows after an array call raised.
 - **Skips and errors.** A twin is skipped for the first missing column in this order: controls,
   boundaries, inlet fields (each inlet's stream is checked once its fields are read), observations,
   measured states. In simulate the plant is the one twin: root inlets, then the leaf inputs; a skip
