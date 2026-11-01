@@ -4,6 +4,7 @@ from typing import Literal
 
 from gemini import ops
 from gemini.errors import PhysicsError, ValidationError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter, State
 from gemini.modules.module import Module
 from gemini.physics import energy, fluid, ground, heat_transfer
@@ -187,7 +188,7 @@ class AquiferStorage(Module):
         return [
             heat_transfer.heat_rate(
                 ground.store_conductance(
-                    self._volume(store),
+                    volume,
                     self.ground_conductivity,
                     self.porosity,
                     water,
@@ -195,9 +196,9 @@ class AquiferStorage(Module):
                     self.aquifer_thickness,
                     self.storage_period,
                 ),
-                self._change(store),
+                change,
             )
-            for store in STORES
+            for volume, change in map(self._store, STORES)
         ]
 
     def _advance_states(self, inlets, outlets, dt):
@@ -236,11 +237,11 @@ class AquiferStorage(Module):
         source, _ = self._source_and_target()
         if source is None:
             return self.aquifer_temperature
-        return self.aquifer_temperature + self._change(source)
+        return self.aquifer_temperature + self._store(source)[1]
 
     def _moved_store(self, store, volume, injected_change):
         """Return a store's volume [m3] and temperature change [K] after this step's flow."""
-        store_volume, change = self._volume(store), self._change(store)
+        store_volume, change = self._store(store)
         source, target = self._source_and_target()
         if store == target:
             return ground.mix_store(store_volume, change, volume, injected_change)
@@ -252,13 +253,11 @@ class AquiferStorage(Module):
         """Return the stores the running mode takes water from and puts it into, else ``None``."""
         return SOURCE_AND_TARGET.get(self.mode, (None, None))
 
-    def _volume(self, store):
-        """Return a store's water volume [m3] at the start of the step."""
-        return getattr(self, f"{store}_volume")
-
-    def _change(self, store):
-        """Return a store's temperature change [K] at the start of the step."""
-        return getattr(self, f"{store}_temperature_change")
+    def _store(self, store):
+        """Return a store's volume [m3] and temperature change [K] at the start of the step."""
+        if store == "warm":
+            return self.warm_volume, self.warm_temperature_change
+        return self.cold_volume, self.cold_temperature_change
 
     @staticmethod
     def _fluid_heat_capacity(stream):
@@ -268,14 +267,7 @@ class AquiferStorage(Module):
 
     def _volume_flow(self, injection):
         """Return the injected liquid volume flow [m3/s] after checking it against the mode."""
-        ops.check(
-            injection.m_dot >= 0,
-            PhysicsError,
-            "{path}: injection_in.m_dot = {m_dot} kg/s; expected >= 0 "
-            "(the mode sets the direction)",
-            path=self.path,
-            m_dot=injection.m_dot,
-        )
+        require_forward(self.path, "injection_in.m_dot", injection.m_dot)
         if self.mode == "idle":
             ops.check(
                 injection.m_dot == 0,

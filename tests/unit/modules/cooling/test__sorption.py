@@ -20,7 +20,8 @@ def test_rates_are_the_heat_capacity_rate_of_each_inlet():
 def test_rates_reject_negative_flow_naming_the_port():
     """A negative mass flow raises with the module path and the port."""
     inlets = {"hot": Stream(m_dot=-1.0, T=350.0, p=1e5)}
-    with pytest.raises(PhysicsError, match=r"^unit: hot.m_dot = -1.0 kg/s; expected >= 0$"):
+    message = r"^unit: hot.m_dot = -1.0 kg/s; expected >= 0 \(reverse flow is not modelled\)$"
+    with pytest.raises(PhysicsError, match=message):
         _sorption.rates("unit", inlets)
 
 

@@ -206,7 +206,6 @@ class Expansion:
     """Steam turbine expansion from dry saturated steam (SI units)."""
 
     inlet_enthalpy: float
-    isentropic_outlet_enthalpy: float
     outlet_enthalpy: float
     outlet_quality: float
     efficiency: float
@@ -625,7 +624,7 @@ def baumann_expansion(
     Returns
     -------
     Expansion
-        ``inlet_enthalpy``, ``isentropic_outlet_enthalpy`` and ``outlet_enthalpy`` [J/kg];
+        ``inlet_enthalpy`` and ``outlet_enthalpy`` [J/kg];
         ``outlet_quality`` [-], the steam mass fraction of the exhaust; ``efficiency`` [-], the
         wet isentropic efficiency (h_in - h_out) / (h_in - h_s).
 
@@ -676,7 +675,7 @@ def baumann_expansion(
         quality=quality,
     )
     h_out = outlet.liquid_enthalpy + quality * outlet.evaporation_enthalpy
-    return Expansion(h_in, h_s, h_out, quality, (h_in - h_out) / (h_in - h_s))
+    return Expansion(h_in, h_out, quality, (h_in - h_out) / (h_in - h_s))
 
 
 def _region_1(pressure, temperature):

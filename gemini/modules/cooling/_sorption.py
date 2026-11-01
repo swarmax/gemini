@@ -1,7 +1,7 @@
 """What the absorption and adsorption machines share: circuit rates, outlets, outputs, capacity."""
 
 from gemini import ops
-from gemini.errors import PhysicsError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.cooling import _physics
 from gemini.physics import heat_transfer
 from gemini.types.flows import Stream
@@ -13,14 +13,7 @@ def rates(path, inlets):
     for port, stream in inlets.items():
         if not isinstance(stream, Stream):
             continue
-        ops.check(
-            stream.m_dot >= 0,
-            PhysicsError,
-            "{path}: {port}.m_dot = {m_dot} kg/s; expected >= 0",
-            path=path,
-            port=port,
-            m_dot=stream.m_dot,
-        )
+        require_forward(path, f"{port}.m_dot", stream.m_dot)
         rate_of[port] = stream.heat_capacity_rate()
     return rate_of
 

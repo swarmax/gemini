@@ -70,3 +70,9 @@ def test_the_gas_liquid_ratio_and_the_mass_fraction_are_inverses():
     rows = [(0.8, 0.9653, 1030.0), (0.0, 0.9653, 1030.0)]
     assert_function_matches(gas.gas_mass_fraction, rows)
     assert_function_matches(gas.gas_liquid_ratio, [(7.49e-4, 0.9653, 1030.0), (0.0, 0.9, 1000.0)])
+
+
+def test_species_flow_without_composition_is_zero_for_any_flow():
+    """No composition gives zero, also for an infinite or NaN flow."""
+    assert gas.species_flow(float("inf"), None, "CO2") == 0.0
+    assert gas.species_flow(float("nan"), None, "CO2") == 0.0

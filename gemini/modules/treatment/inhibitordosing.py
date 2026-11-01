@@ -1,7 +1,6 @@
 """Scale or corrosion inhibitor injection at a commanded mass dose."""
 
-from gemini import ops
-from gemini.errors import PhysicsError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.modules.treatment import _physics
@@ -53,13 +52,7 @@ class InhibitorDosing(Module):
 
         # Outlets
         inlet = inlets.fluid_in
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         product, _ = _physics.dosing_flows(self.dose, inlet.m_dot, self.product_concentration)
         outlet = inlet.with_(m_dot=inlet.m_dot + product)
         chemical_in = inlets.chemical_in.with_(m_dot=product, T=inlet.T)

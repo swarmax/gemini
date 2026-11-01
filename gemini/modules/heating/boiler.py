@@ -1,8 +1,8 @@
 """Auxiliary boilers with a steady first-law heat balance: gas-fired and electric."""
 
 from gemini import ops
-from gemini.errors import PhysicsError
 from gemini.modules._utils.cost import Equipment
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.heating import _burner
 from gemini.modules.module import Module
@@ -40,13 +40,7 @@ class _BoilerBody(Equipment, Module):
 
     def _requested_duty(self, inlet):
         """Return the duty [W] that reaches the setpoint, refusing reverse flow."""
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         return heat_transfer.setpoint_duty(
             inlet.heat_capacity_rate(), self.temperature_setpoint - inlet.T
         )

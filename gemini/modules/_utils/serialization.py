@@ -227,10 +227,6 @@ def _from_history(module, entries):
             module.set_params("", snapshot.params, snapshot.valid_from)
 
 
-def _from_bindings(root, path, value):
-    design.set_bindings(root, path, value)
-
-
 def _from_order(section, entries):
     """Return the items of a section; the history of a child before its deriving parent's."""
     if section == "param_history":
@@ -253,7 +249,7 @@ def from_sections(root, data, report):
         ),
         "boundary": lambda path, value: _from_boundary(_module_at(root, path), value),
         "param_history": lambda path, value: _from_history(_module_at(root, path), value),
-        "bindings": lambda path, value: _from_bindings(root, path, value),
+        "bindings": lambda path, value: design.set_bindings(root, path, value),
     }
     for section, read in readers.items():
         for path, value in _from_order(section, data.get(section, {})):

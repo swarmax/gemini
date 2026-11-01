@@ -1,7 +1,8 @@
 """Adiabatic junction mixing two streams of the same fluid."""
 
 from gemini import ops
-from gemini.errors import PhysicsError, ValidationError
+from gemini.errors import ValidationError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Output
 from gemini.modules.module import Module
 from gemini.physics import heat_transfer
@@ -49,7 +50,12 @@ class Mixer(Module):
         self._check(branch1_in, branch2_in)
         fluid_out = branch1_in.with_(
             m_dot=branch1_in.m_dot + branch2_in.m_dot,
-            T=self._mixed_temperature(branch1_in, branch2_in),
+            T=heat_transfer.mixed_temperature(
+                branch1_in.heat_capacity_rate(),
+                branch1_in.T,
+                branch2_in.heat_capacity_rate(),
+                branch2_in.T,
+            ),
             p=ops.minimum(branch1_in.p, branch2_in.p),
         )
 
@@ -65,27 +71,11 @@ class Mixer(Module):
 
     def _check(self, branch1_in, branch2_in):
         """Reject reverse flow and streams of different fluids."""
-        ops.check(
-            ops.logical_and(branch1_in.m_dot >= 0, branch2_in.m_dot >= 0),
-            PhysicsError,
-            "{path}: branch1_in.m_dot = {first_m_dot} kg/s, branch2_in.m_dot = "
-            "{second_m_dot} kg/s; expected both >= 0",
-            path=self.path,
-            first_m_dot=branch1_in.m_dot,
-            second_m_dot=branch2_in.m_dot,
-        )
+        require_forward(self.path, "branch1_in.m_dot", branch1_in.m_dot)
+        require_forward(self.path, "branch2_in.m_dot", branch2_in.m_dot)
         if branch1_in.fluid != branch2_in.fluid:
             raise ValidationError(
                 f"{self.path}: branch1_in.fluid = {branch1_in.fluid!r}, branch2_in.fluid = "
                 f"{branch2_in.fluid!r}; expected the same fluid",
                 code="invalid_design",
             )
-
-    def _mixed_temperature(self, branch1_in, branch2_in):
-        """Return the adiabatic mixing temperature [K] weighted by heat capacity rates."""
-        return heat_transfer.mixed_temperature(
-            branch1_in.heat_capacity_rate(),
-            branch1_in.T,
-            branch2_in.heat_capacity_rate(),
-            branch2_in.T,
-        )

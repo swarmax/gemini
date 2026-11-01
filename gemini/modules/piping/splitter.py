@@ -1,7 +1,6 @@
 """Flow splitter dividing one stream into two branches."""
 
-from gemini import ops
-from gemini.errors import PhysicsError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet
 from gemini.modules.module import Module
 from gemini.physics import separation
@@ -38,14 +37,7 @@ class Splitter(Module):
 
         # Outlets
         fluid_in = inlets.fluid_in
-        ops.check(
-            fluid_in.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0 (reverse flow "
-            "is not modelled; use a Mixer)",
-            path=self.path,
-            m_dot=fluid_in.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", fluid_in.m_dot)
         first_flow, second_flow = separation.split_flow(fluid_in.m_dot, self.split_fraction)
         branch1_out = fluid_in.with_(m_dot=first_flow)
         branch2_out = fluid_in.with_(m_dot=second_flow)

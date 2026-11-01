@@ -1,7 +1,6 @@
 """Binary organic Rankine cycle plant driven by geothermal brine, with an air-cooled condenser."""
 
-from gemini import ops
-from gemini.errors import PhysicsError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.modules.power import _physics
@@ -96,25 +95,17 @@ class ORC(Module):
         )
         return outlets
 
-    def _heat_input(self, fluid_in, fluid_out):
-        """Return the heat [W] the cycle takes from the brine."""
-        return heat_transfer.heat_rate(fluid_in.heat_capacity_rate(), fluid_in.T - fluid_out.T)
-
     def _balance(self, fluid_in, fluid_out, design):
         """Return the energy balance of the plant at the operating point."""
         return _physics.plant_balance(
-            self._heat_input(fluid_in, fluid_out), design.cycle_efficiency, self.parasitic_fraction
+            heat_transfer.heat_rate(fluid_in.heat_capacity_rate(), fluid_in.T - fluid_out.T),
+            design.cycle_efficiency,
+            self.parasitic_fraction,
         )
 
     def _design(self, fluid_in, air):
         """Return the ``_physics.cycle_design`` of the brine inlet."""
-        ops.check(
-            fluid_in.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=fluid_in.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", fluid_in.m_dot)
         cp = fluid_in.fluid.properties(fluid_in.p, fluid_in.T).cp_l
         return _physics.cycle_design(
             fluid_in.T,

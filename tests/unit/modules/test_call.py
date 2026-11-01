@@ -196,3 +196,23 @@ def test_another_wrong_unit_of_m_dot_keeps_its_error():
     with raises(gm.errors.ValidationError, "invalid_call") as caught:
         call(inlets=inlets)
     assert caught.value.suggestions == ()
+
+
+class _Broken(gm.modules.Module):
+    """A module whose forward has a programming error."""
+
+    def __init__(self):
+        super().__init__()
+        self.fluid_in = gm.modules.Inlet(gm.Stream)
+        self.fluid_out = gm.modules.Outlet(gm.Stream)
+
+    def forward(self, inlets):
+        """Raise a TypeError that is no input error."""
+        raise TypeError("forward bug")
+
+
+def test_an_error_inside_forward_is_not_reported_as_bad_input():
+    """A TypeError of the module's own code stays a TypeError, also under on_error record."""
+    for on_error in ("raise", "record"):
+        with pytest.raises(TypeError, match="forward bug"):
+            gm.call(module=_Broken, parameters={}, inlets=SUCTION, controls={}, on_error=on_error)

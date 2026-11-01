@@ -39,11 +39,14 @@ def evaluate(module, parameters, inlets, controls, on_error="raise", units=None)
         _check_mass_flows(inlets or {})
         instance = _instance(module)
         instance._override_params(parameters or {})
-        result = instance(dict(inlets or {}), **(controls or {}))
     except GeminiError as error:
         return _failed(error, on_error)
     except (TypeError, ValueError) as error:
         return _failed(ValidationError(str(error)), on_error)
+    try:
+        result = instance(dict(inlets or {}), **(controls or {}))
+    except GeminiError as error:
+        return _failed(error, on_error)
     return {
         "outlets": _outlets(result.outlets, output),
         "outputs": _outputs(instance, result.outputs, output),

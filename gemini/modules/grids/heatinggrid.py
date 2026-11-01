@@ -1,7 +1,8 @@
 """Space or process heat demand on a hydronic circuit with a steady first-law balance."""
 
 from gemini import ops
-from gemini.errors import PhysicsError, ValidationError
+from gemini.errors import ValidationError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Boundary, Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import heat_transfer
@@ -133,13 +134,7 @@ class HeatingGrid(Module):
 
     def _delivered_heat(self, supply_in):
         """Return the delivered heat [W]: the demand, capped by the return-temperature floor."""
-        ops.check(
-            supply_in.m_dot >= 0,
-            PhysicsError,
-            "{path}: supply_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=supply_in.m_dot,
-        )
+        require_forward(self.path, "supply_in.m_dot", supply_in.m_dot)
         if self.minimum_return_temperature is None:
             raise ValidationError(
                 f"{self.path}: minimum_return_temperature = None; expected a value without a "

@@ -4,6 +4,7 @@ from typing import Literal
 
 from gemini import ops
 from gemini.errors import PhysicsError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import hydraulics
@@ -95,13 +96,7 @@ class Valve(Module):
 
     def _pressure_drop(self, inlet):
         """Return the pressure drop [Pa] of the inlet flow at the commanded opening."""
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0 (reverse flow is not modelled)",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         if inlet.fluid.gas_mass_fraction > 0:
             raise PhysicsError(
                 f"{self.path}: inlet.fluid.gas_mass_fraction = "

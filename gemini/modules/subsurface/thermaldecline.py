@@ -1,7 +1,6 @@
 """Production temperature decline of a geothermal doublet after thermal breakthrough."""
 
-from gemini import ops
-from gemini.errors import PhysicsError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Boundary, Inlet, Outlet, Output, Parameter, State
 from gemini.modules.module import Module
 from gemini.physics import fluid, ground
@@ -123,11 +122,5 @@ class ThermalDecline(Module):
 
     def _liquid_flow(self, inlet):
         """Return the produced liquid volume flow [m3/s]; reverse flow is outside the model."""
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0 (production)",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         return fluid.volume_flow(inlet.m_dot, inlet.fluid.properties(inlet.p, inlet.T).rho_l)

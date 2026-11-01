@@ -171,9 +171,14 @@ def emissions(result_tree, fuel_factor, electricity_factor):
     return combustion.emission_rate(flows["fuel"], fuel_factor, grid, electricity_factor)
 
 
-def _scale(incoming, outgoing):
+def scale(incoming, outgoing):
     """Return the larger magnitude of the two flows, at least one, to normalise a residual."""
     return ops.maximum(ops.maximum(ops.abs(incoming), ops.abs(outgoing)), 1)
+
+
+def _enthalpy(stream):
+    """Return the enthalpy rate [W] of a stream above 0 K."""
+    return heat_transfer.heat_rate(stream.heat_capacity_rate(), stream.T)
 
 
 def _streams(ports):
@@ -181,10 +186,6 @@ def _streams(ports):
     return [
         value for name, value in ports.items() if isinstance(value, Stream) and name != "flue_out"
     ]
-
-
-def _enthalpy(stream):
-    return heat_transfer.heat_rate(stream.heat_capacity_rate(), stream.T)
 
 
 def _internal_flux(result, measure):
@@ -223,7 +224,7 @@ def mass_balance(module, result):
         "out": outgoing,
         "residual": residual,
         "relative_residual": diagnostics.performance_ratio(
-            ops.abs(residual), _scale(incoming, outgoing)
+            ops.abs(residual), scale(incoming, outgoing)
         ),
         "modules": children,
     }
@@ -264,18 +265,18 @@ def energy_balance(module, result):
     incoming, outgoing, residual, unresolved = (
         totals[key] for key in ("in", "out", "residual", "unresolved_power")
     )
-    scale = _scale(incoming, outgoing)
+    normaliser = scale(incoming, outgoing)
     return flows | {
         "heat_delivered": totals["heat_delivered"],
         "losses": flows["heat_loss"],
         "in": incoming,
         "out": outgoing,
         "residual": residual,
-        "relative_residual": diagnostics.performance_ratio(ops.abs(residual), scale),
+        "relative_residual": diagnostics.performance_ratio(ops.abs(residual), normaliser),
         "unresolved_power": unresolved,
         "thermal_residual": residual - unresolved,
         "relative_thermal_residual": diagnostics.performance_ratio(
-            ops.abs(residual - unresolved), scale
+            ops.abs(residual - unresolved), normaliser
         ),
         "modules": totals["modules"],
     }
@@ -404,8 +405,3 @@ def plant_totals(plant, ends, read):
             _add_boundary(totals, module, partial(read, path))
     _add_root_ports(totals, plant, ends, read)
     return totals
-
-
-def scale(incoming, outgoing):
-    """Return the larger magnitude of the two flows, at least one, to normalise a residual."""
-    return _scale(incoming, outgoing)

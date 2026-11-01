@@ -1,8 +1,9 @@
 """Gas-engine combined heat and power unit heating a water circuit."""
 
 from gemini import ops
-from gemini.errors import PhysicsError, ValidationError
+from gemini.errors import ValidationError
 from gemini.modules._utils.cost import Equipment
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.heating import _burner
 from gemini.modules.module import Module
@@ -120,13 +121,7 @@ class CHP(Equipment, Module):
             total=self.electric_efficiency + self.thermal_efficiency,
             code="invalid_design",
         )
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         load = self._load(fuel_in)
         fuel = combustion.willans_fuel_input(
             load, self.electric_capacity, self.electric_efficiency, self.no_load_fuel_fraction

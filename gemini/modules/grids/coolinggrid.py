@@ -1,7 +1,8 @@
 """Building or process cooling demand on a chilled-water circuit, with latent load."""
 
 from gemini import ops
-from gemini.errors import PhysicsError, ValidationError
+from gemini.errors import ValidationError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Boundary, Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import heat_transfer, psychrometrics
@@ -164,13 +165,7 @@ class CoolingGrid(Module):
 
     def _met_loads(self, supply_in, return_out=None):
         """Return the met sensible and latent loads [W]; the rise of the water on a closed loop."""
-        ops.check(
-            supply_in.m_dot >= 0,
-            PhysicsError,
-            "{path}: supply_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=supply_in.m_dot,
-        )
+        require_forward(self.path, "supply_in.m_dot", supply_in.m_dot)
         available = self._available(supply_in, return_out)
         dew_point = psychrometrics.dew_point(self.indoor_temperature, self.indoor_relative_humidity)
         dry = supply_in.T > dew_point - self.dew_point_margin

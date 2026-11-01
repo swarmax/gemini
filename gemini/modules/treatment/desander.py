@@ -2,6 +2,7 @@
 
 from gemini import ops
 from gemini.errors import PhysicsError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Boundary, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.modules.treatment import _physics
@@ -84,13 +85,7 @@ class Desander(Module):
 
     def _pressure_drop(self, inlet):
         """Return the cyclone loss [Pa], quadratic in forward mass flow."""
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         drop = hydraulics.quadratic_pressure_drop(
             self.nominal_pressure_drop, inlet.m_dot, self.nominal_mass_flow
         )

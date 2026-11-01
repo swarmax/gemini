@@ -3,8 +3,8 @@
 from typing import Literal
 
 from gemini import ops
-from gemini.errors import PhysicsError
 from gemini.modules._utils.cost import Equipment
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter, State
 from gemini.modules.module import Module
 from gemini.modules.storage import _physics
@@ -153,13 +153,7 @@ class ThermalStorage(Equipment, Module):
 
     def _conductance(self, stream, effectiveness):
         """Return the circuit conductance e * m_dot * cp [W/K]; reject reverse flow."""
-        ops.check(
-            stream.m_dot >= 0,
-            PhysicsError,
-            "{path}: circuit m_dot = {m_dot} kg/s; expected >= 0 (reverse flow " "is not modelled)",
-            path=self.path,
-            m_dot=stream.m_dot,
-        )
+        require_forward(self.path, "circuit m_dot", stream.m_dot)
         return _physics.circuit_conductance(effectiveness, stream.heat_capacity_rate())
 
     def _circuit_heat(self, stream, effectiveness):

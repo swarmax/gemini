@@ -3,6 +3,7 @@
 from gemini import ops
 from gemini.errors import PhysicsError
 from gemini.modules._utils.cost import Equipment
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import energy, heat_transfer, pumps
@@ -112,13 +113,7 @@ class CentrifugalPump(Equipment, Module):
     def _performance(self, suction):
         """Return flow [m3/s], head [Pa], hydraulic and shaft power [W] and efficiency [-]."""
         flow = suction.volumetric_flow()
-        ops.check(
-            flow >= 0,
-            PhysicsError,
-            "{path}: suction volume flow = {flow} m3/s; reverse flow is unsupported",
-            path=self.path,
-            flow=flow,
-        )
+        require_forward(self.path, "suction volume flow", flow, "m3/s")
         speed = pumps.speed_ratio(self.frequency, self.rated_frequency)
         head = pumps.centrifugal_head(flow, speed, self.head_coefficients)
         load = pumps.best_efficiency_ratio(flow, speed, self.best_efficiency_flow)

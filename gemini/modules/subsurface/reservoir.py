@@ -90,31 +90,29 @@ class _Reservoir(Module):
             "radial_bottomhole_pressure": radial,
         }
 
-    @ops.physics
-    def injectivity_from_measurements(self, flow, p_bh):
-        """Return injectivity [m3/s/Pa] from one measurement."""
+    def _index_from_measurement(self, index, word, flow, p_bh):
         ops.check(
             p_bh != self.pressure,
             PhysicsError,
             "{path}: bottomhole pressure = reservoir pressure = {p_bh} Pa; "
-            "injectivity needs a pressure differential",
+            "{word} needs a pressure differential",
             path=self.path,
             p_bh=p_bh,
+            word=word,
         )
-        return hydraulics.injectivity_index(flow, self.pressure, p_bh)
+        return index(flow, self.pressure, p_bh)
+
+    @ops.physics
+    def injectivity_from_measurements(self, flow, p_bh):
+        """Return injectivity [m3/s/Pa] from one measurement."""
+        return self._index_from_measurement(hydraulics.injectivity_index, "injectivity", flow, p_bh)
 
     @ops.physics
     def productivity_from_measurements(self, flow, p_bh):
         """Return productivity [m3/s/Pa] from one measurement."""
-        ops.check(
-            p_bh != self.pressure,
-            PhysicsError,
-            "{path}: bottomhole pressure = reservoir pressure = {p_bh} Pa; "
-            "productivity needs a pressure differential",
-            path=self.path,
-            p_bh=p_bh,
+        return self._index_from_measurement(
+            hydraulics.productivity_index, "productivity", flow, p_bh
         )
-        return hydraulics.productivity_index(flow, self.pressure, p_bh)
 
     @ops.physics
     def health(self, result, measured):

@@ -1,7 +1,7 @@
 """Shallow closed-loop borehole field with a lumped ground temperature."""
 
-from gemini import ops
-from gemini.errors import PhysicsError, ValidationError
+from gemini.errors import ValidationError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter, State
 from gemini.modules.module import Module
 from gemini.physics import ground, heat_transfer
@@ -167,11 +167,5 @@ class BoreholeField(Module):
 
     def _capacity_rate(self, inlet):
         """Return m_dot cp [W/K] of the loop flow; reverse flow is outside the model."""
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         return inlet.heat_capacity_rate()

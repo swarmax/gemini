@@ -7,7 +7,8 @@ from pathlib import Path
 from gemini.types import flows
 
 _TRACING_PACKAGES = tuple(
-    str(Path(__file__).parents[2] / package) for package in ("compiler/graph", "ops")
+    str(Path(__file__).parents[2] / package)
+    for package in ("compiler/graph", "ops", "modules/_utils")
 )
 
 

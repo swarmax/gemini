@@ -1,7 +1,8 @@
 """Deep closed-loop downhole heat exchanger in a linear geothermal gradient."""
 
 from gemini import ops
-from gemini.errors import PhysicsError, ValidationError
+from gemini.errors import ValidationError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Parameter
 from gemini.modules.module import Module
 from gemini.physics import ground, heat_transfer
@@ -83,13 +84,7 @@ class DownholeHeatExchanger(Module):
         Zero flow returns the inlet temperature. Both results are always evaluated: at zero flow
         the profile's check of the relaxation length fails and ``where`` drops its error.
         """
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         relaxation = ground.ramey_relaxation_length(
             inlet.heat_capacity_rate(), self.borehole_resistance, self._rock_resistance()
         )

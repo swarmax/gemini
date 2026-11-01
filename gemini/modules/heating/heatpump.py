@@ -6,6 +6,7 @@ from typing import Literal
 from gemini import ops
 from gemini.errors import PhysicsError, ValidationError
 from gemini.modules._utils.cost import Equipment
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import heat_transfer, refrigeration
@@ -402,12 +403,5 @@ class HeatPump(Equipment, Module):
 
 def _rate(path, port, stream):
     """Return a stream's heat capacity rate m_dot * cp [W/K]; reject negative flow."""
-    ops.check(
-        stream.m_dot >= 0,
-        PhysicsError,
-        "{path}: {port}.m_dot = {m_dot} kg/s; expected >= 0",
-        path=path,
-        port=port,
-        m_dot=stream.m_dot,
-    )
+    require_forward(path, f"{port}.m_dot", stream.m_dot)
     return stream.heat_capacity_rate()

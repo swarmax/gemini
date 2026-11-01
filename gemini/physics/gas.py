@@ -299,7 +299,7 @@ AIR_SPECIFIC_HEAT = 1007.0
 def species_flow(mass_flow, composition, species):
     """Return the mass flow [kg/s] of ``species`` in a gas stream; zero without a composition."""
     if composition is None:
-        return mass_flow * 0.0
+        return 0.0
     return mass_flow * mass_fraction(composition, species)
 
 

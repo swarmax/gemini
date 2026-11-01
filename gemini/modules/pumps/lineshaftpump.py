@@ -2,6 +2,7 @@
 
 from gemini import ops
 from gemini.errors import PhysicsError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.modules.pumps import _physics
@@ -121,13 +122,7 @@ class LineShaftPump(Module):
 
     def _head(self, flow):
         """Return the pump-curve pressure rise [Pa] at a suction volume flow [m3/s]."""
-        ops.check(
-            flow >= 0,
-            PhysicsError,
-            "{path}: suction volume flow = {flow} m3/s; reverse flow is unsupported",
-            path=self.path,
-            flow=flow,
-        )
+        require_forward(self.path, "suction volume flow", flow, "m3/s")
         head = _physics.head(flow, self.frequency, self.stage_count, self.head_coefficients)
         ops.check(
             head >= 0,

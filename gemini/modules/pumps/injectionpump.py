@@ -2,6 +2,7 @@
 
 from gemini import ops
 from gemini.errors import PhysicsError, ValidationError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.modules.pumps import _physics
@@ -94,13 +95,7 @@ class InjectionPump(Module):
         no rise, not an error.
         """
         flow = suction.volumetric_flow()
-        ops.check(
-            flow >= 0,
-            PhysicsError,
-            "{path}: suction volume flow = {flow} m3/s; reverse flow is unsupported",
-            path=self.path,
-            flow=flow,
-        )
+        require_forward(self.path, "suction volume flow", flow, "m3/s")
         if self.head_coefficients is not None:
             if self.stage_count is None:
                 raise ValidationError(

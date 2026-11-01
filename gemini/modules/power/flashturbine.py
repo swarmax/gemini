@@ -2,6 +2,7 @@
 
 from gemini import ops
 from gemini.errors import PhysicsError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.modules.power import _physics
@@ -96,13 +97,7 @@ class FlashTurbine(Module):
         Raises ``PhysicsError`` outside the model domain; ``forward`` calls it to reject
         such an inlet before it emits the condensate.
         """
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         if inlet.fluid.kind != "steam":
             raise PhysicsError(
                 f"{self.path}: inlet.fluid.kind = {inlet.fluid.kind!r}; expected 'steam'"

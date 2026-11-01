@@ -7,6 +7,7 @@ import numpy as np
 from gemini import ops
 from gemini.errors import PhysicsError
 from gemini.modules._utils.cost import Equipment
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import diagnostics, heat_transfer, hydraulics
@@ -133,15 +134,8 @@ class HeatExchanger(Equipment, Module):
 
     def _check_inlets(self, hot_in, cold_in):
         """Reject negative flow and a hot inlet below the cold inlet of a running exchanger."""
-        ops.check(
-            ops.logical_and(hot_in.m_dot >= 0, cold_in.m_dot >= 0),
-            PhysicsError,
-            "{path}: negative mass flow hot_in.m_dot = {hot_m_dot} kg/s, "
-            "cold_in.m_dot = {cold_m_dot} kg/s; expected >= 0",
-            path=self.path,
-            hot_m_dot=hot_in.m_dot,
-            cold_m_dot=cold_in.m_dot,
-        )
+        require_forward(self.path, "hot_in.m_dot", hot_in.m_dot)
+        require_forward(self.path, "cold_in.m_dot", cold_in.m_dot)
         stopped = ops.logical_or(hot_in.m_dot == 0, cold_in.m_dot == 0)
         ops.check(
             ops.logical_or(hot_in.T >= cold_in.T, stopped),

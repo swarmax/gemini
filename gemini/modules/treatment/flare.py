@@ -1,8 +1,7 @@
 """Flare that burns the gas reaching it and reports what it emits."""
 
-from gemini import ops
-from gemini.errors import PhysicsError
 from gemini.modules._utils.cost import Equipment
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import combustion, gas
@@ -45,13 +44,7 @@ class Flare(Equipment, Module):
         """Refuse reverse flow and release what burning leaves."""
 
         # Outlets
-        ops.check(
-            inlets.gas_in.m_dot >= 0,
-            PhysicsError,
-            "{path}: gas_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=inlets.gas_in.m_dot,
-        )
+        require_forward(self.path, "gas_in.m_dot", inlets.gas_in.m_dot)
         inlet = inlets.gas_in
         co2, methane = self._released(inlet, inlet.m_dot)
         flue_out = inlet.with_(m_dot=co2 + methane, fluid=self._flue_fluid(inlet))

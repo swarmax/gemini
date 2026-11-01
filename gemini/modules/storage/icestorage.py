@@ -1,7 +1,8 @@
 """Lumped ice-on-coil or encapsulated ice store on one glycol circuit."""
 
 from gemini import ops, units
-from gemini.errors import PhysicsError, ValidationError
+from gemini.errors import ValidationError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter, State
 from gemini.modules.module import Module
 from gemini.modules.storage import _physics
@@ -145,13 +146,7 @@ class IceStorage(Module):
 
     def _rate(self, inlet):
         """Return the glycol capacity rate m_dot * cp [W/K]; reject reverse flow."""
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0 (reverse flow is not modelled)",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         return inlet.heat_capacity_rate()
 
     def _effectiveness(self, inlet):

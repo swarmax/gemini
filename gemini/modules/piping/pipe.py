@@ -3,6 +3,7 @@
 from gemini import ops
 from gemini.errors import PhysicsError, ValidationError
 from gemini.modules._utils.cost import Equipment
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import geometry, heat_transfer, hydraulics
@@ -119,14 +120,7 @@ class Pipe(Equipment, Module):
             length=self.length,
             code="invalid_design",
         )
-        ops.check(
-            inlet.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0 (reverse flow is "
-            "not modelled; wire the pipe in the flow direction)",
-            path=self.path,
-            m_dot=inlet.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         if inlet.fluid.gas_mass_fraction > 0:
             raise PhysicsError(
                 f"{self.path}: inlet.fluid.gas_mass_fraction = "

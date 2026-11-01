@@ -1,7 +1,6 @@
 """Continuous blowdown bleeding a commanded share of a circuit's flow to drain."""
 
-from gemini import ops
-from gemini.errors import PhysicsError
+from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet
 from gemini.modules.module import Module
 from gemini.physics import separation
@@ -48,13 +47,7 @@ class Blowdown(Module):
 
         # Outlets
         fluid_in = inlets.fluid_in
-        ops.check(
-            fluid_in.m_dot >= 0,
-            PhysicsError,
-            "{path}: fluid_in.m_dot = {m_dot} kg/s; expected >= 0",
-            path=self.path,
-            m_dot=fluid_in.m_dot,
-        )
+        require_forward(self.path, "fluid_in.m_dot", fluid_in.m_dot)
         retained, bleed = separation.split_flow(fluid_in.m_dot, self.blowdown_fraction)
         fluid_out = fluid_in.with_(m_dot=retained)
         waste_out = fluid_in.with_(m_dot=bleed)

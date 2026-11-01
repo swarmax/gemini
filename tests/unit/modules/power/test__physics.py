@@ -131,7 +131,6 @@ def test_baumann_expansion_matches_dipippo_closed_form():
     h_out = (
         inlet.vapour_enthalpy - a * (1 - outlet.liquid_enthalpy / outlet.evaporation_enthalpy)
     ) / (1 + a / outlet.evaporation_enthalpy)
-    assert expansion.isentropic_outlet_enthalpy == pytest.approx(h_s, rel=1e-12)
     assert expansion.outlet_enthalpy == pytest.approx(h_out, rel=1e-12)
     assert expansion.outlet_quality == pytest.approx(0.8678, abs=1e-4)
     assert expansion.efficiency == pytest.approx(0.85 * (1 + expansion.outlet_quality) / 2)
