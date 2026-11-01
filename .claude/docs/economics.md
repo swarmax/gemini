@@ -6,8 +6,7 @@ The packages `gemini.evaluate`, `gemini.analysis` and `gemini.study` sit above t
 `(plant, case, results, ...)`, and its return is a `Value` or a check in the
 [return shapes](api.md#return-shapes): in Python a `gm.units.Quantity` in SI that also holds a
 `reason` and its `parts`, and `to_plain` gives the plain JSON (no NumPy types, `NaN` and infinity
-are `null`). A value the inputs cannot give is never a guess. Each name is
-`real` or raises `NotImplementedYet` with its final signature and a full docstring.
+are `null`). A value the inputs cannot give is never a guess. Every name is real.
 
 ## What a run gives
 
@@ -216,10 +215,6 @@ as a result column; that is a change to the engine, not to this package.
 | `nodal(plant, well, conditions)` | real | IPR, VLP and operating point from `gemini/analysis/solves.py`, for production and injection wells; the plant is not changed |
 | `pump_curve(plant, pump, measured=None)` | real | the polynomial head curve of the pump at 60 Hz (the private `_head_curve` of `gemini/analysis/wells.py`), theoretical head of measured points, `gm.analysis.fit_head_correction` |
 | `corrosion_forecast(model, until)` | real | `co2_corrosion_rate`, `wall_loss`, `time_to_minimum_wall` |
-| `injectivity(data, well)` | `NotImplementedYet` | Hall analysis not built |
-| `calibrate_pump(plant, pump, measured)` | `NotImplementedYet` | no module applies the `correction_factors` of `ESP` (only the legacy import and export read it); it will run `gm.analysis.calibrate` |
-| `calibrate_corrosion(logs)` | `NotImplementedYet` | no fit of the correlation constants to logs exists |
-| `erosion(plant, well)` | `NotImplementedYet` | a plant holds neither flow nor solids content, and the retained model has no solids fraction |
 
 `nodal` takes `conditions` as one dict or a list of dicts (a what-if): `wellhead_pressure` [Pa],
 `rates` as the `[low, high]` bracket [kg/s] and `frequency` [Hz] for an ESP; quantities such as
@@ -241,23 +236,36 @@ the pressure. A rate the column of brine injects alone has no pressure to give: 
 
 `gm.modules.check` is described in [modules.md](modules.md#registry-categories-and-streams).
 
-`gm.study.size(plant, case)` returns a new plant with first sizes from the case, by gemini physics
-only: the number of doublets (the smallest in `case.choices.doublets` whose heat at the flow limit
-and the brine cooling limit of the case's constraints covers the heating peak, the largest with a
-note when none does), the nominal flow of each doublet, the capacity of each boiler, heat pump
-and chiller from the peaks of the demand, and the rating of the injection pump. A boiler gets the
-whole heating peak shared by its units, because it is the one unit that does not depend on the
-doublets and so carries the peak when a doublet is out; a heat pump gets the part of the peak the
-reservoir water cannot reach by itself, `peak (T_supply - T_reservoir) / (T_supply - T_return)`
-shared by its units, and none (listed with a note) when the reservoir is hotter than the supply; a
-chiller gets the cooling peak shared. The injection pump gets the flow of the doublets it serves
-and the head to inject at that flow less the wellhead pressure. The chillers of a plant sit in
-series on the chilled water, so a plant whose chillers are only just sized can miss the cooling
-supply temperature by a few mK; list `chiller.capacity` as a variable to give them margin. The plant is not changed; the note is `plant.sizing`,
-`{"sized": [{path, value, reason}], "unchanged": [{path, reason}]}`. A plant class that takes no
-structural size `doublets` (see `gm.plants.capabilities()`) keeps the doublets it has and says so in
-`unchanged`; a size the case lacks the input for raises `missing_value` naming its path. A size
-that is not computed for a module kind (`chp`, `heat_exchanger`) is left unchanged and listed.
+`gm.study.size(plant, case, backup)` returns a new plant with first sizes from the case, by gemini
+physics only. `backup` is a design policy with no default (`missing_value` naming `backup` when
+absent, `invalid_value` for another word): `"peak"` rates a boiler for the whole heating peak (and drive heat) with
+the doublets off, so it carries the peak when a doublet is out; `"none"` rates it for the heat the
+doublets cannot reach, the larger of the peak less the heat of the doublets at their limits and the
+part of the peak the reservoir temperature cannot reach. The sizes: the number of doublets (the
+smallest in `case.choices.doublets` whose heat at the flow limit and the brine cooling limit of the
+case's constraints covers the heating peak, the largest with a note when none does); the nominal
+flow of each doublet, which is the flow limit of the case, the largest flow it may run, so its
+`share` in `gm.evaluate.capacities` is at most one; the capacity of each boiler (the policy above),
+heat pump and chiller; and the rating of the injection pump (the total flow of the doublets it
+serves and the head to inject at that flow less the wellhead pressure). A heat pump gets the part of
+the peak the reservoir water cannot reach by itself, `peak (T_supply - T_reservoir) / (T_supply -
+T_return)` shared by its units (the formula assumes an ideal exchanger), and none (listed with a
+note) when the reservoir is hotter than the supply. A chiller gets the cooling peak shared, except
+the chiller that closes the chilled-water series, which gets the whole peak: a sorption unit
+delivers less than its rating when its characteristic map says so at the peak conditions (an
+adsorption chiller 6 kW short at the peak, which the chillers in series pass on as 3 mK), and the
+last chiller makes up the difference. A boiler is rated for the step where the heating demand and the drive heat of the
+sorption chillers it feeds (their duty over `thermal_cop`, found from the wiring) peak together:
+the whole of it for `"peak"`, and for `"none"` that less the heat of the doublets, at least its
+lift share (the ideal-exchanger assumption may leave the supply short, which `broken` lists). The sized plant is then
+simulated once on the case. The plant is not changed; the notes are `plant.sizing`: `{"sized":
+[{path, value, reason}], "unchanged": [{path, reason}], "broken": [{unit_path, role, quantity,
+value, limit, worst_step}], "simulation": str}`, where `broken` lists each constraint the sized
+design breaks (empty when it meets them all) and `simulation` says `simulated` or `not simulated:
+<code>: <reason>`. A plant class that takes no structural size `doublets` (see
+`gm.plants.capabilities()`) keeps the doublets it has and says so in `unchanged`; a size the case
+lacks the input for raises `missing_value` naming its path. A size that is not computed for a
+module kind (`chp`, `heat_exchanger`) is left unchanged and listed.
 
 `gm.study.minimize(plant, case, objective, variables=None, constraints=None, evaluations=100, *,
 plan=None)` searches design values. Each trial copies the plant and the case, sets the variables,

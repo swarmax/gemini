@@ -26,3 +26,13 @@ def test_a_unit_that_does_not_fit_is_refused():
         display_units(["lcts"], {"cop": "kt"})
     with raises(gm.errors.ValidationError, "invalid_unit"):
         display_units(["co2"], {"co2": "MWh"})
+
+
+def test_the_display_unit_of_an_si_unit_comes_from_the_one_table():
+    """Flow in m3/h, temperature in degC, energy in MWh."""
+    from gemini.evaluate._utils.display import by_si_unit, shown
+    from gemini.units import Quantity
+
+    table = by_si_unit()
+    assert table["m3/s"] == "m3/h" and table["K"] == "degC" and table["J"] == "MWh"
+    assert shown({"t": [Quantity(293.15, "K")]}, table)["t"][0].value == pytest.approx(20.0)

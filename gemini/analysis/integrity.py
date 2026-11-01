@@ -1,4 +1,4 @@
-"""Well integrity: corrosion forecast and the calibration and erosion entry points."""
+"""Well integrity: corrosion forecast."""
 
 from datetime import timedelta
 
@@ -7,7 +7,7 @@ import numpy as np
 from gemini import units as physics_units
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini._utils.time import to_utc
-from gemini.errors import NotImplementedYet, ValidationError
+from gemini.errors import ValidationError
 from gemini.physics import corrosion
 from gemini.types.shapes import OutputUnits, value
 
@@ -118,53 +118,3 @@ def corrosion_forecast(model, until, units=None):
         "minimum_thickness": output.value(model["minimum_thickness"], "m", "length"),
         "years_left": left,
     }
-
-
-def calibrate_corrosion(logs):
-    """Return the corrosion model fitted to wall-thickness logs.
-
-    Parameters
-    ----------
-    logs : list of dict
-        Caliper or ultrasonic logs ``{time, thickness}`` of one tubing joint, with ``time`` as ISO
-        8601 UTC text and ``thickness`` [m], oldest first.
-
-    Returns
-    -------
-    dict
-        Plain JSON ``corrosion_forecast``'s ``model``: the correlation and its fitted
-        coefficients, the conditions and the last measured ``thickness`` and ``start``.
-
-    Raises
-    ------
-    NotImplementedYet
-        Always: the fit of the correlation constants to logs is not built yet.
-    """
-    raise NotImplementedYet("analysis.calibrate_corrosion")
-
-
-def erosion(plant, well, units=None):
-    """Return the erosion wear of the pump and the tubing of a production well.
-
-    Parameters
-    ----------
-    plant : Module
-        A plant with parameter values.
-    well : str
-        Dotted path of the production well chain, as for ``nodal``.
-    units : dict, optional
-        A map from quantity to unit for the returned values.
-
-    Returns
-    -------
-    dict
-        Plain JSON with the DNV RP O501 penetration rate [mm/year] of the pump and of each tubing
-        section and the API RP 14E velocity margin [m/s].
-
-    Raises
-    ------
-    NotImplementedYet
-        Always: the correlations exist (``erosion_rate``), but a plant holds neither the flow
-        nor the solids content they need, and the retained model has no solids fraction.
-    """
-    raise NotImplementedYet("analysis.erosion")

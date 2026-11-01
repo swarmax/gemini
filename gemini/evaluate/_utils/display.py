@@ -1,5 +1,7 @@
 """The unit in which a metric is shown in a table, and the conversion of a number to it."""
 
+from collections.abc import Mapping
+
 from gemini import units as _units
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import ValidationError
@@ -22,8 +24,19 @@ DISPLAY = {
     "co2": ("mass", "kt"),
     "co2_emitted": ("mass", "kt"),
     "methane_emitted": ("mass", "kt"),
+    "flow": ("volume_flow", "m3/h"),
+    "temperature": ("temperature", "degC"),
 }
-"""For each metric its quantity and the unit it is shown in; a metric not listed is shown in SI."""
+"""For each metric its quantity and the unit it is shown in; a metric not listed is shown in SI.
+
+The one display table of ``gm.evaluate``: ``flow`` and ``temperature`` stand for the quantities of
+the capacities and constraints of a report, which are shown by their SI unit (``by_si_unit``).
+"""
+
+
+def by_si_unit():
+    """Return ``{SI unit: display unit}`` derived from ``DISPLAY``: ``J`` shows in ``MWh``."""
+    return {_units.si_unit(unit): unit for _, unit in DISPLAY.values()}
 
 
 def display_units(metrics, units=None):
@@ -64,3 +77,19 @@ def in_unit(metric, number, unit):
         return None
     quantity, default = DISPLAY[metric]
     return _units.convert(number, _units.si_unit(default), unit, quantity)
+
+
+def shown(found, table):
+    """Return ``found`` with every ``Quantity`` in it converted by ``table``, ``{SI unit: unit}``.
+
+    Mappings and lists are walked; a quantity whose SI unit is not in the table, and anything
+    that is not a quantity, stays as it is.
+    """
+    if isinstance(found, _units.Quantity):
+        target = table.get(_units.si_unit(str(found.unit)))
+        return found if target is None else found.to(target)
+    if isinstance(found, Mapping):
+        return {key: shown(item, table) for key, item in found.items()}
+    if isinstance(found, (list, tuple)):
+        return [shown(item, table) for item in found]
+    return found

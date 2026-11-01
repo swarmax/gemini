@@ -6,7 +6,7 @@ import gemini as gm
 from tests.fixtures.balance import assert_plant_closes
 from tests.fixtures.doublet_day import doublet_day
 from tests.fixtures.heating_cooling import two_days_case
-from tests.fixtures.sample_cases import template_plant
+from tests.fixtures.sample_cases import example_plant, template_plant
 
 pytestmark = pytest.mark.e2e
 PLANTS = (
@@ -29,7 +29,7 @@ def test_a_heating_and_cooling_plant_closes(name):
 @pytest.mark.parametrize("frequency", [55, 60, 65])
 def test_the_doublet_heat_plant_closes(frequency):
     """A simulated day of the shipped example closes tick by tick."""
-    plant = gm.plants.example("DoubletHeatPlant")
+    plant = example_plant("DoubletHeatPlant")
     clock, plan = doublet_day(frequency)
     results = gm.simulate(plant, plan=plan, clock=clock)
     assert_plant_closes(plant, results)

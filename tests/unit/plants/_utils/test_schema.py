@@ -5,6 +5,7 @@ import json
 import pytest
 
 import gemini as gm
+from tests.fixtures.sample_cases import example_plant
 
 
 def test_the_schema_is_plain_json_listing_every_module_type_and_group():
@@ -27,7 +28,7 @@ def test_the_schema_has_the_two_forms_of_a_plant_dict():
 def test_the_schema_accepts_only_the_keys_a_plant_dict_holds():
     """Every key a plant writes is declared, in both forms."""
     of_class, with_structure = gm.plants.schema()["anyOf"]
-    plant = gm.plants.example("NodalDoublet")
+    plant = example_plant("NodalDoublet")
     assert set(plant.to_dict()) <= set(of_class["properties"])
     assert set(plant.to_dict(structure=True)) <= set(with_structure["properties"])
 
@@ -47,6 +48,6 @@ def test_the_inputs_schema_takes_a_number_or_a_quantity_and_refuses_a_unit_strin
         "object",
     ]
     assert "unit string" not in inputs["description"]
-    plant = gm.plants.example("NodalDoublet")
+    plant = example_plant("NodalDoublet")
     with pytest.raises(gm.errors.ValidationError):
         plant.set_inputs({"reservoir.production_rate": "5 kg/s"})

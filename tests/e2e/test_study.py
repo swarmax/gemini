@@ -8,6 +8,10 @@ from tests.unit.study.conftest import shallow_case, shallow_plant
 
 PRICE = "case.assumptions.finance.opex.electricity"
 GAS = "case.assumptions.finance.opex.gas"
+UNCERTAIN = {
+    "assumptions.finance.opex.electricity": {"kind": "uniform", "min": 50, "max": 200},
+    "assumptions.finance.opex.gas": {"kind": "uniform", "min": 54, "max": 56},
+}
 COUNTS = [
     {"path": "size", "parameter": "doublets", "lower": 1, "upper": 3},
 ]
@@ -16,7 +20,7 @@ COUNTS = [
 @pytest.fixture(scope="module")
 def case(tmp_path_factory):
     """Return the shallow case over its first two days."""
-    return shallow_case(days=2, folder=tmp_path_factory.mktemp("case"))
+    return shallow_case(days=2, folder=tmp_path_factory.mktemp("case"), uncertain=UNCERTAIN)
 
 
 def lcts(plant, case):
@@ -38,12 +42,8 @@ def test_minimize_over_the_doublets_finds_the_cheapest_of_three_runs(case):
 
 
 def test_sensitivity_orders_the_prices_by_their_effect(case):
-    """A change of 250 EUR/MWh in electricity moves more than 2 EUR/MWh of gas."""
-    spreads = {
-        GAS: {"low": gm.units.Quantity(54, "EUR/MWh"), "high": gm.units.Quantity(56, "EUR/MWh")},
-        PRICE: {"low": gm.units.Quantity(50, "EUR/MWh"), "high": gm.units.Quantity(300, "EUR/MWh")},
-    }
-    found = gm.study.sensitivity(shallow_plant(), case, spreads, ["lcts"])
+    """A range of 150 EUR/MWh in electricity moves more than 2 EUR/MWh of gas."""
+    found = gm.study.sensitivity(shallow_plant(), case, ["lcts"])
     assert [row["parameter"] for row in found] == [PRICE, GAS]
     assert found[0]["at_high"].si > found[0]["at_low"].si
     assert found[0]["effect"].si == pytest.approx(
@@ -52,20 +52,8 @@ def test_sensitivity_orders_the_prices_by_their_effect(case):
 
 
 def test_sample_gives_a_spread_of_lcts_and_co2_over_case_and_plant_values(case):
-    """Three draws of the electricity price and the depth, each a real run."""
-    distributions = {
-        PRICE: {
-            "kind": "uniform",
-            "lower": gm.units.Quantity(50, "EUR/MWh"),
-            "upper": gm.units.Quantity(200, "EUR/MWh"),
-        },
-        "depth": {
-            "kind": "uniform",
-            "lower": gm.units.Quantity(1000, "m"),
-            "upper": gm.units.Quantity(1500, "m"),
-        },
-    }
-    found = gm.study.sample(shallow_plant(), case, distributions, ["lcts", "co2"], 3)
+    """Three draws of the two declared prices, each a real run."""
+    found = gm.study.sample(shallow_plant(), case, ["lcts", "co2"], 3, 0)
     assert all("reason" not in item for item in found["samples"])
     for metric in ("lcts", "co2"):
         spread = found["summary"][metric]

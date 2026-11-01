@@ -8,6 +8,7 @@ from .co2 import co2
 from .compare import compare
 from .constraints import constraints
 from .energy_balance import energy_balance
+from .failures import failures
 from .lcoc import lcoc
 from .lcoh import lcoh
 from .lcts import lcts
@@ -25,6 +26,7 @@ __all__ = [
     "capacities",
     "report",
     "compare",
+    "failures",
     "energy_balance",
     "mass_balance",
     "plant_balance",

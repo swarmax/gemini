@@ -3,6 +3,7 @@
 import pytest
 
 import gemini as gm
+from tests.fixtures.sample_cases import example_plant
 
 COOLING = "cooling.substations.0"
 INPUTS = {
@@ -31,7 +32,7 @@ INPUTS = {
 @pytest.fixture(scope="module")
 def run():
     """Return the example plant and two hourly steps, the return fed back."""
-    plant = gm.plants.example("DistrictEnergyPlant")
+    plant = example_plant("DistrictEnergyPlant")
     plant._set_inputs(INPUTS)
     inlets = {
         "hot_in": gm.Stream(

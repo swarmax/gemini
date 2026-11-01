@@ -16,6 +16,7 @@ import gemini as gm
 from gemini._utils import paths
 from gemini._utils.jsonable import to_plain
 from gemini.types import shapes
+from tests.fixtures.sample_cases import example_plant
 
 ROOT = Path(__file__).parents[1]
 SCHEMAS = ROOT / "docs" / "schemas"
@@ -63,14 +64,14 @@ def _problem_sample():
 
 def documents():
     """Return ``{file name: document}`` of everything this script writes."""
-    plant = gm.plants.example("DoubletHeatPlant")
+    plant = example_plant("DoubletHeatPlant")
     data = plant.to_dict(structure=True)
     results = _results(plant)
     return {
         "plant_dict.schema.json": gm.plants.schema(),
         "profile.schema.json": gm.data.profile_schema(),
         **{f"{name}.schema.json": schema for name, schema in shapes.SCHEMAS.items()},
-        "module_description.sample.json": gm.plants.example("Doublet").describe(),
+        "module_description.sample.json": example_plant("Doublet").describe(),
         "plant_dict.sample.json": data,
         "results_summary.sample.json": results.summary(),
         "profile.sample.json": _profile_sample(),

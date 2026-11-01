@@ -6,6 +6,7 @@ import gemini as gm
 from gemini._utils import paths
 from gemini.data import legacy
 from tests.fixtures import OLD_PROJECT as OLD
+from tests.fixtures.sample_cases import example_plant
 
 pytestmark = pytest.mark.e2e
 
@@ -22,7 +23,7 @@ def test_legacy_bridge(tmp_path):
     frame.reset_index().to_csv(
         tmp_path / "doublet_2024_15min.csv", index=False, float_format="%.17g"
     )
-    gm.plants.example("DoubletHeatPlant").to_json(tmp_path / "example.json")
+    example_plant("DoubletHeatPlant").to_json(tmp_path / "example.json")
     assert (tmp_path / "plant.json").read_bytes() == (tmp_path / "example.json").read_bytes()
     assert (tmp_path / "doublet_2024_15min.csv").read_bytes() == (
         paths.doublet_heat("doublet_2024_15min.csv")

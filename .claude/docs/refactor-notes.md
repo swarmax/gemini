@@ -302,3 +302,23 @@ decisions outlast the move.
   hackathon year the supply at the users rises from 66.3 to 100.0 degC at its lowest (216 days were
   below 99.9), and heat, cold, boiler and electricity stay the same to within rounding: the same
   water, the same split, a different place for the mixer.
+
+## Planned features removed from the API
+
+These names only raised `NotImplementedYet`. They left the public API (no alias) so that it lists
+only what is built; each returns when its work is done, with the signature below.
+
+- `gm.data.synthesize(heating, cooling, start, step, length=None, season=None, seed=None)`: a demand
+  frame made from peak figures, with a season shape and a seed.
+- `gm.analysis.injectivity(data, well, units=None)`: Hall integral, its derivative against cumulative
+  injected volume and the fitted skin lines of an injection well.
+- `gm.analysis.calibrate_pump(plant, pump, measured)`: the `ESP` parameters
+  (`head_coefficients`, `power_coefficients`) that make the model match measured operation, through
+  `gm.analysis.calibrate`; no module applies the `correction_factors` of `ESP` yet.
+- `gm.analysis.calibrate_corrosion(logs)`: a `corrosion_forecast` model fitted to wall-thickness logs.
+- `gm.analysis.erosion(plant, well, units=None)`: DNV RP O501 wear of the pump and tubing and the API
+  RP 14E velocity margin; a plant holds neither flow nor solids content, and the retained model has no
+  solids fraction (the correlations exist in `gemini/physics/erosion.py`).
+- `gm.plants.example(name)` was not a stub for most plants but a reader of `inputs/plants/<Name>.json`
+  that no agent can use outside a source checkout; it is now `example_plant` of
+  `tests/fixtures/sample_cases.py`, and a design for a user is a stored plant dict (section 8).

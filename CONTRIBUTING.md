@@ -20,9 +20,10 @@ It prints the Python, platform, GEMINI and dependency versions and the git commi
 Coding agents follow the branching rule in [AGENTS.md](AGENTS.md#branching). Human contributors
 work as follows:
 
-- create a feature branch from `main`;
+- create a branch from `dev`: `feature/<name>`, `fix/<name>` or `docs/<name>`, as in
+  [AGENTS.md](AGENTS.md#branching);
 - make the change, including tests and documentation, and commit with a clear message;
-- push the branch and open a pull request into `main`;
+- push the branch and open a pull request into `dev`;
 - discuss with the reviewer what changes are needed; the reviewer merges once every discussion is
   resolved;
 - record user-visible changes under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md).

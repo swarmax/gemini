@@ -31,7 +31,7 @@ FILES = {
     "inputs/plants/Plant.json": "{}\n",
     "tests/fixtures/__init__.py": "PROJECT = paths.project()\n",
     "tests/integration/test_project.py": "from tests.fixtures import PROJECT\n",
-    "tests/integration/test_example.py": "gm.plants.example('Plant')\n",
+    "tests/integration/test_example.py": "example_plant('Plant')\n",
 }
 
 

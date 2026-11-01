@@ -174,7 +174,7 @@ class Value(units.Quantity):
 
     def to_dict(self):
         """Return the JSON value ``{value, unit}`` with the ``reason`` and the parts."""
-        return value(self.value, str(self.unit), self.reason, **self.parts)
+        return value(self.value, str(self.unit), self.reason, **to_plain(self.parts))
 
     def __hash__(self):
         """Hash the SI value."""

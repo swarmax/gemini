@@ -92,7 +92,9 @@ under `-n auto` or on a busy machine a test is descheduled and its wall time gro
 extra work, so a wall-clock budget flaked on tests that need 0.5 s alone. `process_time` adds the
 CPU of every thread of the process, so work a test hands to its own threads or to the NumPy
 thread pool still counts (`thread_time` would miss it and let a heavy test pass), while sleeping
-and waiting do not count. A worker runs one test at a time, so the process clock belongs to the
+and waiting do not count. The user and system time of child processes the test started and
+waited for (`os.times().children_*`, such as a process pool of parallel study trials) is added,
+so work handed to other processes counts too. A worker runs one test at a time, so the process clock belongs to the
 test. The budget stays one second; the failure message shows CPU and elapsed time. Never raise
 the budget, skip a test or mark it flaky to get under it.
 
@@ -169,7 +171,7 @@ timing test: the best of three eager daily years against three times a measured 
 Read-only expensive setup belongs in session or module fixtures. `dataset_path`,
 `selected_frame` and `selected_dataset` load the chosen e2e data once; `fast_frame`,
 `fast_dataset` and `reference_dataset` serve short behaviour checks; `shared_plant` validates
-`gm.plants.example("DoubletHeatPlant")` once; a test that takes `module_class` runs once per shipped module class and
+`example_plant("DoubletHeatPlant")` once; a test that takes `module_class` runs once per shipped module class and
 example plant (`pytest_generate_tests` in `tests/conftest.py`), so each class stays within the
 per-test budget. Never mutate these objects. Request `fresh_plant` for a function-scoped deep
 copy or `module_plant` when one workflow shares a copied plant across assertions. Prefer the
@@ -281,7 +283,7 @@ and its runtime dependencies installed from the repository, about 640 MB, and a 
 `sandbox`. `docker/sandbox.Dockerfile.dockerignore` lets only `pyproject.toml`, `README.md`, `LICENSE`
 and `gemini/` into the build. Nothing in the image needs a network at run time: it runs under
 `--read-only --network none`, the flags of `DockerSandbox`. `inputs/` is not in the image, so
-`gm.plants.example` raises `inputs_missing` there, as in any installed package.
+`example_plant` raises `inputs_missing` there, as in any installed package.
 
 The image lives on the machine that built it. Publishing it needs a registry name, such as
 `ghcr.io/<organisation>/gemini-sandbox:<version>`, a `docker login` with a token that may write

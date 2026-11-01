@@ -13,6 +13,7 @@ import pytest
 import gemini as gm
 from gemini.types.bindings import DatedParams
 from tests.fixtures.parity import BACKENDS, on_each_backend, run_engine
+from tests.fixtures.sample_cases import example_plant
 
 ROWS = 24
 
@@ -55,7 +56,7 @@ def built_by_hand(spec):
 @pytest.fixture(scope="module")
 def spec():
     """Return the plant dict of the example, with its structure."""
-    return gm.plants.example("DoubletHeatPlant").to_dict(structure=True)
+    return example_plant("DoubletHeatPlant").to_dict(structure=True)
 
 
 @pytest.fixture(scope="module")

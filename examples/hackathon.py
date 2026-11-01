@@ -4,8 +4,8 @@ Every stored candidate, the hand design included, is sized, searched on LCTS wit
 variables in ``<role>.<parameter>`` names, simulated and reported. A candidate is feasible when no
 step fails and every constraint of the case passes; the table gives each one's reasons, the
 variables the plant could not take, the metrics in readable units and the Pareto front of the
-feasible designs only. Shows ``gm.study.size``, ``minimize``, ``sensitivity`` and
-``gm.evaluate.compare``.
+feasible designs only. Sizes with the backup policy ``"peak"``. Shows ``gm.study.size``,
+``minimize``, ``sensitivity`` and ``gm.evaluate.compare``.
 
 Run with ``python examples/hackathon.py``.
 """
@@ -22,13 +22,6 @@ EVALUATIONS = 20
 SHARE = (0.1, 1.0)
 """A capacity is searched from a tenth of the peak it serves to the whole peak, an assumption."""
 Q = gm.units.Quantity
-PARAMETERS = {
-    "case.assumptions.finance.opex.electricity": {
-        "low": Q(70, "EUR/MWh"),
-        "high": Q(160, "EUR/MWh"),
-    },
-    "case.environment.reservoir.permeability": {"low": Q(150, "mD"), "high": Q(250, "mD")},
-}
 
 
 def variable(path, parameter, lower, upper):
@@ -61,7 +54,7 @@ def variables(case):
 
 def design(plant, case):
     """Return ``(searched design, search result)``; the sized plant and ``None`` if not searched."""
-    sized = gm.study.size(plant, case)
+    sized = gm.study.size(plant, case, backup="peak")
     try:
         found = gm.study.minimize(sized, case, "lcts", variables(case), evaluations=EVALUATIONS)
     except gm.errors.ValidationError as error:
@@ -97,7 +90,7 @@ def main():
     feasible = {name: found[name] for name in frame.index[frame["feasible"]]}
     best, _ = min(feasible.values(), key=lambda item: item[1]["lcts"].si)
     print(
-        gm.study.sensitivity(best, case, PARAMETERS, ["lcts"])
+        gm.study.sensitivity(best, case, ["lcts"])
         .to_frame()
         .to_string(float_format="{:.4g}".format)
     )

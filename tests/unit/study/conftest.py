@@ -27,11 +27,12 @@ PLACEHOLDERS = {
 """A cost factor of each basis for a kind the sample case gives none: the test needs a number."""
 
 
-def shallow_case(days=None, folder=None, **sections):
+def shallow_case(days=None, folder=None, uncertain=None, **sections):
     """Return the shallow sample case with the choices of the study tests, plus ``sections``.
 
-    ``days`` keeps only the first days of the sample demand, written to ``folder``, so that a real
-    run is short.
+    ``uncertain`` maps the dotted path of a number of the case to its ``uncertainty`` dict, as
+    ``case.json`` writes it next to the value. ``days`` keeps only the first days of the sample
+    demand, written to ``folder``, so that a real run is short.
     """
     data = from_json(SAMPLE / "case.json")
     where = SAMPLE
@@ -55,6 +56,16 @@ def shallow_case(days=None, folder=None, **sections):
     fixed = data["assumptions"]["finance"]["opex"].setdefault("fixed", {})
     for kind in EQUIPMENT_KINDS:
         fixed.setdefault(kind, {"value": 2, "unit": "%/yr"})
+    for path, uncertainty in (uncertain or {}).items():
+        *parents, last = path.split(".")
+        node = data
+        for part in parents:
+            node = node[part]
+        value = node[last]
+        node[last] = {**value, "uncertainty": uncertainty} if isinstance(value, dict) else {
+            "value": value,
+            "uncertainty": uncertainty,
+        }
     return gm.Case.from_dict(data | sections, where)
 
 
