@@ -127,3 +127,17 @@ def test_newton_in_a_graph_and_common_subexpressions_keep_solver_nodes():
     np.testing.assert_allclose(
         values["first"], ops.newton(_cubic, np.full(2, 3.0), _cubic_slope, args=(feeds,))
     )
+
+
+def test_brentq_does_not_swallow_a_failed_check_on_floats():
+    """A residual whose check fails raises on floats, as it does on arrays."""
+    from gemini.errors import PhysicsError
+
+    def residual(x):
+        ops.check(x > 0.5, PhysicsError, "residual: x = {x}", x=x)
+        return x - 0.75
+
+    with pytest.raises(PhysicsError):
+        ops.brentq(residual, 0.0, 1.0)
+    with pytest.raises(PhysicsError):
+        ops.brentq(residual, np.array([0.0]), np.array([1.0]))

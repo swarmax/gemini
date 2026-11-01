@@ -81,3 +81,13 @@ def test_resume_and_live_apply_the_saved_runtime_settings(setup, tmp_path):
     fresh = gm.Engine(plant).live(data, path, now=data.end)
     assert fresh[""].float32.tolist() == [1.0, 1.0, 1.0]
     assert runtime.get_precision() == "float64"
+
+
+def test_a_checkpoint_keeps_the_eager_choice_of_the_run(setup, tmp_path):
+    """An engine built with ``compile=False`` is restored with the eager executor."""
+    from gemini.engine.eager import EagerExecutor
+
+    plant, data = setup
+    path = tmp_path / "eager.ckpt"
+    gm.Engine(plant, compile=False).live(data.window(end=data.start), path, now=data.start)
+    assert isinstance(gm.Engine.from_checkpoint(path)._executor, EagerExecutor)

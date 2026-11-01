@@ -4,7 +4,6 @@ from .context import (  # noqa: F401
     get_default_fluid,
     get_display_units,
     get_precision,
-    set_state,
     settings,
     state,
 )

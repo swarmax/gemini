@@ -72,7 +72,9 @@ def read(twin, aligned, start, stop):
             _check_stream(block, twin, source.key, defaults[source.key])
             continue
         column = source.binding.column
-        values = _convert(source, aligned.numbers(column)[start:stop])
+        values = units.array_to_si(
+            aligned.numbers(column)[start:stop], source.binding.unit, source.quantity
+        )
         _mark_missing(block, source, aligned.present(column)[start:stop])
         if source.density is not None:
             module = source.density
@@ -85,11 +87,6 @@ def _defaults(twin, port):
     """Return the default stream fields of an inlet as floats."""
     fields = twin.defaults.get(port, {})
     return {name: float(value) for name, value in fields.items() if name != "fluid"}
-
-
-def _convert(source, raw):
-    """Return a column in SI."""
-    return units.array_to_si(raw, source.binding.unit, source.quantity)
 
 
 def _mark_missing(block, source, present):

@@ -541,7 +541,7 @@ class Results:
         result.end_state = self.end_state
         if self._chunks:
             self._chunks = [merge(self._chunks)]
-            chunk = self._chunks[0].sliced(start)
+            chunk = self._chunks[0].rows(start, len(self._chunks[0]))
             result._chunks = [chunk]
             result._order = _sliced_order(self._order, chunk)
         result._times, result._dt = self._times[start:], self._dt[start:]

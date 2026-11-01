@@ -17,7 +17,6 @@ from itertools import accumulate
 import numpy as np
 from scipy import optimize
 
-from gemini.errors import PhysicsError
 from gemini.ops.backend import Backend, quiet
 
 PLAIN_NUMBERS = frozenset({float, int})
@@ -156,12 +155,12 @@ class PythonBackend(Backend):
         return round(value, digits)
 
     def maximum(self, left, right):
-        """Return the larger value as the builtin ``max(left, right)`` does."""
-        return right if right > left else left
+        """Return the larger value as the builtin ``max(left, right)`` does; ``nan`` propagates."""
+        return right if right > left or right != right else left
 
     def minimum(self, left, right):
-        """Return the smaller value as the builtin ``min(left, right)`` does."""
-        return right if right < left else left
+        """Return the smaller value as the builtin ``min(left, right)`` does; ``nan`` propagates."""
+        return right if right < left or right != right else left
 
     def clip(self, value, low, high):
         """Return ``value`` limited to ``[low, high]``; ``nan`` stays ``nan``."""
@@ -288,16 +287,16 @@ class PythonBackend(Backend):
         return math.tanh(value)
 
     def floor(self, value):
-        """Return the largest integer not above ``value``; ``inf`` and ``nan`` stay as they are."""
+        """Return the largest whole number not above ``value``, a float; ``inf``, ``nan`` stay."""
         try:
-            return math.floor(value)
+            return float(math.floor(value))
         except (ValueError, OverflowError):
             return numpy_float(np.floor, value)
 
     def ceil(self, value):
-        """Return the smallest integer not below ``value``; ``inf`` and ``nan`` stay as they are."""
+        """Return the smallest whole number not below ``value``, a float; ``inf``, ``nan`` stay."""
         try:
-            return math.ceil(value)
+            return float(math.ceil(value))
         except (ValueError, OverflowError):
             return numpy_float(np.ceil, value)
 
@@ -348,7 +347,7 @@ class PythonBackend(Backend):
                 rtol,
                 maxiter,
             )
-        except (ValueError, RuntimeError, PhysicsError):
+        except (ValueError, RuntimeError):
             return math.nan
 
     def newton(self, start, *args, function, derivative, tolerance, max_iterations):

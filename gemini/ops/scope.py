@@ -67,14 +67,6 @@ def _scalar(value):
     return value
 
 
-def _wrapped_keywords(kwargs):
-    """Return ``kwargs`` with exact numbers as NumPy scalars, itself when it holds none."""
-    for value in kwargs.values():
-        if type(value) in _NUMBERS:
-            return {name: _scalar(item) for name, item in kwargs.items()}
-    return kwargs
-
-
 def wrap(value):
     """Return ``value`` for the scope: numbers as NumPy scalars; lists, tuples and dicts too."""
     kind = type(value)
@@ -213,11 +205,7 @@ def physics(function):
 
 def _wrapped_nested(args, kwargs):
     """Return the arguments of a nested call with their exact numbers as NumPy scalars."""
-    for value in args:
-        if type(value) in _NUMBERS:
-            args = tuple([_scalar(item) for item in args])
-            break
-    return args, _wrapped_keywords(kwargs) if kwargs else kwargs
+    return tuple(map(_scalar, args)), {name: _scalar(value) for name, value in kwargs.items()}
 
 
 def _first_failed(args, kwargs):

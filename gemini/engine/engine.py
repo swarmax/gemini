@@ -97,6 +97,7 @@ class Engine:
         self._dataset_fingerprint = None
         self._max_gap = None
         self._in_step = False
+        self.compile = compile
         self._executor = executor_for(plant, compile)
         self.graph_breaks = {}
         self.step_results = {}
@@ -310,6 +311,7 @@ class Engine:
             only=self.only,
             on_error=self.on_error,
             backend=self.backend,
+            compile=self.compile,
             runtime=self.runtime_state,
         )
         storage.to_file(path, checkpoint, self.results, self._unfinished_rows(), self._max_gap)
@@ -333,7 +335,7 @@ class Engine:
         """Restore a plant, dataset handle, finite schedule, states and completed results."""
         checkpoint = storage.from_file(path)
         plant = _rebuilt(import_class(checkpoint.plant_class), checkpoint.plant)
-        engine = cls(plant, checkpoint.backend, callbacks, checkpoint.on_error)
+        engine = cls(plant, checkpoint.backend, callbacks, checkpoint.on_error, checkpoint.compile)
         engine._restore(checkpoint, Path(path).parent)
         return engine
 

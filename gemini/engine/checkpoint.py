@@ -34,6 +34,7 @@ class Checkpoint(BaseModel):
     only: list[str] | None = None
     on_error: Literal["record", "raise"] = "raise"
     backend: str = "numpy"
+    compile: bool = True
     runtime: dict[str, Any] = Field(default_factory=dict)
 
 

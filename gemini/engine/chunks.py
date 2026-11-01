@@ -232,10 +232,6 @@ class ResultChunk:
             [(row - start, error) for row, error in self.errors if start <= row < stop],
         )
 
-    def sliced(self, start):
-        """Return the ticks from ``start`` on."""
-        return self.rows(start, len(self))
-
 
 def first_present(table):
     """Return the index of the first present tick of a path, or ``None``."""

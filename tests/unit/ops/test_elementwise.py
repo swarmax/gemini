@@ -37,11 +37,11 @@ def test_log_and_sqrt_equal_math_on_their_domain(name):
 
 
 def test_inverse_trigonometry_floor_and_atan2_equal_math():
-    """``asin``, ``acos``, ``atan2``, ``floor`` and ``ceil`` keep the ``math`` values and types."""
+    """``asin``, ``acos``, ``atan2``, ``floor`` and ``ceil`` equal ``math``, as floats."""
     assert ops.asin(0.3) == math.asin(0.3) and ops.acos(0.3) == math.acos(0.3)
     assert ops.atan2(1.0, -2.0) == math.atan2(1.0, -2.0)
-    assert ops.floor(2.7) == 2 and type(ops.floor(2.7)) is int
-    assert ops.ceil(-2.7) == -2 and type(ops.ceil(2.1)) is int
+    assert ops.floor(2.7) == 2 and type(ops.floor(2.7)) is float
+    assert ops.ceil(-2.7) == -2 and type(ops.ceil(2.1)) is float
 
 
 def test_invalid_operands_give_inf_or_nan_silently():
@@ -136,3 +136,19 @@ def test_symbolic_operands_record_the_new_ops():
     assert ops.clip(symbolic, 0, 1) == ("clip", (symbolic, 0, 1))
     assert symbolic % 2 == ("mod", (symbolic, 2)) and abs(symbolic) == ("abs", (symbolic,))
     assert 7 // symbolic == ("floordiv", (7, symbolic))
+
+
+def test_maximum_minimum_propagate_nan_on_either_side_like_arrays():
+    """A NaN right operand gives NaN on scalars, as the array path does."""
+    nan = math.nan
+    for function in (ops.maximum, ops.minimum):
+        assert math.isnan(function(1.0, nan))
+        assert math.isnan(function(nan, 1.0))
+        assert np.isnan(function(np.array([1.0]), nan)).all()
+
+
+def test_floor_and_ceil_of_scalars_are_floats_like_arrays():
+    """The scalar path returns floats, as the array path does."""
+    assert type(ops.floor(2.5)) is float and ops.floor(2.5) == 2.0
+    assert type(ops.ceil(2.5)) is float and ops.ceil(2.5) == 3.0
+    assert ops.floor(np.array([2.5])).dtype == np.float64

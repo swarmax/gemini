@@ -30,16 +30,14 @@ def _scalar(function, low, high, args):
         return np.nan
 
 
-def test_a_physics_error_in_a_trial_gives_nan_on_the_python_backend():
-    """The failing row is NaN, as an unbracketed root is; ``PhysicsError`` is no ``ValueError``."""
+def test_a_physics_error_in_a_trial_is_raised_on_the_python_backend():
+    """A failed check in the residual raises, as it does on arrays; only no root gives NaN."""
 
     def refuses(value):
         raise PhysicsError("a trial outside the model's domain")
 
-    root = PythonBackend().brentq(
-        -1.0, 1.0, function=refuses, xtol=XTOL, rtol=RTOL_BRENT, maxiter=10
-    )
-    assert np.isnan(root)
+    with pytest.raises(PhysicsError):
+        PythonBackend().brentq(-1.0, 1.0, function=refuses, xtol=XTOL, rtol=RTOL_BRENT, maxiter=10)
 
 
 def test_brent_roots_follow_scipy_brentq_on_every_row():

@@ -20,28 +20,23 @@ class NumpyBackend(Backend):
 
     def add(self, left, right):
         """Return ``left + right``."""
-        with np.errstate(all="ignore"):
-            return np.add(left, right)
+        return quiet(np.add, left, right)
 
     def sub(self, left, right):
         """Return ``left - right``."""
-        with np.errstate(all="ignore"):
-            return np.subtract(left, right)
+        return quiet(np.subtract, left, right)
 
     def mul(self, left, right):
         """Return ``left * right``."""
-        with np.errstate(all="ignore"):
-            return np.multiply(left, right)
+        return quiet(np.multiply, left, right)
 
     def truediv(self, left, right):
         """Return ``left / right``; a zero divisor gives ``inf`` or ``nan`` silently."""
-        with np.errstate(all="ignore"):
-            return np.true_divide(left, right)
+        return quiet(np.true_divide, left, right)
 
     def pow(self, base, exponent):
         """Return ``base ** exponent``."""
-        with np.errstate(all="ignore"):
-            return np.power(base, exponent)
+        return quiet(np.power, base, exponent)
 
     def identity(self, value):
         """Return ``value`` unchanged."""
@@ -240,10 +235,8 @@ class NumpyBackend(Backend):
 
     def brentq(self, low, high, *args, function, xtol, rtol, maxiter):
         """Return the root of ``function(x, *args)`` in ``[low, high]`` per row, NaN if none."""
-        with np.errstate(all="ignore"):
-            return brent_roots(function, low, high, args, xtol, rtol, maxiter)
+        return quiet(brent_roots, function, low, high, args, xtol, rtol, maxiter)
 
     def newton(self, start, *args, function, derivative, tolerance, max_iterations):
         """Return the Newton iterate of each row, NaN where the iteration fails."""
-        with np.errstate(all="ignore"):
-            return newton_roots(function, derivative, start, args, tolerance, max_iterations)
+        return quiet(newton_roots, function, derivative, start, args, tolerance, max_iterations)

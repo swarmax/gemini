@@ -22,8 +22,8 @@ KEEP = object()
 _state = ContextVar("gemini_runtime_state", default=_DEFAULTS)
 
 
-def _check_names(names, required=False):
-    """Reject unknown setting names and, if ``required``, missing ones."""
+def _check_names(names):
+    """Reject unknown setting names."""
     for name in names:
         if name not in _DEFAULTS:
             raise ValidationError(
@@ -31,12 +31,6 @@ def _check_names(names, required=False):
                 f"{join_names(_DEFAULTS)}{did_you_mean(name, _DEFAULTS)}",
                 code="unknown_name",
             )
-    missing = [name for name in _DEFAULTS if name not in names]
-    if required and missing:
-        raise ValidationError(
-            f"runtime: state is missing {join_names(missing)}; expected every setting",
-            code="unknown_name",
-        )
 
 
 def _validated(values):
@@ -55,12 +49,6 @@ def state():
     result = _state.get().copy()
     result["default_fluid"] = result["default_fluid"].model_dump(mode="json")
     return result
-
-
-def set_state(values):
-    """Replace runtime settings from a complete dictionary returned by ``state()``."""
-    _check_names(values, required=True)
-    _state.set(_validated(dict(values)))
 
 
 def get_default_fluid():

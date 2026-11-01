@@ -66,7 +66,6 @@ def check_numbers(function, **values):
             "{function}: {name} = nan; expected a number",
             function=function,
             name=name,
-            value=value,
         )
 
 

@@ -16,7 +16,6 @@ SCALARS = frozenset({float, int, bool, type(None), np.float64, np.int64, np.bool
 and the NumPy scalars of the eager scope and of arithmetic on rows of a dataset."""
 
 _PYTHON = kernels.get("python")
-_forced_name = kernels.forced_name
 
 
 class Symbolic:
@@ -52,7 +51,7 @@ def elementwise_op(name, arity, summary):
     if arity == 1:
 
         def unary(value):
-            if type(value) in SCALARS and _forced_name() is None:
+            if type(value) in SCALARS and kernels.forced_name() is None:
                 return method(value)
             return dispatch(name, value)
 
@@ -60,7 +59,7 @@ def elementwise_op(name, arity, summary):
     if arity == 2:
 
         def binary(left, right):
-            if type(left) in SCALARS and type(right) in SCALARS and _forced_name() is None:
+            if type(left) in SCALARS and type(right) in SCALARS and kernels.forced_name() is None:
                 return method(left, right)
             return dispatch(name, left, right)
 
@@ -71,7 +70,7 @@ def elementwise_op(name, arity, summary):
             type(first) in SCALARS
             and type(second) in SCALARS
             and type(third) in SCALARS
-            and _forced_name() is None
+            and kernels.forced_name() is None
         ):
             return method(first, second, third)
         return dispatch(name, first, second, third)
