@@ -846,7 +846,9 @@
           "pump_type": "DEFAULT-PUMP",
           "efficiency": 0.8,
           "head_coefficients": null,
-          "power_coefficients": null
+          "power_coefficients": null,
+          "nominal_flow": null,
+          "nominal_head": null
         }
       }
     ]

@@ -3,11 +3,16 @@
 from copy import deepcopy
 
 from gemini import units
+from gemini.analysis import solves
+from gemini.analysis.wells import WELLHEAD_PRESSURES
 from gemini.case._utils.access import require
 from gemini.errors import ValidationError
+from gemini.modules.pumps import InjectionPump
 from gemini.physics.fluid import FluidProperties, heat_capacity_rate
 from gemini.plants._utils.roles import units_of
+from gemini.run._utils.apply import apply_case
 from gemini.study._utils.resize import resized
+from gemini.types import Stream
 
 
 def _limit(case, quantity, bound, required=True):
@@ -51,7 +56,6 @@ def _doublets(plant, case, peak, notes):
     flow_max = _limit(case, "production_flow", "max")
     cooling_max = _limit(case, "brine_cooling", "max")
     heat = heat_capacity_rate(density * flow_max, FluidProperties().cp_l) * cooling_max
-    design = deepcopy(plant)
     count = len(units_of(plant, "doublet"))
     if _takes_doublets(plant):
         top = require(case, "choices.doublets")
@@ -59,6 +63,8 @@ def _doublets(plant, case, peak, notes):
             (n for n in range(int(top.min), int(top.max) + 1) if n * heat >= peak), top.max
         )
         design = resized(plant, int(count))
+    else:
+        design = deepcopy(plant)
     covered = "covers" if count * heat >= peak else "does not cover"
     notes["sized"].append(
         {
@@ -103,6 +109,69 @@ def _capacities(design, case, notes):
             _note(notes, f"{path}.capacity", share, "W", reason)
     for role in ("chp", "heat_exchanger"):
         _skip(notes, units_of(design, role), "not sized from the demand")
+
+
+def _injection_head(applied, case, path):
+    """Return the pressure rise [Pa] that the doublet at ``path`` asks of an injection pump.
+
+    The wellhead pressure that injects the nominal flow, less the pressure of the production
+    wellhead (``nominal_wellhead_pressure``), which the pump suction can be at best; zero when the
+    column of brine injects the flow alone. The brine is injected at the reservoir temperature
+    less the brine cooling limit.
+    """
+    doublet = applied.get_submodule(path)
+    cooling = _limit(case, "brine_cooling", "max")
+    temperature = case.environment.temperature_at(doublet.depth) - cooling
+    rate = doublet.fluid.density * doublet.nominal_flow
+    stream = Stream(
+        m_dot=rate, T=temperature, p=doublet.nominal_wellhead_pressure, fluid=doublet.fluid
+    )
+    low = float(doublet.nominal_wellhead_pressure)
+    needed = solves.solve_injection_pressure(
+        doublet.injector, doublet.sink, stream, (low, WELLHEAD_PRESSURES[1])
+    )
+    return 0.0 if needed is None else needed - low
+
+
+def _lacking(applied, served):
+    """Return why a pump cannot be rated for the doublets ``served``, or ``None`` when it can."""
+    if not served:
+        return "it serves no doublet of the plant"
+    for path in served:
+        doublet = applied.get_submodule(path)
+        for name in ("depth", "nominal_flow", "nominal_wellhead_pressure"):
+            if getattr(doublet, name) is None:
+                return f"{path}.{name} is missing"
+    return None
+
+
+def _injection_pumps(design, case, notes):
+    """Rate each injection pump for the doublets it serves: their total flow and the head.
+
+    A pump serves the doublets that its brine reaches in the plant, found from the wiring. The
+    nominal flow is the sum of their nominal flows and the nominal head the largest head one of
+    them asks (``_injection_head``), floored at zero. A pump that serves no doublet of the plant,
+    or whose doublets lack a design value, is left unsized with a note.
+    """
+    pumps = [path for path, module in design.named_modules() if isinstance(module, InjectionPump)]
+    if not pumps:
+        return
+    applied = apply_case(design, case)
+    doublets = units_of(design, "doublet")
+    for path in pumps:
+        served = [item for item in design.feeds(f"{path}.fluid_out") if item in doublets]
+        reason = _lacking(applied, served)
+        if reason:
+            _skip(notes, [path], f"not sized: {reason}")
+            continue
+        flow = sum(applied.get_submodule(item).nominal_flow for item in served)
+        head = max(_injection_head(applied, case, item) for item in served)
+        values = {"nominal_flow": units.Quantity(flow, "m3/s")}
+        values["nominal_head"] = units.Quantity(head, "Pa")
+        design.set_params(path, values)
+        why = f"the flow of {len(served)} doublet(s) it serves, and the head that injects it"
+        _note(notes, f"{path}.nominal_flow", flow, "m3/s", why)
+        _note(notes, f"{path}.nominal_head", head, "Pa", why)
 
 
 def _skip(notes, paths, reason):
@@ -151,7 +220,14 @@ def size(plant, case):
       by the units of the role, the reservoir temperature taken at the depth of the plant and
       the temperatures from ``demand.heating`` (a heat pump is left unsized, with a note, when
       the reservoir is hotter than the supply temperature); the capacity of each ``chiller``: the
-      cooling peak shared likewise.
+      cooling peak shared likewise;
+    - the ``nominal_flow`` and ``nominal_head`` of each ``InjectionPump``: the total nominal flow
+      of the doublets its brine reaches, and the largest pressure rise one of them asks, the
+      wellhead pressure that injects its flow less ``nominal_wellhead_pressure`` as the best
+      suction, floored at zero (the injection well and aquifer of the case, ``gm.analysis``'s
+      ``solve_injection_pressure``). A pump that serves no doublet of the plant, such as the one
+      of a ``NodalDoublet``, or whose doublet lacks a depth or a wellhead pressure, is left
+      unsized with a note.
 
     The exchanger is taken as ideal for the heat pump share: a finite approach leaves the water
     colder at the heat pump, which a boiler downstream makes up; a plant with a heat pump and no
@@ -188,5 +264,6 @@ def size(plant, case):
     if units_of(plant, "doublet"):
         design = _doublets(plant, case, _peak(case, "heating"), notes)
     _capacities(design, case, notes)
+    _injection_pumps(design, case, notes)
     design.sizing = notes
     return design

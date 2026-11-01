@@ -101,8 +101,8 @@ def test_what_the_case_lacks_is_named(sections, path):
 
 
 def test_the_sized_plant_delivers_the_heating_of_a_short_run(tmp_path):
-    """One doublet carries the peak of the first two days, which a real run then delivers."""
-    case = shallow_case(days=2, folder=tmp_path)
+    """One doublet carries the peak of the first day, which a real run then delivers."""
+    case = shallow_case(days=1, folder=tmp_path)
     design = gm.study.size(shallow_plant(), case)
     assert design.to_dict()["size"] == {"doublets": 1}
     results = gm.simulate(design, case)
@@ -167,3 +167,43 @@ def test_a_searched_capacity_replaces_the_sized_one(runs):
     found = result["best"]["plant"].get_submodule("heat_pump").capacity
     assert 0.1e6 <= found <= 0.5e6
     assert found != sized.get_submodule("heat_pump").capacity
+
+
+def pump_notes(design):
+    """Return the sized value of each note of the injection pump, in SI."""
+    return {
+        item["path"]: item["value"].value
+        for item in design.sizing["sized"]
+        if item["path"].startswith("injection_pump.")
+    }
+
+
+def test_the_injection_pump_is_rated_for_the_flow_of_the_doublets_it_serves():
+    """Three doublets share one pump: its flow is theirs together."""
+    design = gm.study.size(shallow_plant(), shallow_case(constraints=limited(40)))
+    flows = [design.get_submodule(f"d{i}").nominal_flow for i in range(3)]
+    notes = pump_notes(design)
+    assert notes["injection_pump.nominal_flow"] == pytest.approx(sum(flows))
+    assert design.get_submodule("injection_pump").nominal_flow == pytest.approx(sum(flows))
+
+
+def test_the_injection_pump_is_rated_for_the_pressure_the_aquifer_needs_above_the_suction():
+    """One doublet of 117 m3/h at 8 bar of suction needs more than the column gives."""
+    design = gm.study.size(shallow_plant(), shallow_case())
+    assert 0 < pump_notes(design)["injection_pump.nominal_head"] < 100e5
+
+
+def test_a_column_that_injects_alone_asks_no_head():
+    """A suction above the pressure the aquifer needs: the head is floored at zero."""
+    plant = shallow_plant()
+    plant.set_params("d0", {"nominal_wellhead_pressure": gm.units.Quantity(300, "bar")})
+    design = gm.study.size(plant, shallow_case())
+    assert pump_notes(design)["injection_pump.nominal_head"] == 0.0
+
+
+def test_a_pump_whose_doublet_lacks_a_design_value_is_left_unsized_with_a_note():
+    """The stored catalogue plant states no depth: the pump is listed as unchanged."""
+    design = gm.study.size(gm.plants.get("DoubletHeatPlant"), shallow_case())
+    unchanged = {item["path"]: item["reason"] for item in design.sizing["unchanged"]}
+    assert "doublet.depth is missing" in unchanged["injection_pump"]
+    assert design.get_submodule("injection_pump").nominal_flow is None

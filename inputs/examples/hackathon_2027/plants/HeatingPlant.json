@@ -57,6 +57,14 @@
       "unit": "kg/s"
     },
     "injection_pump.efficiency": 0.7,
+    "injection_pump.nominal_flow": {
+      "value": 600,
+      "unit": "m3/h"
+    },
+    "injection_pump.nominal_head": {
+      "value": 15.74,
+      "unit": "bar"
+    },
     "peak_boiler.capacity": {
       "value": 30,
       "unit": "MW"

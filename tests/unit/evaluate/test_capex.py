@@ -203,8 +203,8 @@ def test_a_case_without_finance_is_missing_assumption():
         gm.evaluate.capex(heating_plant(), make_case())
 
 
-def test_every_kind_but_two_is_declared_by_a_module():
-    """Injection pumps and ice stores have no design value to size them from.
+def test_every_kind_but_the_ice_storage_is_declared_by_a_module():
+    """Only the ice storage has no module that declares its kind.
 
     A heat pump is a ``heat_pump`` or, in cooling mode, a ``compression_chiller``.
     """
@@ -214,7 +214,7 @@ def test_every_kind_but_two_is_declared_by_a_module():
         if isinstance(getattr(module_class, "equipment_kind", None), str)
     }
     declared |= {"heat_pump", "compression_chiller"}
-    assert set(EQUIPMENT_KINDS) - declared == {"injection_pump", "ice_storage"}
+    assert set(EQUIPMENT_KINDS) - declared == {"ice_storage"}
 
 
 def _subclasses(root):

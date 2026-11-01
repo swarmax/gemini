@@ -87,22 +87,64 @@ temperatures, the air temperature and every price are assumptions of the case.
 ## Assumptions of the example
 
 Every value of this section is a placeholder of the example, from no source and none given by the organisers: return temperatures 60 degC (heating) and 25 degC (cooling), air
-10 degC; prices electricity 100 and gas 40 EUR/MWh, chemical 3 EUR/kg, waste disposal 0.2 EUR/kg,
+10 degC; prices chemical 3 EUR/kg, waste disposal 0.2 EUR/kg,
 heat and cold revenue 60 EUR/MWh; discount rate 0.05, lifetime 25 yr, `heat_cost_share` 0.8;
-electricity 300 g CO2/kWh; CO2 price 80 EUR/t (`opex.co2`); capex of the production and injection pump 0.5 EUR/W, absorption and
+electricity 300 g CO2/kWh; capex of the production and injection pump 0.5 EUR/W, absorption and
 adsorption chiller and compression chiller 0.3 EUR/W, heat exchanger 0.5 EUR/(W/K), cooler
 0.1 EUR/W, pipe 500 EUR/m, flare 100000 EUR, gas makeup 50000 EUR; fixed opex per kind of 0.5 to
-2 %/yr of its capex (heat pump 2, boiler 1.5, heat exchanger 1, drilling 1).
+2 %/yr of its capex (heat exchanger 1, drilling 1) except the three kinds cited below.
 
-Cited, price year 2015, currency EUR:
+Cited, price year 2015, currency EUR. Conversions to 2015 use the euro-area HICP annual average
+index, all items (Eurostat `prc_hicp_aind`, `INX_A_AVG`, EA, 2015 = 100: 2015 100.00, 2020 105.06,
+2025 128.75, update of 2026-02-06). The catalogue below is Danish Energy Agency, Technology Data for
+Generation of Electricity and District Heating, version 0019, August 2026, with the Excel data sheets
+of the same version (https://ens.dk/media/8614/download and https://ens.dk/media/8615/download, opened
+2026-11-01). The fixed opex is the sheet's fixed O&M [EUR/MW/yr] over its nominal investment.
 
-| Key | Value | Source |
+| Key | Value | Source and figure as stated |
 | --- | --- | --- |
-| `capex.drilling` | 1239.13 EUR/m | SDE+ 2013 reference case, 2300 m doublet, 5.7 MEUR net drilling (Mijnlieff et al. 2013, EGC, slide 26), over two wells of 2300 m, taken into 2015 without escalation |
-| `capex.degasser` | 1.0 MEUR | Same note: reserve for separation of hydrocarbons per doublet |
-| `capex.heat_pump` | 0.67 EUR/W | Danish Energy Agency, Technology Data for Energy Plants, April 2020, chapter 40, compression heat pump, excess heat, 10 MW, 2015 prices |
-| `capex.boiler` | 0.06 EUR/W | DEA Technology Data, chapter 44, district heating boiler, natural gas, 2015 prices |
-| `capex.chp` | 0.95 EUR/W electric | DEA Technology Data, chapter 06, spark ignition engine, natural gas, 1-10 MWe, 2015 prices |
-| `emissions.CH4.gwp` | 29.8 | IPCC AR6 WG1 chapter 7 table 7.15 (Forster et al. 2021), fossil methane, 100 years |
+| `capex.heat_pump` | 0.73786 EUR/W | DEA data sheet "40 Comp. hp, waste heat 10 MW" (heat pump, waste heat, electricity, large, district heating): nominal investment (total) 0.95 MEUR/MW_h in the 2025 column, cost data in 2025 EURO; 0.95 / 1.2875 = 0.73786 EUR2015/W. Replaces 0.67 |
+| `opex.fixed.heat_pump` | 0.2239 %/yr | Same sheet, fixed O&M (total) 2126.745 EUR/MW_h/y over 0.95 MEUR/MW_h. Replaces 2 |
+| `capex.boiler` | 0.06073 EUR/W | DEA data sheet "44 Natural Gas DH Only" (gas boiler, medium): nominal investment (total), 2020 column, 0.0638024 MEUR/MW_h, cost data in 2020 EURO (Intro sheet); 0.0638024 / 1.0506 = 0.06073 EUR2015/W. Replaces 0.06 |
+| `opex.fixed.boiler` | 3.25 %/yr | Same sheet, 2020 column, fixed O&M 2073.58 EUR/MW_h/y over 0.0638024 MEUR/MW_h. Replaces 1.5 |
+| `capex.chp` | 0.96155 EUR/W electric | DEA data sheet "06 Gas engines, natural gas" (engine, back pressure, natural gas, small; 1 to 10 MW_e): nominal investment (total), 2020 column, 1.01020 MEUR/MW_e, cost data in 2020 EURO; 1.01020 / 1.0506 = 0.96155 EUR2015/W. Replaces 0.95 |
+| `opex.fixed.chp` | 1.0263 %/yr | Same sheet, 2020 column, fixed O&M 10367.88 EUR/MW_e/y over 1.01020 MEUR/MW_e. Replaces 2 |
+| `emissions.CH4.gwp` | 29.8 | IPCC AR6 WG1 chapter 7 table 7.15 (Forster et al. 2021), fossil methane, 100 years. Seen as quoted in Munoz, Schmidt and Weidema (2024), "The indirect global warming potential of methane oxidation in the IPCC's sixth assessment report", Environmental Research Letters 19(12), 121002, https://doi.org/10.1088/1748-9326/ad8edd: "the GWP100 for fossil and biogenic methane became 29.8 and 27.0 kg CO2-eq kg-1 methane, respectively (table 7.15 in Forster et al 2021)". The IPCC chapter itself could not be opened (HTTP 403) |
+| `lifetime` 25 yr | kept | DEA data sheets above state a technical lifetime of 25 years for the large heat pump and the gas boiler (and the geothermal sheet 45.3); that is a technology lifetime, not a project appraisal period, so the value stays an assumption that agrees with it |
+| `opex.electricity` | 105.75 EUR/MWh | Eurostat `nrg_pc_205`, electricity prices for non-household consumers, EU average (`EU27_2020`), band IE (20 000 to 69 999 MWh/yr), excluding VAT and other recoverable taxes (`X_VAT`), 2025-S1 0.1381 and 2025-S2 0.1342 EUR/kWh, mean 0.13615 EUR/kWh = 136.15 EUR/MWh (EUR 2025); 136.15 / 1.2875 = 105.75 EUR2015/MWh. API data of 2026-10-19. Band IE is chosen for a heat pump load of tens of GWh/yr. Replaces 100. The case names no country, so the EU average is used |
+| `opex.gas` | 39.92 EUR/MWh | Eurostat `nrg_pc_203`, natural gas prices for non-household consumers, EU average (`EU27_2020`), band I4 (100 000 to 999 999 GJ/yr), `X_VAT`, 2025-S1 0.0545 and 2025-S2 0.0483 EUR/kWh, mean 0.0514 = 51.4 EUR/MWh (EUR 2025); 51.4 / 1.2875 = 39.92 EUR2015/MWh. Eurostat states the price per kWh of gross calorific value; the case does not state which heating value its fuel energy uses, so the value is exact only for a gross-value convention. Replaces 40 |
+| `opex.co2` | 57.03 EUR/t | Instrat Foundation (Wojciech Przedlacki), "EU ETS 2025 summary and the beginning of 2026 auctions", 8 January 2026, https://energy.instrat.pl/en/eu-ets-2025-summary/: "The average CO2 allowance price in 2025 amounted to EUR 73.43 per tCO2 (volume-weighted average)", the 213 primary-market auctions of 2025; 73.43 / 1.2875 = 57.03 EUR2015/t. A secondary source, not the Commission or the EEA (their pages could not be opened). Replaces 80 |
+| `capex.drilling` | 1239.13 EUR/m | SDE+ 2013 reference case, 2300 m doublet, 5.7 MEUR net drilling (Mijnlieff et al. 2013, EGC, slide 26), over two wells of 2300 m, taken into 2015 without escalation. Not re-opened in this check: placeholder, no verified source |
+| `capex.degasser` | 1.0 MEUR | Same note: reserve for separation of hydrocarbons per doublet. Not re-opened: placeholder, no verified source |
 
-The compression chiller factor is a 0.3 EUR/W placeholder, not the heat pump row. `capex.injection_pump` is in the case as the design has it, but no module is priced by it yet (the injection pump has no design head), so it is not used.
+The previous values 0.06, 0.95 and 0.67 EUR/W were cited to the April 2020 catalogue in 2015 prices; that
+version was not re-opened for this check, and version 0019 (2020 and 2025 prices) is the source now.
+
+Placeholder, no verified source (value unchanged): `capex.compression_chiller`, `absorption_chiller`
+and `adsorption_chiller` 0.3 EUR/W (the DEA el and DH catalogue has no chiller or district cooling sheet; two searches found no
+catalogue or peer-reviewed figure that was opened and read); `capex.production_pump` and `injection_pump` 0.5 EUR/W; `capex.heat_exchanger`
+0.5 EUR/(W/K); `capex.cooler` 0.1 EUR/W; `capex.pipe` 500 EUR/m; `capex.flare`; `capex.gas_makeup`;
+`capex.drilling` and `degasser` (above; DEA sheets 45.1 to 45.3 give only the whole plant, e.g. 1.9 MEUR/MW_h for 2000 m
+(sheet 45.1.b) and 1.75 MEUR/MW_h (sheet 45.3), cost data in 2025 EURO, per MW of heat of the plant including heat pump; the sheets do not split wells, degasser, pumps or
+exchangers, so they do not match a price per m of well or per kind); fixed opex of drilling, degasser, chillers, pumps, heat
+exchanger, flare, gas makeup, cooler and pipe; `opex.chemical`, `waste_disposal` (not searched);
+`revenue.heat` and `cold`; `discount_rate` 0.05 (the DEA catalogue guideline discounts reinvestments
+at 4 % real, a different quantity; the European Commission Better Regulation Toolbox tool 64 text could not be opened);
+`allocation.heat_cost_share`; `emissions.CO2.electricity` 300 g/kWh
+(the EEA indicator page is an interactive chart that could not be read; the Umweltbundesamt page "Entwicklung der spezifischen
+Kohlendioxid-Emissionen des deutschen Strommix in den Jahren 1990-2017", Climate Change 11/2018, states 528 g/kWh for 2015,
+direct emissions, without the trade balance, but that is the 2015 grid and not the 2027 one the case describes, so it is not used).
+
+The previous 100, 40 and 80 were not sourced. The energy prices are the latest real prices (2025) deflated to the 2015 price year,
+the same convention as the capex above.
+
+The compression chiller factor is a 0.3 EUR/W placeholder, not the heat pump row. `capex.injection_pump`
+prices the `InjectionPump` of a plant per W of shaft power at its `nominal_flow` and `nominal_head`
+(or the power curve at `nominal_flow`). The five plant dicts with an injection pump state those two design
+values: `nominal_flow` 600 m3/h, the two doublets of 300 m3/h that the one plant-level pump serves, and
+`nominal_head` 15.74 bar. They are the rule of `gm.study.size` (the flow of the doublets the pump serves,
+and the pressure that `solve_injection_pressure` finds for the injection well at that flow, less the 10 bar
+of the production wellhead as best suction, floored at zero) applied to the stored doublets and this case,
+rounded to four digits. They are data of the plants, not a default of the package; the size of a plant with
+other doublets rates its pump again. On `HeatingHeatPumpCoolingPlant` the pump is 0.187 MEUR of the
+33.0 MEUR capex (0.57 %).

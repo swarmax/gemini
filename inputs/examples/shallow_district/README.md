@@ -31,6 +31,12 @@ measured data. Only `examples/` and `tests/` read this folder, and nothing under
 
 Every value here is an invented placeholder of the example, none a market price. Electricity 120 and gas 55 EUR/MWh, no revenue, discount rate 0.04, lifetime 30 yr, `heat_cost_share` 0.8, electricity 360 g CO2/kWh.
 Capex: the cited factors of the hackathon README (drilling, heat pump, boiler, CHP, degasser,
-compression chiller 0.67 EUR/W) and invented ones for the pumps (0.5 EUR/W), exchanger
-(0.5 EUR/(W/K)), cooler (0.1 EUR/W), pipe (500 EUR/m), flare and gas makeup; fixed opex 1.5 %/yr
+compression chiller 0.73786 EUR/W, the heat pump row) and, for the heat pump, boiler and CHP, the cited fixed opex shares (0.2239, 3.25 and 1.0263 %/yr) and invented ones for the pumps (0.5 EUR/W), exchanger
+(0.5 EUR/(W/K)), cooler (0.1 EUR/W), pipe (500 EUR/m), flare and gas makeup; other fixed opex 1.5 %/yr
 (drilling 1 %/yr).
+
+The injection pump of `plant.json` states its two design values, `nominal_flow` 130 m3/h (its one doublet)
+and `nominal_head` 14.13 bar. They come from the rule of `gm.study.size` (the flow of the doublets the
+pump serves, and the pressure that the injection well needs at that flow less the 8 bar of the production
+wellhead as best suction, floored at zero) applied to the stored doublet and this case. They are data of
+the plant, not a default of the package.

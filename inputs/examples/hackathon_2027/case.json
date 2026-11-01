@@ -175,15 +175,15 @@
           "unit": "EUR/m"
         },
         "heat_pump": {
-          "value": 0.67,
+          "value": 0.73786,
           "unit": "EUR/W"
         },
         "boiler": {
-          "value": 0.06,
+          "value": 0.06073,
           "unit": "EUR/W"
         },
         "chp": {
-          "value": 0.95,
+          "value": 0.96155,
           "unit": "EUR/W"
         },
         "degasser": {
@@ -238,15 +238,15 @@
             "unit": "%/yr"
           },
           "heat_pump": {
-            "value": 2,
+            "value": 0.2239,
             "unit": "%/yr"
           },
           "boiler": {
-            "value": 1.5,
+            "value": 3.25,
             "unit": "%/yr"
           },
           "chp": {
-            "value": 2,
+            "value": 1.0263,
             "unit": "%/yr"
           },
           "degasser": {
@@ -295,11 +295,11 @@
           }
         },
         "electricity": {
-          "value": 100,
+          "value": 105.75,
           "unit": "EUR/MWh"
         },
         "gas": {
-          "value": 40,
+          "value": 39.92,
           "unit": "EUR/MWh"
         },
         "chemical": {
@@ -311,7 +311,7 @@
           "unit": "EUR/kg"
         },
         "co2": {
-          "value": 80,
+          "value": 57.03,
           "unit": "EUR/t"
         }
       },

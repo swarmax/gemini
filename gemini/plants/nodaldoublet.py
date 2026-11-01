@@ -23,6 +23,9 @@ class NodalDoublet(Plant):
     A parent plant connects the two limbs through its surface equipment, as with ``Doublet``:
     the parent opens this plant and solves its constraints in its own order.
 
+    Its ``injection_pump`` serves this one limb at a solved rate, so ``gm.study.size`` leaves it
+    unsized: a plant that prices it states its ``nominal_flow`` and ``nominal_head``.
+
     A building block, not schedulable on its own: a run sets ``esp.frequency`` and
     ``wellhead_pressure``.
     """

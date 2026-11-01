@@ -176,15 +176,15 @@
           "unit": "EUR/m"
         },
         "heat_pump": {
-          "value": 0.67,
+          "value": 0.73786,
           "unit": "EUR/W"
         },
         "boiler": {
-          "value": 0.06,
+          "value": 0.06073,
           "unit": "EUR/W"
         },
         "chp": {
-          "value": 0.95,
+          "value": 0.96155,
           "unit": "EUR/W"
         },
         "degasser": {
@@ -192,7 +192,7 @@
           "unit": "EUR"
         },
         "compression_chiller": {
-          "value": 0.67,
+          "value": 0.73786,
           "unit": "EUR/W"
         },
         "production_pump": {
@@ -227,15 +227,15 @@
       "opex": {
         "fixed": {
           "heat_pump": {
-            "value": 1.5,
+            "value": 0.2239,
             "unit": "%/yr"
           },
           "boiler": {
-            "value": 1.5,
+            "value": 3.25,
             "unit": "%/yr"
           },
           "chp": {
-            "value": 1.5,
+            "value": 1.0263,
             "unit": "%/yr"
           },
           "degasser": {

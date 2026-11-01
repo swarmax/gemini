@@ -2,16 +2,36 @@
 
 from gemini import ops
 from gemini.errors import PhysicsError, ValidationError
+from gemini.modules._utils.cost import Equipment
 from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.modules.pumps import _physics
 from gemini.physics import energy, pumps
-from gemini.types import Count, Efficiency, Frequency, Power, Pressure, PressureDifference, Stream
+from gemini.types import (
+    Count,
+    Efficiency,
+    Frequency,
+    Power,
+    Pressure,
+    PressureDifference,
+    Stream,
+    VolumeFlow,
+)
 
 
-class InjectionPump(Module):
-    """Raise brine pressure with a simple hydraulic-power estimate."""
+class InjectionPump(Equipment, Module):
+    """Raise brine pressure with a simple hydraulic-power estimate.
+
+    The pump is equipment of the kind ``injection_pump``, priced per W of shaft power at the
+    design point ``nominal_flow`` (and ``nominal_head`` for a pump with no curves). A plant that
+    wires the doublets to a plant-level pump has one pump for all of them, so its ``nominal_flow``
+    is their total; a ``NodalDoublet`` holds a pump of its own for its one injection limb. A
+    ``Doublet`` has no injection pump and prices only its production pump, so no pump is counted
+    twice. ``gm.study.size`` rates the pump of a plant from the doublets it serves.
+    """
+
+    equipment_kind = "injection_pump"
 
     repr_fields = ("stage_count", "efficiency", "pump_type")
 
@@ -29,6 +49,9 @@ class InjectionPump(Module):
         self.power_coefficients = Parameter(
             list[float] | None, default=None, shape=(pumps.POLYNOMIAL_COEFFICIENT_COUNT,)
         )
+
+        self.nominal_flow = Parameter(VolumeFlow | None, default=None)
+        self.nominal_head = Parameter(PressureDifference | None, default=None)
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="brine")
@@ -111,3 +134,36 @@ class InjectionPump(Module):
             "stage_count",
             code="invalid_design",
         )
+
+    def capex(self, finance):
+        """Return the cost of the pump from its shaft power at the nominal flow.
+
+        The power is the power curve at ``nominal_flow`` and the default frequency for a pump with
+        both curves, else the hydraulic power of ``nominal_flow`` and ``nominal_head`` over the
+        efficiency. A missing design value raises ``missing_value`` naming it.
+        """
+        if self.nominal_flow is None:
+            raise _missing_design(self.path, "nominal_flow")
+        if self.head_coefficients is not None and self.power_coefficients is not None:
+            power = pumps.power(
+                self.nominal_flow,
+                float(pumps.DEFAULT_INJECTION_PUMP_FREQUENCY),
+                self.stage_count,
+                self.power_coefficients,
+            )
+            return self.capex_of(finance, power)
+        if self.nominal_head is None:
+            raise _missing_design(self.path, "nominal_head")
+        if self.efficiency is None:
+            raise _missing_design(self.path, "efficiency")
+        hydraulic = pumps.hydraulic_power(self.nominal_flow, self.nominal_head)
+        return self.capex_of(finance, energy.input_power(hydraulic, self.efficiency))
+
+
+def _missing_design(path, name):
+    """Return the error of a design value that the pump needs to be priced."""
+    return ValidationError(
+        f"{path}.{name} is missing; expected the design value that sizes the pump",
+        path=f"{path}.{name}",
+        code="missing_value",
+    )
