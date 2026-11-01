@@ -218,6 +218,24 @@ def hydraulic_power(flow, head):
     return flow * head
 
 
+def speed_scaled_flow(flow, speed):
+    """Return a flow limit of a pump at a speed ratio [m3/s].
+
+    Parameters
+    ----------
+    flow : float
+        Limit at rated speed [m3/s].
+    speed : float
+        Speed ratio [-].
+
+    Notes
+    -----
+    The flow range of the fitted curves scales with speed (affinity law Q ~ s; Takacs,
+    Electrical Submersible Pumps Manual, 2009).
+    """
+    return flow * speed
+
+
 @ops.physics
 def is_in_operating_window(flow, minimum_flow, maximum_flow, speed):
     """Return whether a flow lies inside the speed-scaled operating window of a pump.

@@ -35,7 +35,7 @@ def test_sample_gives_the_same_summary_with_the_same_seed(sampled):
     first, second = sampled
     assert first["summary"] == second["summary"] and len(first["samples"]) == 6
     spread = first["summary"]["co2"]
-    assert set(spread) == {"mean", "p5", "p50", "p95"}
+    assert set(spread) == {"mean", "p5", "p50", "p95", "failed"}
     numbers = [item["metrics"]["co2"].value for item in first["samples"]]
     assert spread["p50"].value == pytest.approx(np.median(numbers))
     assert spread["p5"].value <= spread["p50"].value <= spread["p95"].value
@@ -124,3 +124,23 @@ def test_the_result_round_trips_through_json(sampled):
     assert again["summary"] == first["summary"]
     assert again["samples"] == first["samples"]
     assert json.loads(text)["samples"][0]["parameters"][PRICE]["unit"] == "currency/J"
+
+
+def test_a_draw_with_failed_steps_gives_no_value_and_is_counted(failing_runs):
+    """Its metrics are None with the count and the top failure; the summary leaves it out."""
+    case = declared_case(**{PATH: {"kind": "uniform", "min": 100, "max": 300}})
+    found = gm.study.sample(shallow_plant(), case, ["lcts"], 8, 1)
+    bad = [item for item in found["samples"] if "reason" in item]
+    good = [item for item in found["samples"] if "reason" not in item]
+    assert bad and good
+    for item in bad:
+        metric = item["metrics"]["lcts"]
+        assert metric.value is None and metric.reason == item["reason"]
+        assert "2 steps failed" in metric.reason and "d0.esp out_of_range (2 rows)" in metric.reason
+    spread = found["summary"]["lcts"]
+    assert spread["failed"].value == len(bad)
+    assert spread["mean"].value == pytest.approx(
+        np.mean([i["metrics"]["lcts"].value for i in good])
+    )
+    again = gm.study.Sample.from_dict(json.loads(json.dumps(found.to_dict())))
+    assert again["summary"]["lcts"]["failed"].value == len(bad)

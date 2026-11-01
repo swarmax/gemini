@@ -4,10 +4,10 @@ import json
 
 from gemini._utils.jsonable import to_plain
 from gemini.evaluate._utils.cost import equipment
+from gemini.evaluate._utils.display import DISPLAY, by_si_unit, display_units, shown
 from gemini.evaluate._utils.ratings import rating_of
 from gemini.evaluate._utils.series import energy
 from gemini.evaluate._utils.verdict import verdict
-from gemini.evaluate._utils.display import DISPLAY, by_si_unit, display_units, shown
 from gemini.evaluate.capacities import capacities
 from gemini.evaluate.capex import capex
 from gemini.evaluate.co2 import co2
@@ -19,8 +19,8 @@ from gemini.evaluate.lcts import lcts
 from gemini.evaluate.opex import opex
 from gemini.evaluate.totals import totals
 from gemini.run._utils.apply import apply_case
-from gemini.units import si_unit
 from gemini.types.shapes import measure
+from gemini.units import si_unit
 
 
 class Report(dict):
@@ -44,9 +44,11 @@ class Report(dict):
         base = by_si_unit()
         return to_plain(
             {
-                name: shown(item, base | {si_unit(DISPLAY[name][1]): chosen[name]})
-                if name in chosen
-                else shown(item, base)
+                name: (
+                    shown(item, base | {si_unit(DISPLAY[name][1]): chosen[name]})
+                    if name in chosen
+                    else shown(item, base)
+                )
                 for name, item in self.items()
             }
         )

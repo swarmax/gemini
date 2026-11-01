@@ -4,25 +4,31 @@ import pandas as pd
 
 from gemini import units
 from gemini._utils.jsonable import to_plain
-from gemini.evaluate._utils.display import display_units, in_unit
+from gemini.evaluate._utils.display import by_si_unit, display_units, in_unit
+from gemini.evaluate._utils.display import shown as displayed
 from gemini.study._utils.parallel import mapped
 from gemini.study._utils.target import quantities
 from gemini.study._utils.trial import checked_metric, drawn_trial
 from gemini.study._utils.uncertain import declared
-from gemini.types.shapes import measure
 from gemini.study.sample import value_of
+from gemini.types.shapes import measure
 
 
 class Tornado(list):
     """The rows of a one-at-a-time sensitivity, sorted by effect, with ``to_frame``."""
 
     def to_dict(self):
-        """Return the rows as plain JSON ``{"rows": [...]}``, quantities as ``{value, unit}``."""
+        """Return the rows as plain JSON ``{"rows": [...]}``, quantities as ``{value, unit}``.
+
+        The bounds and the metrics are in the display units of ``gm.evaluate`` (mD, EUR/MWh, kt,
+        ...); a quantity with no display unit stays in SI. The rows keep SI inside.
+        """
         keys = ("low", "high", "at_low", "at_high", "effect")
+        table = by_si_unit()
         return {
             "rows": [
                 {"parameter": row["parameter"], "metric": row["metric"]}
-                | {key: to_plain(row[key]) for key in keys}
+                | {key: to_plain(displayed(row[key], table)) for key in keys}
                 for row in self
             ]
         }
@@ -42,7 +48,10 @@ class Tornado(list):
         )
 
     def to_frame(self, units=None):
-        """Return a table of the rows: the parameter bounds in SI, the metric in a display unit.
+        """Return a table of the rows: the bounds and the metric in display units.
+
+        ``low`` and ``high`` are in ``value_unit``, the display unit of the value (mD, EUR/MWh,
+        K/km, ...) or its SI unit when it has none.
 
         ``at_low``, ``at_high`` and ``effect`` are numbers in the unit of ``unit``: the display
         unit of the metric (MWh, MW, MEUR, EUR/MWh or kt, as in ``Comparison.to_frame``), or the
@@ -51,18 +60,21 @@ class Tornado(list):
         ``invalid_value``; a unit of another dimension, ``invalid_unit``.
         """
         shown = display_units(list(dict.fromkeys(row["metric"] for row in self)), units)
+        table = by_si_unit()
         rows = [
             {
                 "parameter": row["parameter"],
                 "metric": row["metric"],
-                "low": row["low"].value,
-                "high": row["high"].value,
+                "low": displayed(row["low"], table).value,
+                "high": displayed(row["high"], table).value,
+                "value_unit": str(displayed(row["low"], table).unit),
                 **{name: _number(row, name, shown) for name in ("at_low", "at_high", "effect")},
                 "unit": shown.get(row["metric"], str(row["effect"].unit)),
             }
             for row in self
         ]
-        columns = ["parameter", "metric", "low", "high", "at_low", "at_high", "effect", "unit"]
+        columns = ["parameter", "metric", "low", "high", "value_unit"]
+        columns += ["at_low", "at_high", "effect", "unit"]
         return pd.DataFrame(rows, columns=columns)
 
 

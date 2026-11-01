@@ -97,4 +97,3 @@ def test_another_esp_depth_and_path_length_reuse_the_graph():
         cache.graph(well, {name: well.fluid for name in well._fed_inlets()})
     assert cache.traces == 1
     assert_module_matches(other, [{"bottom_in": Stream(m_dot=40.0, T=353.15, p=25e6)}])
-

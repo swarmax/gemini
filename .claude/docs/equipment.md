@@ -162,11 +162,11 @@ basis (`gemini.physics.pumps`).
   `pumps.is_in_operating_window`, `pumps.power`, `pumps.speed_ratio`
 - **Health**: worst relative drift of measured `power`, `head` and `discharge_pressure`, alarm
   above `drift_threshold` or outside the operating window.
-- **Assumptions and validity**: isothermal; the curves are valid inside the flow window
-  `minimum_flow` to `maximum_flow`, scaled by `frequency / 60 Hz`, and where head and power are not
-  negative. A row outside it (flow at standstill, zero, is inside) fails with `PhysicsError`, code
-  `out_of_range`, naming the path, the flow and the range; the row code is `out_of_range`, never a
-  number from the extrapolated polynomial. Reverse flow raises `PhysicsError`. The fits
+- **Assumptions and validity**: isothermal; the curves are valid for a flow at most `maximum_flow`
+  scaled by `frequency / 60 Hz` and where head and power are not negative. A row outside it fails
+  with `PhysicsError`, code `out_of_range`, naming the path, the flow, the head, the power and the
+  largest flow, never a number from the extrapolated polynomial. `minimum_flow` is the recommended
+  range: a flow below it only raises the health alarm. Reverse flow raises `PhysicsError`. The fits
   (`gm.analysis.fit_head_coefficients`, `gm.analysis.fit_head_correction`) are in `gm.analysis`;
   `head_curve` is the private helper of `gm.analysis.pump_curve`.
 - **Energy audit**: unresolved pump power. The pump is isothermal and allocates no
