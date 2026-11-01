@@ -109,7 +109,7 @@ def _entry(plant, prefix, name, entry, report, path):
             return
         baseline = tree_params(module)
         params = _checked_params(module, entry.get("params", {}), report, f"{path}.params")
-        from_params(module, params, report, f"{path}.params")
+        from_params(module.set_params, params, report, f"{path}.params")
         plant._attach(key, module, deepcopy(entry.get("params")), baseline)
 
 
@@ -198,7 +198,8 @@ def _from_inputs(plant, data, report):
             continue
         with report.guard("inputs"):
             inputs.refuse_bare(plant, path, value)
-            plant.set_inputs({path: value})
+            inputs.refuse_fluid(plant, path, value)
+            plant._set_si_inputs({path: value})
 
 
 def populate(plant, data, report):
@@ -234,7 +235,7 @@ def _of_class(cls, data, report):
             )
         plant = built(found, data.get("size"))
         params = _checked_params(plant, data.get("params", {}), report, "params")
-        from_params(plant, params, report)
+        from_params(plant.set_params, params, report)
         from_sections(plant, data, report)
         _from_inputs(plant, data, report)
         set_sections(plant, data)

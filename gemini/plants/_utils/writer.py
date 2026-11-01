@@ -15,6 +15,7 @@ from gemini.modules._utils.serialization import (
 )
 from gemini.plants._utils import inputs
 from gemini.plants._utils.plan import is_group, is_plant
+from gemini.types import Fluid
 
 
 def _same(module, name, stated, current):
@@ -48,7 +49,7 @@ def params_entry(plant, key, module):
         elif name not in derived and (name not in baseline or baseline[name] != value):
             result[name] = value
     return {
-        name: inputs.in_quantity_form(design.parameter(module, name), value)
+        name: design.quantity_form(design.parameter(module, name), value)
         for name, value in result.items()
     }
 
@@ -78,10 +79,17 @@ def _port_text(ends):
     return join_path(*ends)
 
 
+def _input_form(found, value):
+    """Return an input as the plant dict stores it: a fluid and a quantity in their dict forms."""
+    if isinstance(value, Fluid):
+        return value._to_dict()
+    return design.quantity_form(found, value)
+
+
 def _inputs_section(plant):
     """Return the ``inputs`` key of the plant dict, empty when nothing below ``plant`` set one."""
     stated = {
-        join_path(path, name): inputs.in_quantity_form(inputs.declaration(module, name), value)
+        join_path(path, name): _input_form(inputs.declaration(module, name), value)
         for path, module in plant.named_modules()
         if is_plant(module)
         for name, value in module._inputs.items()

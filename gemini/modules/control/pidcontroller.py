@@ -30,7 +30,7 @@ class PIDController(Module):
     the derivative is the backward difference of the last two errors over the previous step
     length, exact for a uniform clock. Before the first step (``previous_error`` is ``None``)
     the derivative is zero. The derivative acts on the error, so a setpoint change kicks it
-    once; it is not filtered, so noisy measurements need ``derivative_time = 0`` (the
+    once; it is not filtered, so noisy measurements need an empty ``derivative_time`` (the
     default) or a filtered measurement.
 
     Anti-windup is clamping (conditional integration): the integral does not change over a step
@@ -62,9 +62,9 @@ class PIDController(Module):
             description="Integral time Ti of the controller; empty disables the integral action",
         )
         self.derivative_time = Parameter(
-            Duration,
-            default=0,
-            description="Derivative time Td of the controller; zero disables the derivative action",
+            Duration | None,
+            default=None,
+            description="Derivative time Td of the controller; empty disables the derivative part",
         )
         self.minimum_output = Parameter(Dimensionless, description="Lower limit of the command")
         self.maximum_output = Parameter(Dimensionless, description="Upper limit of the command")
@@ -144,7 +144,11 @@ class PIDController(Module):
         )
         error = self._error()
         derivative = 0.0
-        if self.previous_error is not None and self.previous_step is not None:
+        if (
+            self.derivative_time is not None
+            and self.previous_error is not None
+            and self.previous_step is not None
+        ):
             derivative = _physics.pid_derivative(
                 self.proportional_gain,
                 self.derivative_time,

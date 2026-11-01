@@ -17,9 +17,9 @@ from .conftest import Chain, Gain, Opaque, Tank
 def _inlets(rows):
     return {
         "fluid_in": gm.Stream(
-            m_dot=np.arange(1.0, rows + 1),
-            T=np.full(rows, 300.0),
-            p=np.full(rows, 1e5),
+            m_dot=gm.units.Quantity(np.arange(1.0, rows + 1), "kg/s"),
+            T=gm.units.Quantity(np.full(rows, 300.0), "K"),
+            p=gm.units.Quantity(np.full(rows, 1e5), "Pa"),
             fluid=gm.WATER,
         )
     }
@@ -42,7 +42,14 @@ def test_a_composite_root_break_gives_real_trees(backend):
     assert evaluation.failed.tolist() == [False] * 3
     assert evaluation.result.children.keys() == {"first", "middle", "last"}
     assert evaluation.result.children["middle"].children.keys() == {"meter"}
-    row = chain(gm.Stream(m_dot=2.0, T=300.0, p=1e5, fluid=gm.WATER))
+    row = chain(
+        gm.Stream(
+            m_dot=gm.units.Quantity(2.0, "kg/s"),
+            T=gm.units.Quantity(300.0, "K"),
+            p=gm.units.Quantity(1e5, "Pa"),
+            fluid=gm.WATER,
+        )
+    )
     assert evaluation.result.row(1).outputs.value == row.outputs.value
     assert (
         evaluation.result.row(1).children["last"].outlets.fluid_out.p
@@ -131,7 +138,14 @@ class Listing(gm.modules.Module):
 
 def test_a_failed_row_fills_a_list_output_with_as_many_nans():
     """A list output has one length on every row, so a failed row must not break the column."""
-    result = Listing()(fluid_in=gm.Stream(m_dot=1.0, T=300.0, p=1e5, fluid=gm.WATER))
+    result = Listing()(
+        fluid_in=gm.Stream(
+            m_dot=gm.units.Quantity(1.0, "kg/s"),
+            T=gm.units.Quantity(300.0, "K"),
+            p=gm.units.Quantity(1e5, "Pa"),
+            fluid=gm.WATER,
+        )
+    )
     profile = stacked({0: result}, 2).outputs["profile"]
     assert profile.shape == (2, 2) and profile[0].tolist() == [300.0, 1e5]
     assert np.isnan(profile[1]).all()

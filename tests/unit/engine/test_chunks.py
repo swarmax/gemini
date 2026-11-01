@@ -71,7 +71,11 @@ CUTS = [[8], [1] * 8, [3, 5], [2, 2, 4], [4, 1, 3], [7, 1]]
 
 def stream(flow):
     """Return a stream whose mass flow is the given scalar or array."""
-    return Stream(m_dot=flow, T=np.full_like(np.asarray(flow, dtype=float), 300.0), p=1e5)
+    return Stream(
+        m_dot=gm.units.Quantity(flow, "kg/s"),
+        T=gm.units.Quantity(np.full_like(np.asarray(flow, dtype=float), 300.0), "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
 
 
 def element(values, row):

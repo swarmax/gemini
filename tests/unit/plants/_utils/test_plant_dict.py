@@ -7,6 +7,12 @@ import pytest
 import gemini as gm
 from tests.fixtures.sample_cases import example_plant, filled_plant
 
+HISTORY = [
+    {"valid_from": "2020-01-01T00:00:00Z", "params": {"length": {"value": 30.48, "unit": "m"}}},
+    {"valid_from": "2021-01-01T00:00:00Z", "params": {"length": {"value": 200, "unit": "ft"}}},
+]
+"""The dated lengths of the pipe in the spec below, as a plant dict states them."""
+
 
 def test_from_dict_builds_a_plant_of_any_class():
     """``gm.Plant.from_dict`` gives the class of the dict, and a class-less plant without one."""
@@ -43,16 +49,8 @@ def test_a_spec_with_unit_strings_and_sections_round_trips_exactly():
         "inlets": {"feed": "pipe.fluid_in", "air": "pipe.air_in"},
         "outlets": {"product": "valve.fluid_out", "loss": "pipe.loss_out"},
         "bindings": {"pipe": {"pressure_drop": {"column": "q", "unit": "bar"}, "velocity": "v"}},
-        "param_history": {
-            "pipe": [
-                {"valid_from": "2020-01-01T00:00:00Z", "params": {"length": 30.48}},
-                {
-                    "valid_from": "2021-01-01T00:00:00Z",
-                    "params": {"length": {"value": 200, "unit": "ft"}},
-                },
-            ]
-        },
-        "fluids": {"pipe": gm.WATER.model_dump(mode="json")},
+        "param_history": {"pipe": HISTORY},
+        "fluids": {"pipe": gm.WATER._to_dict()},
     }
     complete = {"bindings": {}, "param_history": {}} | spec
     plant = gm.Plant.from_dict(complete)
@@ -97,12 +95,12 @@ def test_an_opened_plant_round_trips_its_nested_wiring():
 def test_params_set_since_and_validation_agree_with_the_builder():
     """``gm.plants.validate`` of a plant reports a root port that has no outer name."""
     plant = gm.Plant("Same")
-    plant.add("Pipe", "pipe", params={"length": 5.0})
+    plant.add("Pipe", "pipe", params={"length": gm.units.Quantity(5.0, "m")})
     plant.connect("feed", "pipe.fluid_in")
     plant.connect("air", "pipe.air_in")
     plant.connect("pipe.fluid_out", "product")
     plant.connect("pipe.loss_out", "loss")
-    found = gm.plants.validate(plant.to_dict(structure=True), on_error="record")
+    found = gm.plants.validate(plant, on_error="record")
     assert {item["code"] for item in found} == {"root_plant_port"}
     with pytest.raises(gm.errors.ValidationError):
         plant.add("Pipe", "bad", params={"length": {"value": 5, "unit": "bar"}})

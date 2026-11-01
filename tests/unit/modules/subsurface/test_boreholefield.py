@@ -11,11 +11,16 @@ from gemini.modules.declarations import Inlet, Outlet
 from gemini.modules.heating import ElectricBoiler
 from gemini.modules.subsurface import BoreholeField
 from gemini.types import Stream
+from gemini.types.fluid import BRINE as DEFAULT_FLUID
 from tests.fixtures.equivalence import assert_function_matches, assert_same_error
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
-BRINE = Stream(m_dot=3, T=273.15, p=3e5)
+BRINE = Stream(
+    m_dot=gm.units.Quantity(3, "kg/s"),
+    T=gm.units.Quantity(273.15, "K"),
+    p=gm.units.Quantity(3e5, "Pa"),
+)
 CP = 4217.4
 DAY = 86400.0
 
@@ -26,13 +31,13 @@ def field():
         "",
         {
             "borehole_count": 10,
-            "borehole_depth": 150,
-            "borehole_radius": 0.075,
-            "borehole_spacing": 6,
-            "borehole_resistance": 0.1,
-            "ground_conductivity": 2.0,
-            "ground_volumetric_heat_capacity": 2.2e6,
-            "undisturbed_ground_temperature": 283.15,
+            "borehole_depth": gm.units.Quantity(150, "m"),
+            "borehole_radius": gm.units.Quantity(0.075, "m"),
+            "borehole_spacing": gm.units.Quantity(6, "m"),
+            "borehole_resistance": gm.units.Quantity(0.1, "m.K/W"),
+            "ground_conductivity": gm.units.Quantity(2.0, "W/m/K"),
+            "ground_volumetric_heat_capacity": gm.units.Quantity(2.2e6, "J/m3/K"),
+            "undisturbed_ground_temperature": gm.units.Quantity(283.15, "K"),
         },
     )
 
@@ -60,7 +65,9 @@ class HeatPumpLoop(Module):
 
         # Modules
         self.field = field()
-        self.heater = ElectricBoiler().set_params("", {"capacity": 1e5, "efficiency": 0.9})
+        self.heater = ElectricBoiler().set_params(
+            "", {"capacity": gm.units.Quantity(1e5, "W"), "efficiency": 0.9}
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream)
@@ -134,8 +141,10 @@ def test_invalid_flow_and_geometry():
     with pytest.raises(gm.errors.PhysicsError, match="fluid_in.m_dot = -1"):
         field()(fluid_in=BRINE.with_(m_dot=-1))
     with raises(gm.errors.ValidationError, "invalid_design", match="field geometry rejected"):
-        field().set_params("", {"borehole_spacing": 0.1})(fluid_in=BRINE)
-    shallow = field().set_params("", {"borehole_count": 400, "borehole_depth": 10})
+        field().set_params("", {"borehole_spacing": gm.units.Quantity(0.1, "m")})(fluid_in=BRINE)
+    shallow = field().set_params(
+        "", {"borehole_count": 400, "borehole_depth": gm.units.Quantity(10, "m")}
+    )
     with raises(gm.errors.ValidationError, "invalid_design", match="expected ln"):
         shallow.step(None, DAY, {"fluid_in": BRINE})
 
@@ -159,7 +168,7 @@ def test_field_arithmetic_matches_on_arrays():
 
     @ops.physics
     def numbers(m_dot, T, p):
-        inlet = Stream(m_dot=m_dot, T=T, p=p)
+        inlet = Stream._si(m_dot=m_dot, T=T, p=p, fluid=DEFAULT_FLUID)
         return dict(
             exchange=module._effective_conductance(inlet),
             surroundings=module._surroundings_conductance(),
@@ -173,7 +182,7 @@ def test_field_arithmetic_matches_on_arrays():
 
 def test_zero_flow_does_not_evaluate_the_cell_geometry():
     """A cell no wider than the borehole is bad design data only where the loop flows."""
-    module = field().set_params("", {"borehole_spacing": 0.1})
+    module = field().set_params("", {"borehole_spacing": gm.units.Quantity(0.1, "m")})
     conductance = ops.physics(module._effective_conductance)
     assert conductance(BRINE.with_(m_dot=0)) == 0
     with raises(gm.errors.ValidationError, "invalid_design", match="field geometry rejected"):

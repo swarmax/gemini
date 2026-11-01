@@ -10,6 +10,7 @@ from gemini.modules.declarations import Boundary, Control, Inlet, Outlet, Output
 from gemini.modules.module import outputs_enabled
 from gemini.ops import Constant
 from gemini.types import BRINE, WATER, Electricity, Pressure, Ratio, Stream, Temperature
+from gemini.units import Quantity
 
 REFERENCE = Constant("REFERENCE", 2.0, "Pa", "pressure rise per unit gain and scale")
 
@@ -68,9 +69,9 @@ def gain():
 def inlet():
     """Return a three-row inlet state."""
     return Stream(
-        m_dot=np.array([1.0, 1.0, 1.0]),
-        T=np.array([300.0, 310.0, 320.0]),
-        p=np.array([1e5, 2e5, 3e5]),
+        m_dot=Quantity(np.array([1.0, 1.0, 1.0]), "kg/s"),
+        T=Quantity(np.array([300.0, 310.0, 320.0]), "K"),
+        p=Quantity(np.array([1e5, 2e5, 3e5]), "Pa"),
         fluid=Gain().fluid,
     )
 
@@ -128,7 +129,12 @@ class Source(Module):
         """Emit the stream."""
 
         # Outlets
-        outlet = Stream(m_dot=self.rate, T=300.0, p=1e5, fluid=self.fluid)
+        outlet = Stream(
+            m_dot=Quantity(self.rate, "kg/s"),
+            T=Quantity(300.0, "K"),
+            p=Quantity(1e5, "Pa"),
+            fluid=self.fluid,
+        )
         outlets = dict(fluid_out=outlet)
         self.double = 2 * outlets["fluid_out"].m_dot
         return outlets
@@ -423,7 +429,10 @@ class Switcher(Module):
         fluid = WATER if inlets.fluid_in.T < 305.0 else BRINE
         outlets = dict(
             fluid_out=Stream(
-                m_dot=inlets.fluid_in.m_dot, T=inlets.fluid_in.T, p=inlets.fluid_in.p, fluid=fluid
+                m_dot=Quantity(inlets.fluid_in.m_dot, "kg/s"),
+                T=Quantity(inlets.fluid_in.T, "K"),
+                p=Quantity(inlets.fluid_in.p, "Pa"),
+                fluid=fluid,
             )
         )
         self.seen = inlets.fluid_in.T

@@ -11,7 +11,7 @@ from tests.fixtures.sample_cases import example_plant
 
 SNAPSHOTS = {
     "0.1.0": "f19ae90f18bb5a5a85e1b1f730276c9a50fdba0d46108c4bcd56488b48178a8b",
-    "0.2.0": "07bcfaf291fcbf1ecf2de8ebe8b0a387f94ef8576d64dbe41ba9ecc657935e87",
+    "0.2.0": "cdfa3a358974d1b7ed055e0b94bd0711ffc54fff204bd0f9f4fe573a1ffe7b0d",
 }
 """Hash of the snapshot per ``gm.__version__``: a released entry never changes."""
 

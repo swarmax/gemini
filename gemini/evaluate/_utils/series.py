@@ -3,7 +3,7 @@
 import numpy as np
 
 from gemini._utils.strings import join_path
-from gemini.modules.grids import CoolingGrid, HeatingGrid
+from gemini.modules.grids import CoolingGrid, ElectricityGrid, GasGrid, HeatingGrid
 from gemini.modules.module import Module
 
 
@@ -38,6 +38,20 @@ def leaf_total(plant, frame, field, module_class=Module):
         if module.is_leaf and isinstance(module, module_class) and join_path(path, field) in frame
     ]
     return _summed(frame, columns)
+
+
+EDGE_POWERS = {
+    "electricity_bought": (ElectricityGrid, "net_import"),
+    "gas_bought": (GasGrid, "gas_out.chemical_flow"),
+    "heat_surplus": (HeatingGrid, "surplus"),
+}
+"""Each power [W] read from one column of the edge modules: module class and column."""
+
+
+def edge_power(plant, frame, name):
+    """Return the power series [W] of ``EDGE_POWERS[name]`` summed over the plant, or ``None``."""
+    module_class, field = EDGE_POWERS[name]
+    return leaf_total(plant, frame, field, module_class)
 
 
 def port_difference(plant, frame, module_class, first, second):

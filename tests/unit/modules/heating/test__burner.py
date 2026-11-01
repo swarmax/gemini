@@ -6,15 +6,21 @@ from gemini.modules.heating import _burner
 from gemini.physics import gas
 from gemini.types.flows import Stream
 from gemini.types.fluid import Fluid
+from gemini.units import Quantity
 
 FLUID = Fluid(kind="gas", gas_composition={"CH4": 1.0})
-FUEL = Stream(m_dot=0.1, T=300, p=2e5, fluid=FLUID)
+FUEL = Stream(m_dot=Quantity(0.1, "kg/s"), T=Quantity(300, "K"), p=Quantity(2e5, "Pa"), fluid=FLUID)
 
 
 def test_the_fuel_of_a_stream_is_its_mass_times_its_heating_value():
     """A stream without a composition holds no fuel."""
     assert _burner.available_fuel(FUEL) == pytest.approx(0.1 * FLUID.heating_value())
-    assert _burner.available_fuel(Stream(m_dot=0.1, T=300, p=2e5)) == 0
+    assert (
+        _burner.available_fuel(
+            Stream(m_dot=Quantity(0.1, "kg/s"), T=Quantity(300, "K"), p=Quantity(2e5, "Pa"))
+        )
+        == 0
+    )
 
 
 def test_the_mark_says_whether_the_grid_may_be_drawn():

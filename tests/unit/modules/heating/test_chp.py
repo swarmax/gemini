@@ -9,13 +9,16 @@ from gemini.modules.heating import CHP
 from gemini.physics import gas
 from gemini.types.flows import Stream
 from gemini.types.fluid import Fluid
+from gemini.units import Quantity
+from tests.fixtures import si
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
 CP = 4217.4
-WATER = Stream(m_dot=20, T=333.15, p=3e5)
-GRID_GAS = GasGrid()._offered()["gas_out"]
+WATER = Stream(m_dot=Quantity(20, "kg/s"), T=Quantity(333.15, "K"), p=Quantity(3e5, "Pa"))
+GRID_GAS = with_values(GasGrid())._offered()["gas_out"]
 
 
 def engine(**params):
@@ -26,7 +29,7 @@ def engine(**params):
         thermal_efficiency=0.45,
         maximum_outlet_temperature=363.15,
     )
-    return CHP().set_params("", design | params)
+    return si.set_params(CHP(), "", design | params)
 
 
 def test_full_load_hand_value_and_closure():
@@ -86,7 +89,13 @@ def test_traced_call_matches_one_call_per_row():
     """Off, part load, full load, dumping and stopped-water rows trace and equal per-row calls."""
     unit = engine(no_load_fuel_fraction=0.1)
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=T, p=3e5), fuel_in=GRID_GAS, load_fraction=load)
+        dict(
+            fluid_in=Stream(
+                m_dot=Quantity(m_dot, "kg/s"), T=Quantity(T, "K"), p=Quantity(3e5, "Pa")
+            ),
+            fuel_in=GRID_GAS,
+            load_fraction=load,
+        )
         for m_dot, T, load in [
             (20, 333.15, 1),
             (20, 333.15, 0.5),
@@ -102,7 +111,9 @@ def test_traced_call_matches_one_call_per_row():
 def test_an_engine_on_co_produced_gas_buys_what_it_lacks():
     """Co-produced gas comes first, as in a boiler; the rest is purchased."""
     fluid = Fluid(kind="gas", gas_composition={"CH4": 1.0}).with_grid(gas.GRID_COMPOSITION)
-    fuel = Stream(m_dot=0.01, T=330, p=2e5, fluid=fluid)
+    fuel = Stream(
+        m_dot=Quantity(0.01, "kg/s"), T=Quantity(330, "K"), p=Quantity(2e5, "Pa"), fluid=fluid
+    )
     out = reading(engine()(fluid_in=WATER, fuel_in=fuel, load_fraction=1), fuel)
     assert out.fuel == pytest.approx(2.5e6)
     assert out.fuel_coproduced == pytest.approx(0.01 * fluid.heating_value())
@@ -112,7 +123,9 @@ def test_an_engine_on_co_produced_gas_buys_what_it_lacks():
 def test_an_engine_without_a_grid_mark_is_limited_by_its_gas():
     """On an unmarked stream the gas sets the load."""
     fluid = Fluid(kind="gas", gas_composition={"CH4": 1.0})
-    fuel = Stream(m_dot=0.01, T=330, p=2e5, fluid=fluid)
+    fuel = Stream(
+        m_dot=Quantity(0.01, "kg/s"), T=Quantity(330, "K"), p=Quantity(2e5, "Pa"), fluid=fluid
+    )
     out = reading(engine()(fluid_in=WATER, fuel_in=fuel, load_fraction=1), fuel)
     assert out.fuel_purchased == 0
     assert out.fuel == pytest.approx(0.01 * fluid.heating_value())

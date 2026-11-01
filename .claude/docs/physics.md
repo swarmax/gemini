@@ -162,7 +162,7 @@ Pipe hydraulics: Darcy–Weisbach with Swamee–Jain, Beggs–Brill, path marchi
 
 The doublet design adds `radial_index` (the inverse of `radial_pressure_drops`),
 `hydrostatic_pressure`, `pump_setting_depth` and `design_pump_head` to `hydraulics.py`,
-`geotherm_temperature`, `SURFACE_TEMPERATURE`, `GEOTHERMAL_GRADIENT` and `DOUBLET_WELL_SPACING` to `ground.py`, `vertical_path` to `geometry.py` and
+`geotherm_temperature` to `ground.py` (the surface temperature, the gradient and the well spacing are not constants any more: the case and the plant state them), `vertical_path` to `geometry.py` and
 `constant_head_curves` to `pumps.py`.
 
 ### `heat_transfer.py`
@@ -294,6 +294,10 @@ reads them too.
 - `esp_efficiency(flow, head, power)`: retained US-basis ESP efficiency; zero for a stopped pump.
 - `is_in_operating_window(flow, minimum_flow, maximum_flow, speed)`: whether a flow lies inside the
   speed-scaled operating window of a pump.
+- `intake_gas_volume_fraction(liquid_density, gas_density, gas_mass_fraction)`: free-gas volume over
+  total volume [-] of a homogeneous (no-slip) mixture at the pump intake, `x rho_l / (x rho_l + (1 - x)
+  rho_g)` for the gas mass fraction `x`, written without a division by the gas density so that a
+  near-zero intake pressure gives a fraction near one.
 - `line_shaft_friction_power(friction_loss, depth, speed)`: mechanical friction power of a line
   shaft.
 
@@ -772,6 +776,10 @@ efficiency, scaled by the speed ratio.
 - `hydraulic_power(Q, H)` = `Q H` [W], the power given to the liquid.
 - `is_in_operating_window(Q, Q_min, Q_max, s)` = `s Q_min <= Q <= s Q_max`; `ESP` uses the same
   function.
+- `intake_gas_volume_fraction(rho_l, rho_g, x)` = `x rho_l / (x rho_l + (1 - x) rho_g)` [-]: the
+  free-gas volume share of a homogeneous mixture at the intake, from the phase densities at the
+  intake pressure and temperature and the gas mass fraction `x`; `ESP` writes it as
+  `gas_volume_fraction`.
 
 ### Line shaft pump
 
@@ -1044,9 +1052,9 @@ or a size distribution.
   efficiency (Svarovsky 2000), so the cut size does not follow the flow.
 - `dosing_flows(dose, m, w)`: product `dose m` and active substance `w dose m` [kg/s]; the dosed
   mass is not added to the stream (Gallup 2009).
-- Defaults of the filter and the degasser are `FILTER_NOMINAL_DROP` = 1600 Pa,
-  `FILTER_NOMINAL_MASS_FLOW` = 149 / 3600 * 1068 kg/s, `FILTER_CLOGGING_BAR` = 0.5 and
-  `DEFAULT_DEGASSER_DROP` = 14900 Pa.
+- The filter and the degasser keep no default: the nominal pressure drop, the nominal mass flow and
+  the vessel drop are parameters the plant states (the constants `FILTER_NOMINAL_DROP`,
+  `FILTER_NOMINAL_MASS_FLOW` and `DEFAULT_DEGASSER_DROP` are deleted).
 
 ## Combustion
 
@@ -1084,9 +1092,10 @@ or a size distribution.
   and `x` changes linearly; a sensible segment relaxes with the time constant `M c / G` and stops
   at the freezing temperature. `ice_step` is one segment, and at most `MAX_SEGMENTS` = 3
   segments run per step.
-- Defaults: `DEFAULT_LATENT_HEAT` = 333550 J/kg, `DEFAULT_FREEZING_TEMPERATURE` = 273.15 K,
-  `DEFAULT_WATER_HEAT_CAPACITY` = 4219.9 and `DEFAULT_ICE_HEAT_CAPACITY` = 2096.8 J/kg/K,
-  `DEFAULT_TANK_TEMPERATURE` = 293.15 K.
+- Sourced constants that stay as the defaults of `IceStorage`: `DEFAULT_LATENT_HEAT` = 333550 J/kg,
+  `DEFAULT_FREEZING_TEMPERATURE` = 273.15 K, `DEFAULT_WATER_HEAT_CAPACITY` = 4219.9 and
+  `DEFAULT_ICE_HEAT_CAPACITY` = 2096.8 J/kg/K. The start temperature of a tank or a store is the
+  parameter `initial_temperature`, not a constant.
 
 ## Control
 
@@ -1151,8 +1160,8 @@ modules score alike.
 - `remaining_margin(r)` = `max(0, 1 - r)`.
 - `below_limit(r, threshold)` = `r < 1 - threshold`, the alarm of a decline or fouling test.
 - `performance_ratio(measured, reference)` = `measured / reference`, valid for a nonzero reference.
-- Default thresholds: `DEFAULT_DRIFT_THRESHOLD` = 0.10, `DEFAULT_DECLINE_THRESHOLD` = 0.15,
-  `DEFAULT_FOULING_THRESHOLD` = 0.15.
+- No default thresholds: `DEFAULT_DRIFT_THRESHOLD`, `DEFAULT_DECLINE_THRESHOLD` and
+  `DEFAULT_FOULING_THRESHOLD` are deleted; a module states its threshold or has `None`.
 
 ## Units
 

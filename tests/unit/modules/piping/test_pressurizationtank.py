@@ -8,11 +8,16 @@ from gemini.modules.declarations import Inlet, Outlet, Output
 from gemini.modules.piping import Mixer, Pipe, PressurizationTank, Splitter, Valve
 from gemini.types import Stream
 from tests.fixtures.air import air
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
-RETURN = Stream(m_dot=10, T=323.15, p=1.2e5)
+RETURN = Stream(
+    m_dot=gm.units.Quantity(10, "kg/s"),
+    T=gm.units.Quantity(323.15, "K"),
+    p=gm.units.Quantity(1.2e5, "Pa"),
+)
 
 
 class Network(Module):
@@ -24,16 +29,16 @@ class Network(Module):
 
         # Modules
         self.splitter = Splitter()
-        self.pipe = Pipe().set_params(
+        self.pipe = with_values(Pipe()).set_params(
             "",
             {
-                "length": 200,
-                "inner_diameter": 0.08,
-                "elevation_change": 0,
-                "heat_transfer_coefficient": 2.0,
+                "length": gm.units.Quantity(200, "m"),
+                "inner_diameter": gm.units.Quantity(0.08, "m"),
+                "elevation_change": gm.units.Quantity(0, "m"),
+                "heat_transfer_coefficient": gm.units.Quantity(2.0, "W/m2/K"),
             },
         )
-        self.valve = Valve().set_params(
+        self.valve = with_values(Valve()).set_params(
             "", {"flow_coefficient": {"value": 40, "unit": "m3/h/bar^0.5"}}
         )
         self.mixer = Mixer()
@@ -119,7 +124,14 @@ def test_piping_network_closes_mass_and_energy():
 def test_pressurization_tank_matches_traced():
     """Setpoint above and below the inlet pressure traces correctly."""
     rows = [
-        dict(fluid_in=Stream(m_dot=10, T=323.15, p=p), pressure_setpoint=3e5)
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(10, "kg/s"),
+                T=gm.units.Quantity(323.15, "K"),
+                p=gm.units.Quantity(p, "Pa"),
+            ),
+            pressure_setpoint=3e5,
+        )
         for p in (1.2e5, 3e5, 5e5)
     ]
     assert_module_matches(PressurizationTank(), rows)

@@ -38,6 +38,8 @@ into the vocabulary in the commit that first uses it, only if it is a full word 
 | bulk material around a well | `ground_conductivity`, `ground_diffusivity`, `ground_...` | |
 | solid matrix of a porous layer | `rock_volumetric_heat_capacity` | |
 | depth of a borehole | `borehole_depth` | a bare `depth` |
+| pressure of the stream where it enters a pump | `intake_pressure` | `suction_pressure`, `pip` |
+| free-gas share of the volume of the stream at a pump intake | `gas_volume_fraction`; on a role, `intake_gas_fraction` | `gvf`, `void_fraction` |
 | design of a doublet from its depth | `depth`, `thickness`, `gradient`, on `Doublet` and, `depth` alone, on the plants of `DoubletsPlant` | |
 
 Four short forms stay because the full word would be longer and no clearer in this field: `T` (see
@@ -117,7 +119,7 @@ emission empty energy error esp evaporation evaporator excess exhaust export ext
 fan feed first flow flue fluid fouling fraction freezing frequency friction fuel full gain gas
 generated generation generator geothermal gradient gravity grid gross ground groundwater head heat
 heating hot humidity hydraulic hydrostatic ice imbalance import in index indoor injected
-injection injectivity inclination inlet inner input integral is isentropic latent length lift limit limited
+injection injectivity inclination initial inlet inner input intake integral is isentropic latent length lift limit limited
 liquid load log loop lorenz loss margin mass maximum mean measurement methane minimum mixed mode
 model motor net network no nominal opening operating or out outlet output overpressure parasitic
 part path period permeability phase pinch pipe point porosity power pressure previous price
@@ -138,8 +140,8 @@ Not names of module declarations, so not in the list above; the one meaning of e
 | Term | Meaning |
 | --- | --- |
 | case | `gm.Case`: everything a plant is asked to do and the world around it, in the sections `time`, `environment`, `demand`, `choices`, `constraints`, `assumptions` |
-| role | a kind of unit found in a plant by class and wiring (`doublet`, `heat_pump`, `boiler`, `chp`, `chiller`, `heat_exchanger`, `heating_supply`, `cooling_supply`); `gm.case.roles()` |
-| quantity of a role | what a constraint limits on every unit of the role (`production_flow`, `brine_cooling`, `cop`, ...) |
+| role | a kind of unit found in a plant by class and wiring (`doublet`, `heat_pump`, `boiler`, `chp`, `chiller`, `heat_exchanger`, `heating_supply`, `cooling_supply`, and `plant` for the plant as a whole); `gm.case.roles()` |
+| quantity of a role | what a constraint limits on every unit of the role (`production_flow`, `brine_cooling`, `cop`, `heat_output`, `electricity_bought`, ...) |
 | equipment kind | the key of `capex` and `opex.fixed` in the case (`drilling`, `heat_pump`, `boiler`, ...); a module that is equipment declares `equipment_kind` |
 | capex factor | the unit cost of a kind in the case, times the size of the equipment |
 | problem | only the shape `{path, code, message, suggestions}` of an error or a failed row; never an input |

@@ -9,7 +9,12 @@ from gemini.types import WATER, Stream
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 
-FEED = Stream(m_dot=10, T=353.15, p=5e5, fluid=WATER)
+FEED = Stream(
+    m_dot=gm.units.Quantity(10, "kg/s"),
+    T=gm.units.Quantity(353.15, "K"),
+    p=gm.units.Quantity(5e5, "Pa"),
+    fluid=WATER,
+)
 
 
 def test_split_divides_mass_and_keeps_the_state():
@@ -46,7 +51,15 @@ def test_invalid_inputs_raise():
 def test_splitter_matches_traced():
     """Split fractions from zero to one and a stopped feed trace correctly."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=353.15, p=5e5, fluid=WATER), split_fraction=fraction)
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(353.15, "K"),
+                p=gm.units.Quantity(5e5, "Pa"),
+                fluid=WATER,
+            ),
+            split_fraction=fraction,
+        )
         for m_dot, fraction in [(10, 0.25), (10, 0), (10, 1), (0, 0.5), (0.7, 0.3)]
     ]
     assert_module_matches(Splitter(), rows)

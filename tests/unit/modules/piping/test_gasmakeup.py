@@ -5,11 +5,17 @@ import pytest
 import gemini as gm
 from gemini.modules import GasGrid, GasMakeup
 from gemini.physics import gas
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 
 FLUID = gm.Fluid(kind="gas", gas_composition={"CH4": 0.8, "CO2": 0.2})
-GAS = gm.Stream(m_dot=0.05, T=330, p=2e5, fluid=FLUID)
-GRID = GasGrid()._offered()["gas_out"]
+GAS = gm.Stream(
+    m_dot=gm.units.Quantity(0.05, "kg/s"),
+    T=gm.units.Quantity(330, "K"),
+    p=gm.units.Quantity(2e5, "Pa"),
+    fluid=FLUID,
+)
+GRID = with_values(GasGrid())._offered()["gas_out"]
 
 
 def test_the_makeup_marks_the_offer_and_moves_no_gas():
@@ -39,7 +45,7 @@ def test_traced_calls_match_one_call_per_row():
     plant = gm.Plant("Burner")
     plant.add("GasGrid", "grid")
     plant.add("GasMakeup", "makeup")
-    plant.add("Boiler", "boiler", {"capacity": 1e6, "efficiency": 0.9})
+    plant.add("Boiler", "boiler", {"capacity": gm.units.Quantity(1e6, "W"), "efficiency": 0.9})
     plant.connect("gas_in", "makeup.gas_in")
     plant.connect("grid.gas_out", "makeup.grid_in")
     plant.connect("makeup.fuel_out", "boiler.fuel_in")
@@ -48,7 +54,13 @@ def test_traced_calls_match_one_call_per_row():
     plant.connect("boiler.fluid_out", "water_out")
     plant.connect("boiler.flue_out", "flue")
     plant.connect("boiler.loss_out", "loss")
+    with_values(plant)
     plant.boiler.temperature_setpoint = 330.0
-    water = gm.Stream(m_dot=5.0, T=320.0, p=3e5, fluid=gm.WATER)
+    water = gm.Stream(
+        m_dot=gm.units.Quantity(5.0, "kg/s"),
+        T=gm.units.Quantity(320.0, "K"),
+        p=gm.units.Quantity(3e5, "Pa"),
+        fluid=gm.WATER,
+    )
     rows = [dict(gas_in=GAS.with_(m_dot=flow), water_in=water) for flow in (0.0, 0.1)]
     assert_module_matches(plant, rows)

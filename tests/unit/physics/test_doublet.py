@@ -9,6 +9,7 @@ FLOW_PATH = {
     "permeability": 1e-13,
     "thickness": 100.0,
     "well_diameter": 0.2,
+    "roughness": 4.5e-5,
     "drainage_radius": 1000.0,
 }
 PUMP = {"nominal_flow": 0.05, "pump_efficiency": 0.7, "nominal_wellhead_pressure": 2e5}

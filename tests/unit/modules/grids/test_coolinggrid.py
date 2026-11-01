@@ -12,14 +12,22 @@ from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
 CP = 4217.4
-SUPPLY = Stream(m_dot=2.0, T=280.15, p=3e5)
+SUPPLY = Stream(
+    m_dot=gm.units.Quantity(2.0, "kg/s"),
+    T=gm.units.Quantity(280.15, "K"),
+    p=gm.units.Quantity(3e5, "Pa"),
+)
 INDOOR = dict(indoor_temperature={"value": 24, "unit": "C"}, indoor_relative_humidity=0.5)
 AVAILABLE = 2 * CP * 9
 
 
 def _consumer():
     return CoolingGrid().set_params(
-        "", {"maximum_return_temperature": {"value": 16, "unit": "C"}, "dew_point_margin": 3}
+        "",
+        {
+            "maximum_return_temperature": {"value": 16, "unit": "C"},
+            "dew_point_margin": gm.units.Quantity(3, "K"),
+        },
     )
 
 
@@ -105,7 +113,7 @@ def test_invalid_inputs_raise():
     with pytest.raises(ValidationError):
         _call(consumer, latent=-1)
     with pytest.raises(ValidationError):
-        consumer.set_params("", {"dew_point_margin": -1})
+        consumer.set_params("", {"dew_point_margin": gm.units.Quantity(-1, "K")})
     with raises(ValidationError, "missing_value"):
         consumer(supply_in=SUPPLY, sensible_cooling_demand=1e4, latent_cooling_demand=0)
 
@@ -114,7 +122,11 @@ def test_traced_call_matches_one_call_per_row():
     """Met, short, humid (no latent), no-demand and stopped rows trace and equal per-row calls."""
     rows = [
         dict(
-            supply_in=Stream(m_dot=m_dot, T=T, p=3e5),
+            supply_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(T, "K"),
+                p=gm.units.Quantity(3e5, "Pa"),
+            ),
             sensible_cooling_demand=sensible,
             latent_cooling_demand=latent,
             indoor_temperature=297.15,
@@ -136,11 +148,21 @@ def test_traced_call_matches_one_call_per_row():
 def test_a_closed_loop_reports_the_cold_above_the_demand():
     """More water than the load takes up to the fixed return: the rest is surplus."""
     grid = CoolingGrid().set_params(
-        "", {"return_temperature": 301.15, "return_pressure": 4e5, "dew_point_margin": 1.0}
+        "",
+        {
+            "return_temperature": gm.units.Quantity(301.15, "K"),
+            "return_pressure": gm.units.Quantity(4e5, "Pa"),
+            "dew_point_margin": gm.units.Quantity(1.0, "K"),
+        },
     )
     grid.fluid = gm.WATER
     flow = 2e6 / (grid.fluid.properties(0, 0).cp_l * 8.0)
-    supply = gm.Stream(m_dot=flow, T=293.15, p=4e5, fluid=gm.WATER)
+    supply = gm.Stream(
+        m_dot=gm.units.Quantity(flow, "kg/s"),
+        T=gm.units.Quantity(293.15, "K"),
+        p=gm.units.Quantity(4e5, "Pa"),
+        fluid=gm.WATER,
+    )
     outputs = grid(
         supply_in=supply,
         flow=flow,

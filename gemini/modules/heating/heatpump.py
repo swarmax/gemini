@@ -50,7 +50,7 @@ class HeatPump(Equipment, Module):
     lift of about 10 to 80 K between outlet temperatures, the range of the water-to-water
     machines summarised by Arpagaus et al. (2018), "High temperature heat pumps: Market overview,
     state of the art, research status, refrigerants, and application potentials", Energy 152,
-    985-1010, who report Carnot fractions of about 0.4 to 0.6 (default 0.5). Outlet temperatures
+    985-1010, who report Carnot fractions of about 0.4 to 0.6. Outlet temperatures
     are not checked against the freezing point of the fluid unless
     ``minimum_source_outlet_temperature`` is set: it caps a heating duty so the source leaves no
     colder than the minimum (upstream GEMINI ``Ts_in_minimum``) and raises a cooling setpoint
@@ -78,29 +78,28 @@ class HeatPump(Equipment, Module):
         self.capacity = Parameter(Power, gt=0, description="Largest useful duty of the machine")
         self.cop_model = Parameter(
             Literal["carnot", "lorenz"],
-            default="carnot",
             description="Model of the coefficient of performance: Carnot fraction or Lorenz",
         )
         self.carnot_fraction = Parameter(
             Efficiency,
-            default=refrigeration.DEFAULT_CARNOT_FRACTION,
             description="Share of the Carnot efficiency reached by the machine",
         )
         self.lorenz_fraction = Parameter(
             Efficiency,
-            default=refrigeration.DEFAULT_LORENZ_FRACTION,
             description="Share of the Lorenz efficiency reached by the machine",
         )
         self.minimum_temperature_lift = Parameter(
             TemperatureDifference,
-            default=refrigeration.DEFAULT_MINIMUM_LIFT,
             gt=0,
             description="Smallest temperature lift used in the coefficient of performance",
         )
         self.minimum_part_load = Parameter(
-            Fraction,
-            default=0,
-            description="Smallest part load, as a share of capacity, at which the machine runs",
+            Fraction | None,
+            default=None,
+            description=(
+                "Smallest part load, as a share of capacity, at which the machine runs; empty "
+                "means no minimum"
+            ),
         )
         self.minimum_source_outlet_temperature = Parameter(
             Temperature | None,
@@ -263,8 +262,9 @@ class HeatPump(Equipment, Module):
     def _duty(self, requested, source_rate, sink_rate):
         """Return the delivered useful duty [W]: zero with a stopped circuit, else part load."""
         stopped = ops.logical_or(source_rate == 0, sink_rate == 0)
+        minimum = 0.0 if self.minimum_part_load is None else self.minimum_part_load
         duty = refrigeration.part_load_duty(
-            requested, self.capacity, ops.where(stopped, 0.0, self.minimum_part_load)
+            requested, self.capacity, ops.where(stopped, 0.0, minimum)
         )
         return ops.where(stopped, 0.0, duty)
 

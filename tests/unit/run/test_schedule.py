@@ -22,7 +22,9 @@ from gemini.physics import constants
 from gemini.run.schedule import _doublets_above
 from gemini.runtime import settings
 from gemini.units import Quantity
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
+from tests.fixtures.esp_design import ESP_DESIGN
 from tests.fixtures.parity import BACKENDS
 from tests.fixtures.sample_cases import example_plant, template_dict
 
@@ -32,9 +34,11 @@ DESIGN = {
     "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
     "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
-}
+} | ESP_DESIGN
 PRICES = {"electricity": Quantity(100, "EUR/MWh"), "gas": Quantity(40, "EUR/MWh")}
-BRINE = gm.Fluid(density=1030.0, viscosity=4e-4).properties(0, 0)
+BRINE = gm.Fluid(density=Quantity(1030.0, "kg/m3"), viscosity=Quantity(4e-4, "Pa.s")).properties(
+    0, 0
+)
 HEAT_PER_FLOW = BRINE.rho_l * BRINE.cp_l * 40.0
 FULL = 300 / 3600 * HEAT_PER_FLOW
 
@@ -125,11 +129,11 @@ def plant_of_two(names=("d0", "d1")):
         "HeatExchanger",
         name="hx",
         params=dict(
-            thermal_conductance=2e6,
-            hot_nominal_pressure_drop=0,
-            cold_nominal_pressure_drop=0,
-            hot_nominal_mass_flow=170.0,
-            cold_nominal_mass_flow=170.0,
+            thermal_conductance=Quantity(2e6, "W/K"),
+            hot_nominal_pressure_drop=Quantity(0, "Pa"),
+            cold_nominal_pressure_drop=Quantity(0, "Pa"),
+            hot_nominal_mass_flow=Quantity(170.0, "kg/s"),
+            cold_nominal_mass_flow=Quantity(170.0, "kg/s"),
         ),
     )
     plant.add("Splitter", name="injection")
@@ -140,7 +144,7 @@ def plant_of_two(names=("d0", "d1")):
     plant.add("HeatingGrid", name="users", params={"return_pressure": {"value": 6, "unit": "bar"}})
     wire(plant, names)
     plant.boiler.temperature_setpoint = {"value": 100, "unit": "degC"}
-    return plant
+    return with_values(plant)
 
 
 def wire(plant, names=("d0", "d1")):
@@ -420,7 +424,7 @@ def split_sources():
         {"source": "grid.gas_out", "target": "boiler.fuel_in"},
         {"source": "boiler.fluid_out", "target": "users.supply_in"},
     ]
-    built = gm.Plant.from_dict(spec)
+    built = with_values(gm.Plant.from_dict(spec))
     built.boiler.temperature_setpoint = {"value": 100, "unit": "degC"}
     built.heat_pump.temperature_setpoint = {"value": 100, "unit": "degC"}
     return built
@@ -505,7 +509,7 @@ COOLING_INPUTS = {
 
 def cooling_plant(inputs=COOLING_INPUTS):
     """Return the plant with every cooling unit: only what a schedule reads is set."""
-    plant = gm.plants.get("HeatingCoolingPlant")
+    plant = with_values(gm.plants.get("HeatingCoolingPlant"))
     plant.set_params("", COOLING_SIZES)
     plant.set_params("d0", DESIGN)
     return plant.set_inputs(inputs)

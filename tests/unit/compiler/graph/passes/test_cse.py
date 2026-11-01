@@ -72,7 +72,12 @@ def esp(shared_plant):
 
 def _suction(esp, rows):
     density = esp.fluid.properties(None, None).density
-    return gm.Stream(m_dot=rows[:, 0] * density, T=rows[:, 1], p=rows[:, 2], fluid=esp.fluid)
+    return gm.Stream(
+        m_dot=gm.units.Quantity(rows[:, 0] * density, "kg/s"),
+        T=gm.units.Quantity(rows[:, 1], "K"),
+        p=gm.units.Quantity(rows[:, 2], "Pa"),
+        fluid=esp.fluid,
+    )
 
 
 def test_esp_graph_shrinks_and_keeps_its_results(esp, week):
@@ -320,7 +325,10 @@ def test_cache_merges_by_default_and_not_when_disabled(esp):
 def test_composite_graph_shrinks_and_keeps_its_results(twice):
     """A child called twice on the same inlet is computed once; every output stays exact."""
     stream = gm.Stream(
-        m_dot=np.ones(3), T=np.full(3, 300.0), p=np.array([1e5, 2e5, 3e5]), fluid=twice.fluid
+        m_dot=gm.units.Quantity(np.ones(3), "kg/s"),
+        T=gm.units.Quantity(np.full(3, 300.0), "K"),
+        p=gm.units.Quantity(np.array([1e5, 2e5, 3e5]), "Pa"),
+        fluid=twice.fluid,
     )
     plain, merged = GraphCache(optimize=False), GraphCache()
     expected = run(

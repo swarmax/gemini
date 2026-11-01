@@ -11,7 +11,11 @@ from gemini.types.bindings import Binding, ModuleBindings
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
-STREAM = Stream(m_dot=1, T=350, p=1e6)
+STREAM = Stream(
+    m_dot=gm.units.Quantity(1, "kg/s"),
+    T=gm.units.Quantity(350, "K"),
+    p=gm.units.Quantity(1e6, "Pa"),
+)
 
 
 class Tank(Module):

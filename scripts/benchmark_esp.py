@@ -41,7 +41,12 @@ def direct_calls(esp, rows):
     """Call the ESP once per row and return the results."""
     return [
         esp(
-            fluid_in=gm.Stream(m_dot=m_dot, T=temperature, p=pressure, fluid=esp.fluid),
+            fluid_in=gm.Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(temperature, "K"),
+                p=gm.units.Quantity(pressure, "Pa"),
+                fluid=esp.fluid,
+            ),
             frequency=frequency,
         )
         for m_dot, temperature, pressure, frequency in rows
@@ -50,7 +55,7 @@ def direct_calls(esp, rows):
 
 def traced(esp, rows, cache):
     """Evaluate the ESP on all rows in one traced NumPy call."""
-    suction = Stream(m_dot=rows[:, 0], T=rows[:, 1], p=rows[:, 2], fluid=esp.fluid)
+    suction = Stream._si(m_dot=rows[:, 0], T=rows[:, 1], p=rows[:, 2], fluid=esp.fluid)
     return run(esp, {"fluid_in": suction}, {"frequency": rows[:, 3]}, cache=cache)
 
 

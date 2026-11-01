@@ -50,3 +50,9 @@ def test_the_quantities_carry_the_si_unit_of_the_first_name():
     """Each value is a quantity in the unit of its parameter."""
     got = quantities(hackathon_plant(), shallow_case(), {"doublet.depth": 2500.0})
     assert got == {"doublet.depth": gm.units.Quantity(2500.0, "m")}
+
+
+def test_the_plant_role_reaches_a_parameter_of_the_plant_itself():
+    """``plant.depth`` is the depth of the root, without a unit path in front."""
+    plant = gm.plants.get("HeatingPlant")
+    assert concrete(plant, "plant.depth") == ["depth"]

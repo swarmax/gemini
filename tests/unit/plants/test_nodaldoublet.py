@@ -4,6 +4,7 @@ import pytest
 
 import gemini as gm
 from gemini.physics.geometry import build_path, section_values
+from tests.fixtures import si
 from tests.fixtures.sample_cases import example_plant
 
 PRODUCER_SURVEY = [
@@ -59,12 +60,13 @@ HEAD_COEFFICIENTS = [
 def deviated():
     """Return the doublet of the parallel exchangers case: 18 stages, 2.3 m3/h/bar injector."""
     doublet = example_plant("NodalDoublet")
-    doublet.reservoir.set_params(
+    si.set_params(
+        doublet.reservoir,
         "",
         {
             "pressure": {"value": 216, "unit": "bar"},
-            "productivity_index": 1.76 / 3.6e8,
-            "top_depth": 1900,
+            "productivity_index": gm.units.Quantity(1.76 / 3.6e8, "m3/s/Pa"),
+            "top_depth": gm.units.Quantity(1900, "m"),
             **RESERVOIR,
         },
     )
@@ -73,8 +75,8 @@ def deviated():
         soil_temperature={"value": 20, "unit": "degC"},
         esp_depth=550,
     )
-    doublet.well.set_params("", {"segment": "below_esp", **producer})
-    doublet.riser.set_params("", {"segment": "above_esp", **producer})
+    si.set_params(doublet.well, "", {"segment": "below_esp", **producer})
+    si.set_params(doublet.riser, "", {"segment": "above_esp", **producer})
     doublet.esp.set_params(
         "",
         {
@@ -82,13 +84,14 @@ def deviated():
             "head_coefficients": HEAD_COEFFICIENTS,
         },
     )
-    doublet.injector.set_params("", path_of(INJECTOR_SURVEY))
-    doublet.sink.set_params(
+    si.set_params(doublet.injector, "", path_of(INJECTOR_SURVEY))
+    si.set_params(
+        doublet.sink,
         "",
         {
             "pressure": {"value": 180, "unit": "bar"},
-            "injectivity_index": 2.3 / 3.6e8,
-            "top_depth": 1883,
+            "injectivity_index": gm.units.Quantity(2.3 / 3.6e8, "m3/s/Pa"),
+            "top_depth": gm.units.Quantity(1883, "m"),
             **RESERVOIR,
         },
     )

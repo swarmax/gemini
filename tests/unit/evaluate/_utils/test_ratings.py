@@ -2,13 +2,14 @@
 
 import gemini as gm
 from gemini.evaluate._utils.ratings import RATINGS, rating_of
+from tests.fixtures import si
 from tests.fixtures.result_tables import make_results
 
 
 def module(kind, params):
     """Return one module of class ``kind`` with ``params``."""
     plant = gm.Plant("One")
-    return plant.add(kind, name="unit", params=params)
+    return si.add(plant, kind, name="unit", values=params)
 
 
 def test_a_boiler_is_rated_by_its_capacity_in_watts():

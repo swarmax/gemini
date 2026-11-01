@@ -6,17 +6,22 @@ import gemini as gm
 from gemini.modules import energy_balance, mass_balance
 from gemini.modules.piping import Valve
 from gemini.types import Fluid, Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 
 KV = 100 / 3600 / 1e5**0.5
 """Flow coefficient [m3/s/Pa^0.5] of a catalogue Kv = 100 m3/h/bar^0.5."""
 
-STREAM = Stream(flow={"value": 36, "unit": "m3/h"}, T=353.15, p=20e5)
+STREAM = Stream(
+    flow={"value": 36, "unit": "m3/h"},
+    T=gm.units.Quantity(353.15, "K"),
+    p=gm.units.Quantity(20e5, "Pa"),
+)
 
 
 def valve(**changes):
     """Return a Kv 100 equal-percentage valve."""
-    return Valve().set_params(
+    return with_values(Valve()).set_params(
         "", {"flow_coefficient": {"value": 100, "unit": "m3/h/bar^0.5"}} | changes
     )
 
@@ -49,8 +54,13 @@ def test_inherent_characteristics():
 
 def test_density_enters_the_sizing_equation():
     """The sizing equation dp = rho / 1000 (q / Kv)^2 gives a denser brine less drop."""
-    brine = Fluid(density=1050)
-    stream = Stream(m_dot=STREAM.m_dot, T=353.15, p=5e5, fluid=brine)
+    brine = Fluid(density=gm.units.Quantity(1050, "kg/m3"))
+    stream = Stream(
+        m_dot=gm.units.Quantity(STREAM.m_dot, "kg/s"),
+        T=gm.units.Quantity(353.15, "K"),
+        p=gm.units.Quantity(5e5, "Pa"),
+        fluid=brine,
+    )
     drop = valve()(fluid_in=stream, opening=1).outputs.pressure_drop
     assert drop == pytest.approx(1.05 * (10 / 1050 / KV) ** 2, rel=1e-12)
 
@@ -80,7 +90,14 @@ def test_invalid_inputs_raise():
 def test_valve_matches_traced():
     """Both characteristics, a closed valve with no flow and a stopped inlet trace correctly."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=353.15, p=20e5), opening=opening)
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(353.15, "K"),
+                p=gm.units.Quantity(20e5, "Pa"),
+            ),
+            opening=opening,
+        )
         for m_dot, opening in [(10, 1), (10, 0.5), (1, 0.01), (0, 0), (0, 0.3)]
     ]
     for module in (valve(), valve(characteristic="linear", rangeability=20)):

@@ -34,7 +34,7 @@ def stack_column(values):
 def row_streams(fluids, value):
     """Return the inlet streams of one row: ``value(port, field)`` for each field of each port."""
     return {
-        port: Stream(**{field: value(port, field) for field in STREAM_FIELDS}, fluid=fluid)
+        port: Stream._si(**{field: value(port, field) for field in STREAM_FIELDS}, fluid=fluid)
         for port, fluid in fluids.items()
     }
 

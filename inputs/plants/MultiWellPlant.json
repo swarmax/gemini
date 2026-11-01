@@ -1,6 +1,55 @@
 {
   "plant": "MultiWellPlant",
   "params": {
+    "producers.0.esp.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.1.esp.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.0.reservoir.decline_threshold": 0.15,
+    "producers.1.reservoir.decline_threshold": 0.15,
+    "injectors.0.sink.decline_threshold": 0.15,
+    "producers.0.reservoir.skin": 0.0,
+    "producers.0.well.friction_correlation": "darcy_weisbach",
+    "producers.0.well.two_phase_friction_correlation": "BeggsBrill",
+    "producers.0.well.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.0.well.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "producers.0.riser.friction_correlation": "darcy_weisbach",
+    "producers.0.riser.two_phase_friction_correlation": "BeggsBrill",
+    "producers.0.riser.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.0.riser.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "producers.1.reservoir.skin": 0.0,
+    "producers.1.well.friction_correlation": "darcy_weisbach",
+    "producers.1.well.two_phase_friction_correlation": "BeggsBrill",
+    "producers.1.well.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.1.well.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "producers.1.riser.friction_correlation": "darcy_weisbach",
+    "producers.1.riser.two_phase_friction_correlation": "BeggsBrill",
+    "producers.1.riser.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.1.riser.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "injectors.0.well.friction_correlation": "darcy_weisbach",
+    "injectors.0.well.two_phase_friction_correlation": "BeggsBrill",
+    "injectors.0.well.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "injectors.0.well.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "injectors.0.sink.skin": 0.0,
     "producers.0.reservoir.pressure": {"value": 220, "unit": "bar"},
     "producers.0.reservoir.temperature": {"value": 80, "unit": "degC"},
     "producers.0.reservoir.permeability": {"value": 9.869233e-12, "unit": "m2"},
@@ -9,10 +58,10 @@
     "producers.0.reservoir.top_depth": {"value": 1800, "unit": "m"},
     "producers.0.reservoir.productivity_index": {"value": 5.833333333333333e-08, "unit": "m3/s/Pa"},
     "producers.0.reservoir.wellbore_radius": {"value": 0.0765, "unit": "m"},
-    "producers.0.well.section_length": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0],
-    "producers.0.well.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988],
-    "producers.0.well.section_diameter": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778],
-    "producers.0.well.section_roughness": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05],
+    "producers.0.well.section_length": {"value": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0], "unit": "m"},
+    "producers.0.well.section_inclination": {"value": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988], "unit": "rad"},
+    "producers.0.well.section_diameter": {"value": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778], "unit": "m"},
+    "producers.0.well.section_roughness": {"value": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05], "unit": "m"},
     "producers.0.well.soil_temperature": {"value": 15, "unit": "degC"},
     "producers.0.well.segment": "below_esp",
     "producers.0.well.esp_depth": {"value": 600, "unit": "m"},
@@ -34,15 +83,17 @@
       0.0
     ],
     "producers.0.esp.pump_type": "DEFAULT-PUMP",
+    "producers.0.esp.motor_efficiency": 1.0,
+    "producers.0.esp.drift_threshold": 0.1,
     "producers.0.esp.setting_depth": {"value": 600, "unit": "m"},
     "producers.0.esp.minimum_flow": {"value": 82, "unit": "m3/h"},
     "producers.0.esp.maximum_flow": {"value": 178, "unit": "m3/h"},
     "producers.0.esp.best_efficiency_flow": {"value": 129.98, "unit": "m3/h"},
     "producers.0.esp.tubing": {"value": 0.1778, "unit": "m"},
-    "producers.0.riser.section_length": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0],
-    "producers.0.riser.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988],
-    "producers.0.riser.section_diameter": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778],
-    "producers.0.riser.section_roughness": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05],
+    "producers.0.riser.section_length": {"value": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0], "unit": "m"},
+    "producers.0.riser.section_inclination": {"value": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988], "unit": "rad"},
+    "producers.0.riser.section_diameter": {"value": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778], "unit": "m"},
+    "producers.0.riser.section_roughness": {"value": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05], "unit": "m"},
     "producers.0.riser.soil_temperature": {"value": 15, "unit": "degC"},
     "producers.0.riser.segment": "above_esp",
     "producers.0.riser.esp_depth": {"value": 600, "unit": "m"},
@@ -54,10 +105,10 @@
     "producers.1.reservoir.top_depth": {"value": 1800, "unit": "m"},
     "producers.1.reservoir.productivity_index": {"value": 5.833333333333333e-08, "unit": "m3/s/Pa"},
     "producers.1.reservoir.wellbore_radius": {"value": 0.0765, "unit": "m"},
-    "producers.1.well.section_length": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0],
-    "producers.1.well.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988],
-    "producers.1.well.section_diameter": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778],
-    "producers.1.well.section_roughness": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05],
+    "producers.1.well.section_length": {"value": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0], "unit": "m"},
+    "producers.1.well.section_inclination": {"value": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988], "unit": "rad"},
+    "producers.1.well.section_diameter": {"value": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778], "unit": "m"},
+    "producers.1.well.section_roughness": {"value": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05], "unit": "m"},
     "producers.1.well.soil_temperature": {"value": 15, "unit": "degC"},
     "producers.1.well.segment": "below_esp",
     "producers.1.well.esp_depth": {"value": 600, "unit": "m"},
@@ -79,22 +130,24 @@
       0.0
     ],
     "producers.1.esp.pump_type": "DEFAULT-PUMP",
+    "producers.1.esp.motor_efficiency": 1.0,
+    "producers.1.esp.drift_threshold": 0.1,
     "producers.1.esp.setting_depth": {"value": 600, "unit": "m"},
     "producers.1.esp.minimum_flow": {"value": 82, "unit": "m3/h"},
     "producers.1.esp.maximum_flow": {"value": 178, "unit": "m3/h"},
     "producers.1.esp.best_efficiency_flow": {"value": 129.98, "unit": "m3/h"},
     "producers.1.esp.tubing": {"value": 0.1778, "unit": "m"},
-    "producers.1.riser.section_length": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0],
-    "producers.1.riser.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988],
-    "producers.1.riser.section_diameter": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778],
-    "producers.1.riser.section_roughness": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05],
+    "producers.1.riser.section_length": {"value": [400.0, 150.0, 150.0, 362.0, 188.0, 100.0, 250.0, 550.0, 250.0, 100.0, 300.0], "unit": "m"},
+    "producers.1.riser.section_inclination": {"value": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.312662130424935, 0.9238027730805987, 1.5707963267948966, 0.9272934315845873, 0.814370628980554, 0.9272934315845873, 0.5235987755982988, 0.5235987755982988], "unit": "rad"},
+    "producers.1.riser.section_diameter": {"value": [0.1778, 0.1778, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.273, 0.1778, 0.1778], "unit": "m"},
+    "producers.1.riser.section_roughness": {"value": [2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05, 2e-05], "unit": "m"},
     "producers.1.riser.soil_temperature": {"value": 15, "unit": "degC"},
     "producers.1.riser.segment": "above_esp",
     "producers.1.riser.esp_depth": {"value": 600, "unit": "m"},
-    "injectors.0.well.section_length": [500.0, 500.0, 1000.0],
-    "injectors.0.well.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966],
-    "injectors.0.well.section_diameter": [0.1778, 0.1778, 0.1778],
-    "injectors.0.well.section_roughness": [2e-05, 2e-05, 2e-05],
+    "injectors.0.well.section_length": {"value": [500.0, 500.0, 1000.0], "unit": "m"},
+    "injectors.0.well.section_inclination": {"value": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966], "unit": "rad"},
+    "injectors.0.well.section_diameter": {"value": [0.1778, 0.1778, 0.1778], "unit": "m"},
+    "injectors.0.well.section_roughness": {"value": [2e-05, 2e-05, 2e-05], "unit": "m"},
     "injectors.0.well.soil_temperature": {"value": 15, "unit": "degC"},
     "injectors.0.sink.pressure": {"value": 220, "unit": "bar"},
     "injectors.0.sink.temperature": {"value": 80, "unit": "degC"},
@@ -116,9 +169,18 @@
       "grid_composition": null,
       "glycol_fraction": 0.0,
       "property_model": "constant_stp",
-      "density": 1068.0,
-      "viscosity": 0.00065,
-      "specific_heat": 4129.213483146067,
+      "density": {
+        "value": 1068.0,
+        "unit": "kg/m3"
+      },
+      "viscosity": {
+        "value": 0.00065,
+        "unit": "Pa.s"
+      },
+      "specific_heat": {
+        "value": 4129.213483146067,
+        "unit": "J/kg/K"
+      },
       "thermal_conductivity": null
     },
     "producers.0.well": {
@@ -131,9 +193,18 @@
       "grid_composition": null,
       "glycol_fraction": 0.0,
       "property_model": "constant_stp",
-      "density": 1068.0,
-      "viscosity": 0.00065,
-      "specific_heat": 4129.213483146067,
+      "density": {
+        "value": 1068.0,
+        "unit": "kg/m3"
+      },
+      "viscosity": {
+        "value": 0.00065,
+        "unit": "Pa.s"
+      },
+      "specific_heat": {
+        "value": 4129.213483146067,
+        "unit": "J/kg/K"
+      },
       "thermal_conductivity": null
     },
     "producers.0.esp": {
@@ -146,9 +217,18 @@
       "grid_composition": null,
       "glycol_fraction": 0.0,
       "property_model": "constant_stp",
-      "density": 1068.0,
-      "viscosity": 0.00065,
-      "specific_heat": 4129.213483146067,
+      "density": {
+        "value": 1068.0,
+        "unit": "kg/m3"
+      },
+      "viscosity": {
+        "value": 0.00065,
+        "unit": "Pa.s"
+      },
+      "specific_heat": {
+        "value": 4129.213483146067,
+        "unit": "J/kg/K"
+      },
       "thermal_conductivity": null
     },
     "producers.0.riser": {
@@ -161,9 +241,18 @@
       "grid_composition": null,
       "glycol_fraction": 0.0,
       "property_model": "constant_stp",
-      "density": 1068.0,
-      "viscosity": 0.00065,
-      "specific_heat": 4129.213483146067,
+      "density": {
+        "value": 1068.0,
+        "unit": "kg/m3"
+      },
+      "viscosity": {
+        "value": 0.00065,
+        "unit": "Pa.s"
+      },
+      "specific_heat": {
+        "value": 4129.213483146067,
+        "unit": "J/kg/K"
+      },
       "thermal_conductivity": null
     },
     "producers.1.reservoir": {
@@ -176,9 +265,18 @@
       "grid_composition": null,
       "glycol_fraction": 0.0,
       "property_model": "constant_stp",
-      "density": 1068.0,
-      "viscosity": 0.00065,
-      "specific_heat": 4129.213483146067,
+      "density": {
+        "value": 1068.0,
+        "unit": "kg/m3"
+      },
+      "viscosity": {
+        "value": 0.00065,
+        "unit": "Pa.s"
+      },
+      "specific_heat": {
+        "value": 4129.213483146067,
+        "unit": "J/kg/K"
+      },
       "thermal_conductivity": null
     },
     "producers.1.well": {
@@ -191,9 +289,18 @@
       "grid_composition": null,
       "glycol_fraction": 0.0,
       "property_model": "constant_stp",
-      "density": 1068.0,
-      "viscosity": 0.00065,
-      "specific_heat": 4129.213483146067,
+      "density": {
+        "value": 1068.0,
+        "unit": "kg/m3"
+      },
+      "viscosity": {
+        "value": 0.00065,
+        "unit": "Pa.s"
+      },
+      "specific_heat": {
+        "value": 4129.213483146067,
+        "unit": "J/kg/K"
+      },
       "thermal_conductivity": null
     },
     "producers.1.esp": {
@@ -206,9 +313,18 @@
       "grid_composition": null,
       "glycol_fraction": 0.0,
       "property_model": "constant_stp",
-      "density": 1068.0,
-      "viscosity": 0.00065,
-      "specific_heat": 4129.213483146067,
+      "density": {
+        "value": 1068.0,
+        "unit": "kg/m3"
+      },
+      "viscosity": {
+        "value": 0.00065,
+        "unit": "Pa.s"
+      },
+      "specific_heat": {
+        "value": 4129.213483146067,
+        "unit": "J/kg/K"
+      },
       "thermal_conductivity": null
     },
     "producers.1.riser": {
@@ -221,9 +337,18 @@
       "grid_composition": null,
       "glycol_fraction": 0.0,
       "property_model": "constant_stp",
-      "density": 1068.0,
-      "viscosity": 0.00065,
-      "specific_heat": 4129.213483146067,
+      "density": {
+        "value": 1068.0,
+        "unit": "kg/m3"
+      },
+      "viscosity": {
+        "value": 0.00065,
+        "unit": "Pa.s"
+      },
+      "specific_heat": {
+        "value": 4129.213483146067,
+        "unit": "J/kg/K"
+      },
       "thermal_conductivity": null
     },
     "injectors.0.well": {
@@ -236,9 +361,18 @@
       "grid_composition": null,
       "glycol_fraction": 0.0,
       "property_model": "constant_stp",
-      "density": 1068.0,
-      "viscosity": 0.00065,
-      "specific_heat": 4129.213483146067,
+      "density": {
+        "value": 1068.0,
+        "unit": "kg/m3"
+      },
+      "viscosity": {
+        "value": 0.00065,
+        "unit": "Pa.s"
+      },
+      "specific_heat": {
+        "value": 4129.213483146067,
+        "unit": "J/kg/K"
+      },
       "thermal_conductivity": null
     },
     "injectors.0.sink": {
@@ -251,9 +385,18 @@
       "grid_composition": null,
       "glycol_fraction": 0.0,
       "property_model": "constant_stp",
-      "density": 1068.0,
-      "viscosity": 0.00065,
-      "specific_heat": 4129.213483146067,
+      "density": {
+        "value": 1068.0,
+        "unit": "kg/m3"
+      },
+      "viscosity": {
+        "value": 0.00065,
+        "unit": "Pa.s"
+      },
+      "specific_heat": {
+        "value": 4129.213483146067,
+        "unit": "J/kg/K"
+      },
       "thermal_conductivity": null
     }
   }

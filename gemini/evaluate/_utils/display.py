@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from gemini import units as _units
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import ValidationError
+from gemini.types.shapes import Value
 
 DISPLAY = {
     "heat_delivered": ("energy", "MWh"),
@@ -21,6 +22,8 @@ DISPLAY = {
     "lcts": ("money_per_energy", "EUR/MWh"),
     "lcoh": ("money_per_energy", "EUR/MWh"),
     "lcoc": ("money_per_energy", "EUR/MWh"),
+    "annual_energy": ("annual_energy", "MWh/yr"),
+    "duration": ("duration", "d"),
     "co2": ("mass", "kt"),
     "co2_emitted": ("mass", "kt"),
     "methane_emitted": ("mass", "kt"),
@@ -88,12 +91,15 @@ def in_unit(metric, number, unit):
 def shown(found, table):
     """Return ``found`` with every ``Quantity`` in it converted by ``table``, ``{SI unit: unit}``.
 
-    Mappings and lists are walked; a quantity whose SI unit is not in the table, and anything
-    that is not a quantity, stays as it is.
+    Mappings and lists are walked, and so are the parts of a ``Value``; a quantity whose SI unit
+    is not in the table, and anything that is not a quantity, stays as it is.
     """
     if isinstance(found, _units.Quantity):
         target = table.get(_units.si_unit(str(found.unit)))
-        return found if target is None else found.to(target)
+        converted = found if target is None else found.to(target)
+        if isinstance(found, Value):
+            return Value(converted.value, converted.unit, found.reason, shown(found.parts, table))
+        return converted
     if isinstance(found, Mapping):
         return {key: shown(item, table) for key, item in found.items()}
     if isinstance(found, (list, tuple)):

@@ -1,10 +1,9 @@
 """Clean-filter quadratic hydraulic loss and clogging diagnostics."""
 
-from gemini import ops, units
+from gemini import ops
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
-from gemini.modules.treatment import _physics
-from gemini.physics import diagnostics, hydraulics, separation
+from gemini.physics import diagnostics, hydraulics
 from gemini.types import Health, MassFlow, PressureDifference, Stream
 
 
@@ -21,21 +20,22 @@ class Filter(Module):
         # Parameters
         self.nominal_pressure_drop = Parameter(
             PressureDifference,
-            default=_physics.FILTER_NOMINAL_DROP,
             ge=0,
             description="Pressure drop of the clean filter at the nominal mass flow",
         )
         self.nominal_mass_flow = Parameter(
             MassFlow,
-            default=_physics.FILTER_NOMINAL_MASS_FLOW,
             gt=0,
             description="Mass flow at which the clean-filter pressure drop holds",
         )
         self.clogging_pressure_drop = Parameter(
-            PressureDifference,
-            default=units.bar_to_pa(separation.FILTER_CLOGGING_BAR),
+            PressureDifference | None,
+            default=None,
             gt=0,
-            description="Pressure drop at which the clogging alarm is raised",
+            description=(
+                "Pressure drop at which the clogging alarm is raised; empty switches the "
+                "health check off"
+            ),
         )
 
         # Inlets
@@ -65,7 +65,7 @@ class Filter(Module):
 
     def health(self, result, measured):
         """Alarm when measured filter pressure loss exceeds the clogging limit."""
-        if "pressure_drop" not in measured:
+        if "pressure_drop" not in measured or self.clogging_pressure_drop is None:
             return None
         dp = measured["pressure_drop"]
         ratio = diagnostics.performance_ratio(ops.maximum(0, dp), self.clogging_pressure_drop)

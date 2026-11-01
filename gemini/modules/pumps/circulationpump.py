@@ -47,7 +47,6 @@ class CirculationPump(Equipment, Module):
         )
         self.efficiency = Parameter(
             Efficiency,
-            default=pumps.DEFAULT_CIRCULATION_PUMP_EFFICIENCY,
             description="Overall efficiency of the pump: hydraulic power over electric power",
         )
 

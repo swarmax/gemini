@@ -62,7 +62,6 @@ class Pipe(Equipment, Module):
         self.inner_diameter = Parameter(Length, gt=0, description="Inner diameter of the pipe")
         self.roughness = Parameter(
             Length,
-            default=hydraulics.COMMERCIAL_STEEL_ROUGHNESS,
             description="Absolute roughness of the inner pipe wall",
         )
         self.elevation_change = Parameter(

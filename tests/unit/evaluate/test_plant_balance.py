@@ -10,9 +10,14 @@ from gemini.runtime import settings
 from gemini.types import Stream
 from tests.fixtures.air import air
 from tests.fixtures.balance import assert_plant_closes
+from tests.fixtures.designs import with_values
 from tests.fixtures.parity import BACKENDS
 
-HOT = Stream(m_dot=2.0, T=350.0, p=4e5)
+HOT = Stream(
+    m_dot=gm.units.Quantity(2.0, "kg/s"),
+    T=gm.units.Quantity(350.0, "K"),
+    p=gm.units.Quantity(4e5, "Pa"),
+)
 
 
 class Leak(Module):
@@ -83,13 +88,13 @@ def test_a_loss_that_reaches_no_edge_module_fails_the_plant_only():
             outlets = dict(fluid_out=passed.outlets.fluid_out)
             return outlets
 
-    pipe = Pipe().set_params(
+    pipe = with_values(Pipe()).set_params(
         "",
         {
-            "length": 500,
-            "inner_diameter": 0.1,
-            "elevation_change": 0,
-            "heat_transfer_coefficient": 5.0,
+            "length": gm.units.Quantity(500, "m"),
+            "inner_diameter": gm.units.Quantity(0.1, "m"),
+            "elevation_change": gm.units.Quantity(0, "m"),
+            "heat_transfer_coefficient": gm.units.Quantity(5.0, "W/m2/K"),
         },
     )
     plant = Lost(pipe)

@@ -173,7 +173,18 @@ def test_importing_a_file_registers_the_classes_that_state_a_category(monkeypatc
     spec = importlib.util.spec_from_file_location("user_module", file)
     spec.loader.exec_module(importlib.util.module_from_spec(spec))
     assert "Lifter" in gm.modules.names("pumps")
-    result = gm.call("Lifter", {}, {"fluid_in": {"m_dot": 10, "T": 300, "p": 2e5}}, {})
+    result = gm.call(
+        "Lifter",
+        {},
+        {
+            "fluid_in": {
+                "m_dot": gm.units.Quantity(10, "kg/s"),
+                "T": gm.units.Quantity(300, "K"),
+                "p": gm.units.Quantity(2e5, "Pa"),
+            }
+        },
+        {},
+    )
     assert result["outlets"]["fluid_out"]["p"]["value"] == pytest.approx(3e5)
 
 

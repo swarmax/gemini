@@ -7,6 +7,7 @@ import pytest
 
 import gemini as gm
 from gemini.errors import PhysicsError
+from tests.fixtures.designs import with_values
 from tests.fixtures.parity import BACKENDS
 
 
@@ -45,7 +46,7 @@ def port_free_plant():
     )
     plant.connect("users.return_out", "valve.fluid_in")
     plant.connect("valve.fluid_out", "users.supply_in")
-    return plant
+    return with_values(plant)
 
 
 @pytest.mark.parametrize("backend", BACKENDS)

@@ -75,7 +75,7 @@ def _fluid(case):
     density = require(fluid, "density", "environment.fluid")
     viscosity = require(fluid, "viscosity", "environment.fluid")
     given = {"gas_liquid_ratio": fluid.gas_liquid_ratio, "gas_composition": fluid.gas}
-    return Fluid(
+    return Fluid._si(
         kind="brine",
         density=density,
         viscosity=viscosity,
@@ -87,7 +87,7 @@ def _formations(plant, case, doublets):
     """Set the surface temperature and the gradient on every ``Formation`` outside a doublet."""
     for path, module in plant.named_modules():
         if isinstance(module, Formation) and _outside(path, doublets):
-            plant.set_params(
+            plant._set_si_params(
                 path,
                 {
                     "geothermal_gradient": require(case, "environment.ground.gradient"),
@@ -102,7 +102,7 @@ def _reservoirs(plant, case, doublets):
         if isinstance(module, RESERVOIRS) and _outside(path, doublets):
             reference = require(case, "environment.reservoir.reference_depth")
             module.fluid = _fluid(case)
-            plant.set_params(
+            plant._set_si_params(
                 path,
                 {
                     "permeability": require(case, "environment.reservoir.permeability"),
@@ -129,7 +129,7 @@ def _doublets(plant, case, doublets):
             for limb in ("reservoir", "sink"):
                 values[f"{limb}.temperature"] = temperature
                 values[f"{limb}.pressure"] = pressure
-        plant.set_params(path, values)
+        plant._set_si_params(path, values)
 
 
 def _air(plant, case):
@@ -140,7 +140,7 @@ def _air(plant, case):
     air = require(case, "environment.air.temperature")
     if isinstance(air, np.ndarray):
         return
-    plant.set_inputs({join_path(path, "temperature"): air for path in paths})
+    plant._set_si_inputs({join_path(path, "temperature"): air for path in paths})
 
 
 def _consumers(plant, case):
@@ -160,4 +160,4 @@ def _consumers(plant, case):
                 "return_temperature": demand.return_temperature,
                 supply: demand.supply_temperature,
             }
-            plant.set_params(path, {name: v for name, v in values.items() if v is not None})
+            plant._set_si_params(path, {name: v for name, v in values.items() if v is not None})

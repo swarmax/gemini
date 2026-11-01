@@ -6,11 +6,18 @@ import pytest
 from gemini.compiler.graph.fixedpoint import FixedPoint
 from gemini.plants._utils import loops
 from gemini.types import WATER, Stream
+from gemini.units import Quantity
 
 
 def test_a_fixed_point_gives_the_current_value_of_each_field_and_the_active_rows():
     """The columns are the iterates by carry index; ``active`` marks the rows left."""
-    tear = loops.Tear(Stream(m_dot=1.0, T=300.0, p=1e5, fluid=WATER), None, None)
+    tear = loops.Tear(
+        Stream(
+            m_dot=Quantity(1.0, "kg/s"), T=Quantity(300.0, "K"), p=Quantity(1e5, "Pa"), fluid=WATER
+        ),
+        None,
+        None,
+    )
     found = FixedPoint([tear], np.array([False, True]))
     assert [found.column(index) for index in range(3)] == [1.0, 300.0, 1e5]
     assert found.column("active").tolist() == [False, True]

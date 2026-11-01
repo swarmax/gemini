@@ -19,9 +19,9 @@ from tests.fixtures.engine_plants import Booster, Reservoir
 def _streams(rows):
     return {
         "fluid_in": gm.Stream(
-            m_dot=np.arange(1.0, rows + 1),
-            T=np.full(rows, 300.0),
-            p=np.full(rows, 1e5),
+            m_dot=gm.units.Quantity(np.arange(1.0, rows + 1), "kg/s"),
+            T=gm.units.Quantity(np.full(rows, 300.0), "K"),
+            p=gm.units.Quantity(np.full(rows, 1e5), "Pa"),
             fluid=gm.WATER,
         )
     }

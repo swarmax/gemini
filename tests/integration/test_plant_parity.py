@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 
 import gemini as gm
+from gemini.types import Fluid
 from gemini.types.bindings import DatedParams
 from tests.fixtures.parity import BACKENDS, on_each_backend, run_engine
 from tests.fixtures.sample_cases import example_plant
@@ -34,7 +35,13 @@ def _fill_sections(plant, spec):
         plant.set_bindings(path, value)
     for path, history in spec["param_history"].items():
         plant.get_submodule(path)._param_history = [DatedParams.model_validate(i) for i in history]
-    plant.set_inputs(spec.get("inputs", {}))
+    stored = spec.get("inputs", {})
+    plant.set_inputs(
+        {
+            path: Fluid.model_validate(v) if path.endswith(".fluid") else v
+            for path, v in stored.items()
+        }
+    )
 
 
 def built_by_hand(spec):

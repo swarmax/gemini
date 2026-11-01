@@ -4,11 +4,14 @@ import pytest
 
 import gemini as gm
 from gemini.errors import ValidationError
+from tests.fixtures import si
+from tests.fixtures.designs import design_values
 from tests.fixtures.errors import raises
+from tests.fixtures.esp_design import ESP_DESIGN
 from tests.fixtures.heating_cooling import days_case
 
 BRINE = gm.Fluid(
-    density=1030,
+    density=gm.units.Quantity(1030, "kg/m3"),
     viscosity={"value": 0.4, "unit": "mPa*s"},
     gas_liquid_ratio=0.8,
     gas_composition={"CH4": 0.8, "CO2": 0.2},
@@ -25,10 +28,11 @@ WELL_DESIGN = {
     "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
     "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
-}
+} | ESP_DESIGN
 SIZES = {
     "degasser.separation_efficiency": 1.0,
     "injection_pump.efficiency": 0.7,
+    "injection_pump.pump_type": "unspecified",
     "heat_exchanger.thermal_conductance": {"value": 1500000, "unit": "W/K"},
     "heat_exchanger.hot_nominal_pressure_drop": {"value": 0, "unit": "bar"},
     "heat_exchanger.cold_nominal_pressure_drop": {"value": 0, "unit": "bar"},
@@ -66,7 +70,7 @@ def designed(count):
         values |= {f"d{index}.{name}": value for name, value in WELL_DESIGN.items()}
     for pipe in ("heating_return_pipe", "heating_supply_pipe"):
         values |= {f"{pipe}.{name}": value for name, value in PIPE.items()}
-    plant.set_params("", values)
+    si.set_params(plant, "", design_values(plant) | values)
     return plant.set_inputs(INPUTS)
 
 
@@ -78,7 +82,7 @@ def test_every_template_takes_one_to_three_doublets(name, count):
     assert [hasattr(plant, f"d{index}") for index in range(4)] == [
         index < count for index in range(4)
     ]
-    assert gm.plants.validate(plant.to_dict(structure=True), on_error="record") == []
+    assert gm.plants.validate(plant, on_error="record") == []
     assert plant.to_dict()["size"] == {"doublets": count}
 
 

@@ -238,7 +238,6 @@ def test_doublet_drop_and_time_by_hand():
 
 def test_aquifer_store_relations_by_hand():
     """Mixing weights by volume, an empty store keeps no excess, conduction decays exactly."""
-    assert ground.HALF_YEAR == 182.625 * 24 * 3600
     assert ground.mix_store(100, 10, 100, 0) == (200, 5)
     assert ground.mix_store(100, 10, 0, 0) == (100, 10)
     assert ground.stored_heat(4e6, 10, 5) == 2e8

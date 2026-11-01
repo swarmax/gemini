@@ -56,8 +56,8 @@ class AquiferStorage(Module):
     (rho c)_w V / UA and the losses scale with the area-to-volume ratio, as observed for ATES
     (Bloemendal and Hartog 2018, Geothermics 71, 306-319). A store above the aquifer
     temperature reports its loss as ``loss_out``, one below it its gain as
-    ``loss_out`` (negative). The default ``storage_period`` is half a year, the charge or discharge
-    season of seasonal ATES.
+    ``loss_out`` (negative). The ``storage_period`` is the charge or discharge season of seasonal
+    ATES, about half a year, and the plant states it.
 
     Each step first applies the injected volume Q dt (mixing) and the withdrawn volume
     (temperature unchanged; the store volume stops at zero, after which native water is
@@ -115,7 +115,6 @@ class AquiferStorage(Module):
         )
         self.storage_period = Parameter(
             Duration,
-            default=ground.HALF_YEAR,
             gt=0,
             description="Duration of one charge or discharge period of the store",
         )
@@ -209,7 +208,7 @@ class AquiferStorage(Module):
                 "production_out; expected both on a loop through the well pair",
                 code="invalid_design",
             )
-        offered = Stream(
+        offered = Stream._si(
             m_dot=self.groundwater_flow,
             T=self.production_temperature(),
             p=self.groundwater_pressure,

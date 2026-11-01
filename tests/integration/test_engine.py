@@ -306,7 +306,7 @@ def test_error_policies_and_missing_columns(setup):
 def test_plant_only_checkpoint(setup, tmp_path):
     """A configured engine can save before its first run, including fitted design overrides."""
     plant, _ = setup
-    plant.heat_exchanger.set_params("", {"thermal_conductance": 123456})
+    plant.heat_exchanger.set_params("", {"thermal_conductance": gm.units.Quantity(123456, "W/K")})
     engine = gm.Engine(plant)
     path = tmp_path / "design.ckpt"
     engine.to_checkpoint(path)

@@ -53,10 +53,15 @@ def get(name):
 
 
 def validate(data, on_error="raise"):
-    """Check a plant dict and return ``[]``, or raise one ``ValidationError`` with every problem.
+    """Check a plant dict or a ``Plant`` and return ``[]``, or raise one ``ValidationError``.
+
+    A ``Plant`` is checked by its ``to_dict(structure=True)``, so a plant and its dict give the
+    same result. The error carries every problem.
 
     With ``on_error="record"`` nothing is raised and the problems are returned, each
     ``{path, code, message, suggestions}``: the list the error carries in ``problems``. ``path``
     points into the dict, for example ``connections[1].target``.
     """
+    if isinstance(data, Plant):
+        data = data.to_dict(structure=True)
     return reader.check(Plant, data, on_error)

@@ -158,6 +158,23 @@
     },
     {
       "on": "doublet",
+      "quantity": "intake_pressure",
+      "over": "each",
+      "when": "running",
+      "min": {
+        "value": 5,
+        "unit": "bar"
+      }
+    },
+    {
+      "on": "doublet",
+      "quantity": "intake_gas_fraction",
+      "over": "each",
+      "when": "running",
+      "max": 0.1875
+    },
+    {
+      "on": "doublet",
       "quantity": "volume_imbalance",
       "over": "each",
       "when": "running",

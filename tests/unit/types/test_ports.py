@@ -5,6 +5,7 @@ import pytest
 
 from gemini.errors import ValidationError
 from gemini.types import BRINE, Ports, Stream
+from gemini.units import Quantity
 from tests.fixtures.errors import raises
 
 
@@ -12,8 +13,8 @@ from tests.fixtures.errors import raises
 def streams():
     """Return two distinct streams for mapping tests."""
     return (
-        Stream(m_dot=1, T=300, p=1e5),
-        Stream(m_dot=2, T=310, p=2e5),
+        Stream(m_dot=Quantity(1, "kg/s"), T=Quantity(300, "K"), p=Quantity(1e5, "Pa")),
+        Stream(m_dot=Quantity(2, "kg/s"), T=Quantity(310, "K"), p=Quantity(2e5, "Pa")),
     )
 
 
@@ -76,7 +77,12 @@ def test_ports_reject_non_stream_values(streams):
 
 def test_ports_accept_streams_of_arrays():
     """Batched calls pass ``Stream`` values of arrays through the same mapping."""
-    state = Stream(m_dot=np.array([1.0, 2.0]), T=300.0, p=1e5, fluid=BRINE)
+    state = Stream(
+        m_dot=Quantity(np.array([1.0, 2.0]), "kg/s"),
+        T=Quantity(300.0, "K"),
+        p=Quantity(1e5, "Pa"),
+        fluid=BRINE,
+    )
     assert Ports({"fluid_in": state}).fluid_in is state
 
 

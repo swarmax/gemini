@@ -87,7 +87,7 @@ def _doublets(plant, case, peak, notes):
         }
     )
     for path in units_of(design, "doublet"):
-        design.set_params(path, {"nominal_flow": units.Quantity(flow_max, "m3/s")})
+        design._set_si_params(path, {"nominal_flow": flow_max})
         _note(notes, f"{path}.nominal_flow", flow_max, "m3/s", "the flow limit of the case")
     return design, count * heat
 
@@ -181,7 +181,7 @@ def _capacities(design, case, notes, backup, cover):
                     f"{part:.3g} of the {service} peak of {peak:.4g} W "
                     f"shared by {len(paths)} {role} unit(s)"
                 )
-            design.set_params(path, {"capacity": units.Quantity(value, "W")})
+            design._set_si_params(path, {"capacity": value})
             _note(notes, f"{path}.capacity", value, "W", reason)
     for role in ("chp", "heat_exchanger"):
         _skip(notes, units_of(design, role), "not sized from the demand")
@@ -199,7 +199,7 @@ def _injection_head(applied, case, path):
     cooling = _limit(case, "brine_cooling", "max")
     temperature = case.environment.temperature_at(doublet.depth) - cooling
     rate = doublet.fluid.density * doublet.nominal_flow
-    stream = Stream(
+    stream = Stream._si(
         m_dot=rate, T=temperature, p=doublet.nominal_wellhead_pressure, fluid=doublet.fluid
     )
     low = float(doublet.nominal_wellhead_pressure)
@@ -242,9 +242,7 @@ def _injection_pumps(design, case, notes):
             continue
         flow = sum(applied.get_submodule(item).nominal_flow for item in served)
         head = max(_injection_head(applied, case, item) for item in served)
-        values = {"nominal_flow": units.Quantity(flow, "m3/s")}
-        values["nominal_head"] = units.Quantity(head, "Pa")
-        design.set_params(path, values)
+        design._set_si_params(path, {"nominal_flow": flow, "nominal_head": head})
         why = f"the flow of {len(served)} doublet(s) it serves, and the head that injects it"
         _note(notes, f"{path}.nominal_flow", flow, "m3/s", why)
         _note(notes, f"{path}.nominal_head", head, "Pa", why)

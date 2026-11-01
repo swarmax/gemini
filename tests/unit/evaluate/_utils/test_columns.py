@@ -2,6 +2,7 @@
 
 import gemini as gm
 from gemini.evaluate._utils import columns
+from tests.fixtures import si
 from tests.fixtures.costed_plants import heating_plant
 from tests.fixtures.errors import raises
 from tests.fixtures.result_tables import make_results
@@ -43,7 +44,7 @@ def test_a_parameter_is_told_from_an_output():
 def test_a_parameter_takes_the_value_it_has_in_the_run():
     """The latest value of an undated module, as a one-element array."""
     plant = heating_plant()
-    plant.set_params("heat", {"return_temperature": 303.15})
+    si.set_params(plant, "heat", {"return_temperature": 303.15})
     frame = make_results({"heat": {"unmet_demand": [1.0]}}).to_frame()
     assert list(columns.parameter_values(plant, frame, "heat", "return_temperature")) == [303.15]
 

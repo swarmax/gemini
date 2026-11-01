@@ -12,9 +12,9 @@ from tests.fixtures.graph_run import graph_outputs
 def _inlet(pressures):
     count = len(pressures)
     return gm.Stream(
-        m_dot=np.ones(count),
-        T=np.full(count, 300.0),
-        p=np.array(pressures),
+        m_dot=gm.units.Quantity(np.ones(count), "kg/s"),
+        T=gm.units.Quantity(np.full(count, 300.0), "K"),
+        p=gm.units.Quantity(np.array(pressures), "Pa"),
         fluid=gm.WATER,
     )
 
@@ -48,7 +48,12 @@ def test_a_violated_bound_raises_a_declaration_error(bounded, pressures, setpoin
     with pytest.raises(ValidationError):
         for row in range(2):
             bounded(
-                fluid_in=gm.Stream(m_dot=1.0, T=300.0, p=pressures[row], fluid=gm.WATER),
+                fluid_in=gm.Stream(
+                    m_dot=gm.units.Quantity(1.0, "kg/s"),
+                    T=gm.units.Quantity(300.0, "K"),
+                    p=gm.units.Quantity(pressures[row], "Pa"),
+                    fluid=gm.WATER,
+                ),
                 setpoint=setpoint[row],
                 ambient=ambient[row] if isinstance(ambient, np.ndarray) else ambient,
             )
@@ -91,4 +96,12 @@ def test_not_a_number_against_a_bound_fails_like_the_untraced_call(bounded):
     with pytest.raises(ValidationError, match="bounded"):
         _run(bounded, [2e5], [np.nan])
     with pytest.raises(ValidationError):
-        bounded(fluid_in=gm.Stream(m_dot=1.0, T=300.0, p=2e5, fluid=gm.WATER), setpoint=np.nan)
+        bounded(
+            fluid_in=gm.Stream(
+                m_dot=gm.units.Quantity(1.0, "kg/s"),
+                T=gm.units.Quantity(300.0, "K"),
+                p=gm.units.Quantity(2e5, "Pa"),
+                fluid=gm.WATER,
+            ),
+            setpoint=np.nan,
+        )

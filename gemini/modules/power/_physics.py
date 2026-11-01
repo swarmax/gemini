@@ -26,9 +26,6 @@ from gemini import ops, units
 from gemini.errors import PhysicsError
 from gemini.ops import Constant
 
-DEFAULT_TURBINE_EFFICIENCY = 0.85
-"""Dry isentropic efficiency [-] DiPippo (2016, section 5.5) assumes for geothermal turbines."""
-
 GAS_CONSTANT = Constant(
     "WATER_GAS_CONSTANT", 461.526, "J/kg/K", "IF97 specific gas constant of water R"
 )

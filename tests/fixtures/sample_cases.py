@@ -70,4 +70,4 @@ def example_plant(name):
     from_sections(plant, values, Report(strict=True))
     reader.set_sections(plant, values)
     plant._stated[""] = {}
-    return plant.set_inputs(values.get("inputs", {}))
+    return plant._set_si_inputs(values.get("inputs", {}))

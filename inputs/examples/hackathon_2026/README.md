@@ -52,6 +52,8 @@ standard conditions.
 | Minimum stable flow while active | 50 m³/h per doublet | Hard cap |
 | Maximum brine cooling | 40 °C, producer to injector | Hard cap |
 | Pump hydraulic efficiency | 70% | Simplified |
+| Free gas at the pump intake | At most 18.75 % of the volume while running | Sourced below, not an organiser limit |
+| Pump intake pressure | At least 5 bar while running | Assumption, no verified source; not an organiser limit |
 | Production and injection volume | Equal liquid volumes, same reservoir | Required |
 | Annual operation of a doublet | 330 daily steps | Daily power and energy balance |
 | Heating supply temperature | 100 °C | Fixed |
@@ -165,3 +167,56 @@ of the production wellhead as best suction, floored at zero) applied to the stor
 rounded to four digits. They are data of the plants, not a default of the package; the size of a plant with
 other doublets rates its pump again. On `HeatingHeatPumpCoolingPlant` the pump is 0.187 MEUR of the
 33.0 MEUR capex (0.57 %).
+
+## Pump intake limits
+
+`case.json` adds two constraints on the ESP intake of a running doublet, which the organisers did not state.
+
+- Maximum free gas, 0.1875 of the volume at the intake. Source: Baker Hughes, Ace Plus gas handler pumps,
+  <https://www.bakerhughes.com/production/artificial-lift/electrical-submersible-pump-systems/pumps/ace-plus-gas-handler-pumps>:
+  "Performance tests indicate that Ace Plus gas handler pumps can process up to 75% free gas without locking"
+  and "Standard pump stages can handle only one-fourth of this amount of free gas before locking." The limit is
+  75 % / 4 = 18.75 %, the manufacturer's figure for standard stages; the page was opened on 2026-11-01. A stricter
+  rule of thumb of 10 % for a standard pump (Takacs, Electrical Submersible Pumps Manual, 2009, as quoted by a design
+  manual site, not opened at the book) is not used.
+- Minimum intake pressure, 5 bar: assumption, no verified source. The published rule found (intake pressure above the
+  bubble point of the produced fluid) needs the PVT of the fluid, which the case does not give.
+- Intake values of the stored plants over the first 32 days of the case (one run, 300 m3/h per doublet): lowest pressure
+  7.7 bar, largest gas share 12.1 %, so neither limit rejects a stored design. The 10 % rule of thumb would.
+- The limits do reject searched designs. Without them `HeatingFullCoolingPlant` searches to 3 doublets at 3319 m with an
+  intake of 2.0 bar and 35.7 % free gas, and `HeatingPlant` to 2 doublets at 3275 m with 3.0 bar and 27.2 %: both break
+  both limits, so the sourced gas limit alone rejects them. With the limits they search to 1 doublet at 2456 m (5.4 bar,
+  16.5 %, LCTS 55.59 EUR/MWh instead of 40.29) and 2 doublets at 3234 m (6.7 bar, 14.4 %, 29.83 instead of 29.45), and the
+  lowest LCTS among the designs that deliver heat and cold is now `HeatingHeatPumpCoolingPlant`, 40.34 EUR/MWh.
+
+## Values the plants state that a module no longer defaults
+
+A module declares no design value: each plant dict of this folder states the values below, with the value the package used as a default before, so no result changed. Where no source is given the value is an assumption of this sample, not data of the organisers or of a machine. `dN` is `d0`, `d1`, ... one per doublet.
+
+| Name | Value | Status |
+| --- | --- | --- |
+| `heating_supply_pipe.roughness`, `heating_return_pipe.roughness` (and the cooling pipes) | 4.5e-5 m | cited: new commercial steel, Moody (1944), Trans. ASME 66 |
+| `dN.drainage_radius` | 1000 m | assumption (the lower end of 1 to 2 km Dutch doublet spacing, Willems 2016) |
+| `dN.roughness` | 4.5e-5 m | cited: new commercial steel, Moody (1944), Trans. ASME 66 (wall of the vertical wells, was inside the derivation) |
+| `dN.esp.correction_factors` | [1, 0] | assumption (no calibration) |
+| `dN.reservoir.skin`, `dN.sink.skin` | 0 | assumption |
+| `dN.well|riser|injector.friction_correlation` | darcy_weisbach | assumption (model choice) |
+| `dN.well|riser|injector.two_phase_friction_correlation` | BeggsBrill | assumption (model choice) |
+| `dN.well|riser|injector.correction_factors` | [1, 0] | assumption (no calibration) |
+| `dN.well|riser|injector.heat_transfer_coefficient` | 10 W/m2/K | assumption (the value of the original GEMINI well model) |
+| `degasser.nominal_pressure_drop` | 14900 Pa | assumption (0.149 bar of the original GEMINI example) |
+| `filters.hot|cold.nominal_pressure_drop` | 1600 Pa | assumption (0.016 bar of the original GEMINI example) |
+| `filters.hot|cold.nominal_mass_flow` | 44.2033 kg/s | assumption (149 m3/h of brine at 1068 kg/m3) |
+| `filters.hot|cold.clogging_pressure_drop` | 50000 Pa | assumption (0.5 bar, the limit of an old project) |
+| `heat_exchanger.arrangement` | counterflow | assumption |
+| `heat_exchanger.fouling_threshold`, `dN.reservoir.decline_threshold`, `dN.sink.decline_threshold` | 0.15 | assumption (alarm threshold) |
+| `gas_grid.composition` | CH4 0.82495, C2H6 0.03955, C3H8 0.01275, CO2 0.01191, N2 0.11084 (mole fractions) | assumption (a measured grid gas of the original GEMINI example) |
+| `flare.combustion_efficiency` | 0.98 | cited: US EPA AP-42, section 13.5 |
+| `heat_pump.cop_model`, `compression_chiller.cop_model` | carnot | assumption (model choice) |
+| `heat_pump.carnot_fraction`, `compression_chiller.carnot_fraction` | 0.5 | cited: H. U. Frutschi, ABB Review 5/1996 |
+| `heat_pump.lorenz_fraction`, `compression_chiller.lorenz_fraction` | 0.5 | assumption (no source for a Lorenz value of its own) |
+| `heat_pump.minimum_temperature_lift`, `compression_chiller.minimum_temperature_lift` | 10 K | cited: lowest lift of the machines summarised by Arpagaus et al. (2018) |
+| `absorption_chiller.thermal_cop`, `chiller.thermal_cop` | 0.7 | cited: Herold, Radermacher and Klein (2016), Absorption Chillers and Heat Pumps |
+| `absorption_chiller.minimum_driving_temperature`, `chiller.minimum_driving_temperature` | 353.15 K | assumption (a GEMINI operating limit of a LiBr chiller) |
+| `adsorption_chiller.thermal_cop` | 0.55 | cited: Wang and Oliveira (2006), Prog. Energy Combust. Sci. 32 |
+| `adsorption_chiller.minimum_driving_temperature`, `adsorption_chiller.maximum_driving_temperature` | 328.15 K, 363.15 K | assumption (a GEMINI operating range of a silica-gel machine) |

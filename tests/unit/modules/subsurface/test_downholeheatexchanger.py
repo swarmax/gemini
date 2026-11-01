@@ -14,7 +14,11 @@ from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
-INLET = Stream(m_dot=5, T=303.15, p=3e5)
+INLET = Stream(
+    m_dot=gm.units.Quantity(5, "kg/s"),
+    T=gm.units.Quantity(303.15, "K"),
+    p=gm.units.Quantity(3e5, "Pa"),
+)
 CP = 4217.4
 
 
@@ -26,11 +30,11 @@ def exchanger():
             "borehole_depth": {"value": 2500, "unit": "m"},
             "surface_temperature": {"value": 10, "unit": "degC"},
             "geothermal_gradient": {"value": 30, "unit": "K/km"},
-            "ground_conductivity": 2.5,
-            "ground_diffusivity": 1e-6,
-            "borehole_radius": 0.1,
-            "borehole_resistance": 0.05,
-            "operating_time": 3.15e7,
+            "ground_conductivity": gm.units.Quantity(2.5, "W/m/K"),
+            "ground_diffusivity": gm.units.Quantity(1e-6, "m2/s"),
+            "borehole_radius": gm.units.Quantity(0.1, "m"),
+            "borehole_resistance": gm.units.Quantity(0.05, "m.K/W"),
+            "operating_time": gm.units.Quantity(3.15e7, "s"),
         },
     )
 
@@ -81,7 +85,7 @@ def test_hot_inlet_heats_the_rock():
 
 def test_short_operating_time_is_bad_design_data():
     """Ramey's long-time function needs alpha t / r**2 >= 25."""
-    module = exchanger().set_params("", {"operating_time": 3600})
+    module = exchanger().set_params("", {"operating_time": gm.units.Quantity(3600, "s")})
     with raises(gm.errors.ValidationError, "invalid_design", match="operating_time rejected"):
         module(fluid_in=INLET)
 
@@ -97,15 +101,23 @@ def test_exchanger_matches_traced():
 
 def test_early_operating_time_is_not_evaluated_at_zero_flow():
     """A stopped exchanger needs no rock resistance, so a short operating time does not raise."""
-    module = exchanger().set_params("", {"operating_time": 3600})
+    module = exchanger().set_params("", {"operating_time": gm.units.Quantity(3600, "s")})
     assert reading(module(fluid_in=INLET.with_(m_dot=0))).heat_extraction_rate == 0
 
 
 def test_traced_early_operating_time_raises_only_for_flowing_rows():
     """In a traced call the configuration error belongs to the rows that flow."""
-    module = exchanger().set_params("", {"operating_time": 3600})
-    stopped = Stream(m_dot=np.zeros(2), T=np.full(2, 303.15), p=np.full(2, 3e5))
+    module = exchanger().set_params("", {"operating_time": gm.units.Quantity(3600, "s")})
+    stopped = Stream(
+        m_dot=gm.units.Quantity(np.zeros(2), "kg/s"),
+        T=gm.units.Quantity(np.full(2, 303.15), "K"),
+        p=gm.units.Quantity(np.full(2, 3e5), "Pa"),
+    )
     assert run(module, {"fluid_in": stopped}).outlets["loss_out"]["power"].tolist() == [0, 0]
-    mixed = Stream(m_dot=np.array([0.0, 5.0]), T=np.full(2, 303.15), p=np.full(2, 3e5))
+    mixed = Stream(
+        m_dot=gm.units.Quantity(np.array([0.0, 5.0]), "kg/s"),
+        T=gm.units.Quantity(np.full(2, 303.15), "K"),
+        p=gm.units.Quantity(np.full(2, 3e5), "Pa"),
+    )
     with raises(gm.errors.ValidationError, "invalid_design", match="operating_time rejected"):
         run(module, {"fluid_in": mixed})

@@ -34,14 +34,14 @@ def esp(shared_plant):
 
 def _suction(esp, week):
     density = esp.fluid.properties(None, None).density
-    return Stream(m_dot=week[:, 0] * density, T=week[:, 1], p=week[:, 2], fluid=esp.fluid)
+    return Stream._si(m_dot=week[:, 0] * density, T=week[:, 1], p=week[:, 2], fluid=esp.fluid)
 
 
 def _untraced(esp, week):
     suction = _suction(esp, week)
     return [
         esp(
-            fluid_in=gm.Stream(
+            fluid_in=gm.Stream._si(
                 m_dot=suction.m_dot[row], T=week[row, 1], p=week[row, 2], fluid=esp.fluid
             ),
             frequency=week[row, 3],
@@ -178,7 +178,10 @@ def test_reverse_flow_raises_the_untraced_error_at_the_physics_line(esp, week):
     with pytest.raises(PhysicsError) as untraced:
         esp(
             fluid_in=gm.Stream(
-                m_dot=reversed_flow.m_dot[1], T=week[1, 1], p=week[1, 2], fluid=esp.fluid
+                m_dot=gm.units.Quantity(reversed_flow.m_dot[1], "kg/s"),
+                T=gm.units.Quantity(week[1, 1], "K"),
+                p=gm.units.Quantity(week[1, 2], "Pa"),
+                fluid=esp.fluid,
             ),
             frequency=week[1, 3],
         )

@@ -13,7 +13,9 @@ import numpy as np
 
 from gemini.evaluate._utils.series import (
     COLD_DELIVERED,
+    EDGE_POWERS,
     HEAT_DELIVERED,
+    edge_power,
     energy,
     leaf_total,
     port_difference,
@@ -25,7 +27,6 @@ from gemini.modules.grids import (
     ChemicalGrid,
     CoolingGrid,
     ElectricityGrid,
-    GasGrid,
     HeatingGrid,
     WasteGrid,
 )
@@ -125,9 +126,9 @@ def _kpis(plant, results):
 
 
 _EDGE_TOTALS = {
-    "electricity_bought": ("J", ElectricityGrid, "net_import"),
+    "electricity_bought": ("J", *EDGE_POWERS["electricity_bought"]),
     "electricity_sold": ("J", ElectricityGrid, "net_export"),
-    "gas_bought": ("J", GasGrid, "gas_out.chemical_flow"),
+    "gas_bought": ("J", *EDGE_POWERS["gas_bought"]),
     "co2_emitted": ("kg", Atmosphere, "co2_emission"),
     "methane_emitted": ("kg", Atmosphere, "methane_emission"),
     "waste": ("kg", WasteGrid, "waste_in.mass_flow"),
@@ -186,7 +187,7 @@ def totals(plant, case, results):
     report = {
         "heat_delivered": _integral(port_difference(plant, frame, *HEAT_DELIVERED), seconds, "J"),
         "heat_useful": _integral(useful_heat(plant, frame), seconds, "J"),
-        "heat_surplus": _integral(leaf_total(plant, frame, "surplus", HeatingGrid), seconds, "J"),
+        "heat_surplus": _integral(edge_power(plant, frame, "heat_surplus"), seconds, "J"),
         "cold_delivered": _integral(port_difference(plant, frame, *COLD_DELIVERED), seconds, "J"),
         "cold_useful": _integral(useful_cold(plant, frame), seconds, "J"),
         "cold_surplus": _integral(leaf_total(plant, frame, "surplus", CoolingGrid), seconds, "J"),

@@ -9,13 +9,22 @@ from gemini.types.flows import Stream
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 
-INLET = Stream(m_dot=20, T=350, p=1e6)
+INLET = Stream(
+    m_dot=gm.units.Quantity(20, "kg/s"),
+    T=gm.units.Quantity(350, "K"),
+    p=gm.units.Quantity(1e6, "Pa"),
+)
 
 
 def desander():
     """Return a desander rated 1 bar at 40 kg/s that removes 90 % of the sand."""
     return Desander().set_params(
-        "", {"separation_efficiency": 0.9, "nominal_pressure_drop": 1e5, "nominal_mass_flow": 40}
+        "",
+        {
+            "separation_efficiency": 0.9,
+            "nominal_pressure_drop": gm.units.Quantity(1e5, "Pa"),
+            "nominal_mass_flow": gm.units.Quantity(40, "kg/s"),
+        },
     )
 
 
@@ -52,7 +61,14 @@ def test_limits():
 def test_desander_matches_traced():
     """The cyclone loss and sand removal trace and equal one call per row."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=350, p=1e6), sand_concentration=sand)
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(350, "K"),
+                p=gm.units.Quantity(1e6, "Pa"),
+            ),
+            sand_concentration=sand,
+        )
         for m_dot, sand in [(0, 0.05), (20, 0.05), (40, 0.001), (60, 0.2)]
     ]
     assert_module_matches(desander(), rows)

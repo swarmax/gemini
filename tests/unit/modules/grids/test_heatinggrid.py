@@ -6,12 +6,17 @@ import gemini as gm
 from gemini.errors import PhysicsError, ValidationError
 from gemini.modules import HeatingGrid, energy_balance, mass_balance
 from gemini.types import Stream
+from tests.fixtures import si
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
 CP = 4217.4
-SUPPLY = Stream(m_dot=2.0, T=343.15, p=3e5)
+SUPPLY = Stream(
+    m_dot=gm.units.Quantity(2.0, "kg/s"),
+    T=gm.units.Quantity(343.15, "K"),
+    p=gm.units.Quantity(3e5, "Pa"),
+)
 
 
 def _consumer():
@@ -72,7 +77,14 @@ def test_invalid_inputs_raise():
 def test_traced_call_matches_one_call_per_row():
     """Met, short, cold-supply, no-demand and stopped rows trace and equal per-row calls."""
     rows = [
-        dict(supply_in=Stream(m_dot=m_dot, T=T, p=3e5), heat_demand=demand)
+        dict(
+            supply_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(T, "K"),
+                p=gm.units.Quantity(3e5, "Pa"),
+            ),
+            heat_demand=demand,
+        )
         for m_dot, T, demand in [
             (2.0, 343.15, 100e3),
             (2.0, 343.15, 1e6),
@@ -89,7 +101,7 @@ CLOSED = {"return_temperature": 333.15, "return_pressure": 5e5}
 
 def closed_loop():
     """Return a heat user on a closed loop: the return is fixed, the water brings what it brings."""
-    grid = HeatingGrid().set_params("", CLOSED)
+    grid = si.set_params(HeatingGrid(), "", CLOSED)
     grid.fluid = gm.WATER
     return grid
 
@@ -103,7 +115,12 @@ def test_surplus_is_zero_when_the_supply_equals_the_demand():
     """Water that brings the demand leaves neither unmet heat nor a surplus."""
     grid = closed_loop()
     flow = rate(grid, 1e6, 40.0)
-    supply = gm.Stream(m_dot=flow, T=373.15, p=6e5, fluid=gm.WATER)
+    supply = gm.Stream(
+        m_dot=gm.units.Quantity(flow, "kg/s"),
+        T=gm.units.Quantity(373.15, "K"),
+        p=gm.units.Quantity(6e5, "Pa"),
+        fluid=gm.WATER,
+    )
     outputs = grid(supply_in=supply, heat_demand=1e6, flow=flow).outputs
     assert outputs.surplus == pytest.approx(0, abs=1e-6)
     assert outputs.unmet_demand == pytest.approx(0, abs=1e-6)
@@ -113,7 +130,12 @@ def test_surplus_is_what_the_water_gives_above_the_demand():
     """Twice the water at the demand of one: the rest is surplus, and nothing is unmet."""
     grid = closed_loop()
     flow = rate(grid, 2e6, 40.0)
-    supply = gm.Stream(m_dot=flow, T=373.15, p=6e5, fluid=gm.WATER)
+    supply = gm.Stream(
+        m_dot=gm.units.Quantity(flow, "kg/s"),
+        T=gm.units.Quantity(373.15, "K"),
+        p=gm.units.Quantity(6e5, "Pa"),
+        fluid=gm.WATER,
+    )
     outputs = grid(supply_in=supply, heat_demand=1e6, flow=flow).outputs
     assert outputs.surplus == pytest.approx(1e6)
     assert outputs.unmet_demand == 0
@@ -121,6 +143,13 @@ def test_surplus_is_what_the_water_gives_above_the_demand():
 
 def test_a_user_on_an_open_circuit_has_no_surplus():
     """The return follows from the demand, so the water gives what was asked."""
-    grid = HeatingGrid().set_params("", {"minimum_return_temperature": 313.15})
-    supply = gm.Stream(m_dot=10.0, T=353.15, p=3e5, fluid=gm.WATER)
+    grid = HeatingGrid().set_params(
+        "", {"minimum_return_temperature": gm.units.Quantity(313.15, "K")}
+    )
+    supply = gm.Stream(
+        m_dot=gm.units.Quantity(10.0, "kg/s"),
+        T=gm.units.Quantity(353.15, "K"),
+        p=gm.units.Quantity(3e5, "Pa"),
+        fluid=gm.WATER,
+    )
     assert grid(supply_in=supply, heat_demand=1e5).outputs.surplus == 0

@@ -11,7 +11,9 @@ from gemini.modules.control import PIDController
 from gemini.modules.declarations import Boundary, Control, Inlet, Outlet, Output
 from gemini.modules.storage import ThermalStorage
 from gemini.types import Stream, Temperature
+from tests.fixtures import si
 from tests.fixtures.air import air
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_close
 from tests.fixtures.errors import raises
 
@@ -25,7 +27,7 @@ def _controller(**changes):
         maximum_output=1.0,
         direction="reverse",
     )
-    return PIDController().set_params("", params | changes)
+    return si.set_params(PIDController(), "", params | changes)
 
 
 def _step(pid, state, dt, measurement):
@@ -106,13 +108,13 @@ class ControlledTank(Module):
 
         # Modules
         self.controller = _controller(proportional_gain=0.1, integral_time=600.0)
-        self.storage = ThermalStorage().set_params(
+        self.storage = with_values(ThermalStorage()).set_params(
             "",
             {
                 "service": "hot",
-                "volume": 1.0,
-                "heat_loss_conductance": 0,
-                "reference_temperature": 313.15,
+                "volume": gm.units.Quantity(1.0, "m3"),
+                "heat_loss_conductance": gm.units.Quantity(0, "W/K"),
+                "reference_temperature": gm.units.Quantity(313.15, "K"),
             },
         )
 
@@ -161,8 +163,16 @@ def test_controller_steps_inside_a_composite():
         {"temperature_setpoint": 343.15, "measured_temperature": 333.15}
     )
     streams = {
-        "charge_in": Stream(m_dot=1.0, T=353.15, p=3e5),
-        "discharge_in": Stream(m_dot=0.0, T=313.15, p=3e5),
+        "charge_in": Stream(
+            m_dot=gm.units.Quantity(1.0, "kg/s"),
+            T=gm.units.Quantity(353.15, "K"),
+            p=gm.units.Quantity(3e5, "Pa"),
+        ),
+        "discharge_in": Stream(
+            m_dot=gm.units.Quantity(0.0, "kg/s"),
+            T=gm.units.Quantity(313.15, "K"),
+            p=gm.units.Quantity(3e5, "Pa"),
+        ),
     }
     state, result = plant.step(None, 60, streams)
     assert result.outputs.command == pytest.approx(0.1 * 10)

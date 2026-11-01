@@ -64,7 +64,7 @@ NEW_PARAMS = {
             "nominal_wellhead_pressure",
         )
     }
-    | {"drainage_radius": 1000.0},
+    | {"drainage_radius": 1000.0, "roughness": 4.5e-05},
     "injection_pump": {"nominal_flow": None, "nominal_head": None},
 }
 """Parameters added after phase 0, as ``None`` (unset), plus the two explicit values."""

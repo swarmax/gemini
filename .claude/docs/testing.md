@@ -309,6 +309,15 @@ builds the case and the plants of a sample (`sample_case()`, `shallow_case()`,
 `template_plant(name)`, `treatment_plant()`, `filled_plant(name)`) with `gm.Case.from_json` and
 `gm.Plant.from_dict`, so no test builds a path into `inputs/examples/` by hand.
 `tests/fixtures/heating_cooling.py` builds small cases in code (`days_case`, `two_days_case`).
+A public door takes a quantity for every value with a dimension, so a test that holds SI numbers
+passes them through `tests/fixtures/si.py` (`si.params`, `si.set_params`, `si.add`, `si.inputs`,
+`si.stream`, `si.fluid`), which wraps each bare number in the SI unit of its declaration; a test of
+private behaviour (traced and batched runs, a plant class that derives, a JSON round trip of a dump)
+uses the private path (`Stream._si`, `Fluid._si`, `_set_si_params`, `_set_si_inputs`). A module
+declares no design value, so `tests/fixtures/designs.py` (`with_values(module_or_plant, **values)`,
+`design_values`, `VALUES`) sets the value each class defaulted before, by class name through its MRO,
+and `tests/fixtures/esp_design.py` (`ESP_DESIGN`, `ESP_MODULE`) holds the ESP values that a designed
+`Doublet` leaves to its plant.
 A study that runs a plant a hundred times is an e2e test (`tests/e2e/test_study.py`); the unit tests
 of `gm.study` replace the trial run with a fake, because a real trial takes about 0.7 s.
 

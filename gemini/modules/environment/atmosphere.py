@@ -7,6 +7,7 @@ from gemini.modules.module import Module
 from gemini.physics import energy, gas
 from gemini.types import MassFlow, Power, Pressure, Stream, Temperature
 from gemini.types.fluid import AIR
+from gemini.units import Quantity
 
 
 class Atmosphere(Module):
@@ -22,8 +23,16 @@ class Atmosphere(Module):
 
     @staticmethod
     def ambient_air(temperature):
-        """Return what ``air_out`` offers at ``temperature``, for a call without an atmosphere."""
-        return Stream(m_dot=0.0, T=temperature, p=gas.NORMAL_PRESSURE, fluid=AIR)
+        """Return what ``air_out`` offers at ``temperature``, for a call without an atmosphere.
+
+        ``temperature`` is a ``Quantity`` or its ``{"value", "unit"}`` dict, as ``Stream`` takes it.
+        """
+        return Stream(
+            m_dot=Quantity(0.0, "kg/s"),
+            T=temperature,
+            p=Quantity(gas.NORMAL_PRESSURE, "Pa"),
+            fluid=AIR,
+        )
 
     def __init__(self):
         """Declare the ambient conditions, the air ports and what the air receives."""
@@ -73,8 +82,8 @@ class Atmosphere(Module):
             dry=self.temperature,
         )
         return {
-            "air_out": Stream(m_dot=0.0, T=self.temperature, p=self.pressure, fluid=AIR),
-            "wet_air_out": Stream(m_dot=0.0, T=temperature, p=self.pressure, fluid=AIR),
+            "air_out": Stream._si(m_dot=0.0, T=self.temperature, p=self.pressure, fluid=AIR),
+            "wet_air_out": Stream._si(m_dot=0.0, T=temperature, p=self.pressure, fluid=AIR),
         }
 
     def forward(self, inlets):

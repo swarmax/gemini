@@ -52,8 +52,10 @@ tighten quantity defaults.
 `{"value": 150, "unit": "m3/h"}` to the declared SI unit and then validates it with a Pydantic
 `TypeAdapter`; a failure raises `gm.errors.ValidationError`. Text such as `"150 m3/h"` is
 `invalid_value` and a unit of another dimension `invalid_unit`, listing the units of the field.
-Plain numbers are taken as SI: inside a module, a plant and the engine every value is a plain SI
-number, and the conversion happens once, here at the boundary. A cheap check built once per
+`validate` itself takes a plain number as SI: inside a module, a plant and the engine every value is a plain
+SI number, and the conversion happens once, at the public door. `Module.set_params` refuses a bare number
+with a dimension before it gets here (`gemini/types/bare.py`, `invalid_value`, see [api.md](api.md#units)),
+and calls the private `_set_si_params` with the converted values. A cheap check built once per
 declaration is tried first and accepts only the common case, returned unchanged: an exact `float`
 inside its bounds (NaN never is), an exact `bool` or `str` for those kinds, `None` for an optional
 kind. Everything else, and every failure, takes the full path, so accepted values, coercions and
@@ -105,17 +107,17 @@ helpers remain in `gemini.units`.
 
 `Stream(flow=..., T=..., p=..., fluid=None)` accepts mass flow (`kg/s`, `t/h`) or volumetric flow
 (`m3/s`, `m3/h`, `l/s`) and converts it with the stream's fluid density. Plain `flow` numbers are
-kg/s; any text, such as `flow="150"` or `flow="150 m3/h"`, raises `gm.errors.ValidationError` (`invalid_value`), and passing both
+refused: `flow`, `m_dot`, `T` and `p` are quantities (`Stream(m_dot=Quantity(10, "kg/s"), T=Quantity(300, "K"),
+p=Quantity(1, "bar"))`), and a bare number or any text, such as `flow="150"` or `flow="150 m3/h"`, raises `gm.errors.ValidationError` (`invalid_value`), and passing both
 `flow` and `m_dot` raises `gm.errors.ValidationError`, as do an unknown keyword (with a did-you-mean),
 a missing field and a `fluid` that is neither a `Fluid` nor a mapping of its fields. The explicit
-SI `m_dot` field remains supported. Without `fluid` the constructor uses the runtime default
+`m_dot` field is a mass flow quantity. Without `fluid` the constructor uses the runtime default
 fluid. All public numeric declarations accept a `gm.units.Quantity(value, unit)` or its dict.
 `gm.units.convert(value, from_unit, to_unit, quantity=None)` handles explicit output conversion.
 
 `gm.units` is the one unit implementation (`gemini/units/conversions.py`, one table). Its public names:
 `names(quantity=None)` lists every unit, or those of a named quantity such as `"pressure"`;
-`parse({"value": 150, "unit": "m3/h"})` returns `(150.0, "m3/h")` (a number, a space and a known unit, else
-`ValidationError`); `convert(value, from_unit, to_unit, quantity=None)`; and `fits(unit, quantity)` tells
+`convert(value, from_unit, to_unit, quantity=None)`; and `fits(unit, quantity)` tells
 whether a unit converts to the quantity's SI unit, which is how bindings and CSV headers
 `name [unit]` are checked. An unknown unit does not fit and an unknown quantity raises
 `ValidationError` with suggestions. The table includes `km`, `mm`, `in`, `kPa`, `MPa`, `rpm`
@@ -127,11 +129,12 @@ quantity, so physics needs no upward import and the quantity list has one source
 `Stream` is one frozen slots dataclass (`m_dot`, `T`, `p`, `fluid`) for every path: plain calls,
 batched runs and traces. It has dataclass equality, hash, `repr`, pickling and `copy`; its JSON
 (`pydantic_core.to_jsonable_python`) lists `m_dot`, `T`, `p` and `fluid`, and `Stream(**data)`
-builds it back. The constructor validates at the boundary: numbers become Python `float`,
+builds it back. The public constructor takes quantities and converts them; `Stream._si(m_dot=, T=, p=, fluid=)` is the private
+constructor of SI values that `gemini` itself uses (no unit lookup). The constructor validates at the boundary: numbers become Python `float`,
 `m_dot` must be finite, `T > 0` and finite, `p >= 0` and finite, else `PhysicsError`. When a
 field is an array over time or a traced value it is kept as given and the limits become
 `gemini.ops.check` calls, so an invalid row raises the same class. `stream.with_(**changes)` is
-a trusted fast copy: it reuses the `Fluid`, checks only the changed fields against the same
+a trusted fast copy, author-level and in SI: it reuses the `Fluid`, checks only the changed fields against the same
 limits and raises `ValidationError` for an unknown field. A traced inlet is a `Stream` of graph
 inputs with the concrete `Fluid`, so `volumetric_flow()` divides by a plain float density.
 `Ports` hold a `Stream`, a power (a number, an array or a traced value) or the list of a `many` port.
@@ -145,9 +148,9 @@ guard of the graph cache; numeric parameters are graph inputs by default.
 dataclass: numbers become `float`, bounds raise `PhysicsError`), the original
 constant-water numbers. `Fluid` carries salinity, dissolved CO2 and free-gas mass fractions.
 `density`, `viscosity`, `specific_heat` and `thermal_conductivity` are validated and immutable, take
-unit strings (`{"value": 0.4, "unit": "mPa*s"}`) and describe the liquid of a brine or water fluid and the gas of a gas
+quantities (`Fluid(viscosity=Quantity(0.4, "mPa*s"))`, a bare number for them raises `invalid_value`; the fractions and ratios stay numbers) and describe the liquid of a brine or water fluid and the gas of a gas
 fluid; a mixture density is a computed property, never an input. Reservoirs hold no density or
-viscosity: the fluid owns its properties. A value that does not fit raises `ValidationError`.
+viscosity: the fluid owns its properties. A value that does not fit raises `ValidationError`. `Fluid._si(...)` is the private constructor of SI numbers (`BRINE`, `WATER`, the fluids `gemini` builds); `Fluid.model_validate(mapping)` reads the SI data that `model_dump` writes; the plant dict stores a fluid with `{"value", "unit"}` for those four fields.
 
 Free gas is `gas_liquid_ratio` (normal m3 of free gas per m3 of produced liquid, at 0 degC and
 1.01325 bar a, unit `Nm3/m3`) with `gas_composition` (mole fractions summing to one; species `CH4`,

@@ -6,30 +6,6 @@ from gemini import ops
 from gemini.errors import PhysicsError
 from gemini.units import k_to_c
 
-ABSORPTION_THERMAL_COP = 0.7
-"""Thermal COP of a single-effect water/LiBr absorption chiller [-] (Herold, Radermacher and
-Klein 2016, Absorption Chillers and Heat Pumps, 2nd ed.: about 0.7)."""
-
-
-ABSORPTION_MINIMUM_DRIVING_TEMPERATURE = 353.15
-"""Generator inlet temperature [K] (80 degC) below which a LiBr absorption chiller is off; within
-the driving range of about 70 to 120 degC of single-effect machines (GEMINI default)."""
-
-
-ADSORPTION_THERMAL_COP = 0.55
-"""Cycle-averaged thermal COP of a silica-gel/water adsorption chiller [-] (Wang and Oliveira
-2006, Progress in Energy and Combustion Science 32, 424-458: about 0.5 to 0.6)."""
-
-
-ADSORPTION_MINIMUM_DRIVING_TEMPERATURE = 328.15
-"""Generator inlet temperature [K] (55 degC) below which an adsorption chiller is off (GEMINI
-default for low-temperature silica-gel machines)."""
-
-
-ADSORPTION_MAXIMUM_DRIVING_TEMPERATURE = 363.15
-"""Generator inlet temperature [K] (90 degC) above which the adsorption characteristic map is not
-valid (GEMINI default)."""
-
 
 @ops.physics
 def characteristic_temperature_difference(

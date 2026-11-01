@@ -10,6 +10,8 @@ from gemini import units
 from gemini.analysis import wells
 from gemini.physics.geometry import section_values, vertical_path
 from gemini.types.flows import Stream
+from tests.fixtures import si
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 from tests.fixtures.sample_cases import example_plant
 
@@ -34,7 +36,12 @@ def test_the_operating_point_reproduces_the_wellhead_pressure_in_the_plant_call(
     doublet.get_submodule("reservoir").production_rate = point["rate"]["value"]
     fluid = doublet.get_submodule("reservoir").fluid
     supply = doublet(
-        return_in=Stream(m_dot=point["rate"]["value"], T=300.0, p=1e6, fluid=fluid)
+        return_in=Stream(
+            m_dot=gm.units.Quantity(point["rate"]["value"], "kg/s"),
+            T=gm.units.Quantity(300.0, "K"),
+            p=gm.units.Quantity(1e6, "Pa"),
+            fluid=fluid,
+        )
     ).outlets
     assert supply.supply_out.p == pytest.approx(4.6 * BAR, rel=1e-9)
     assert point["wellhead_pressure"]["value"] == pytest.approx(4.6 * BAR)
@@ -99,7 +106,9 @@ WIDE = 2.0
 """A well this wide has no friction to speak of: the answer is the column of brine."""
 INJECTIVITY = 2e-6
 RATE = 50.0
-BRINE = gm.Fluid(density=1030.0, viscosity=4e-4)
+BRINE = gm.Fluid(
+    density=gm.units.Quantity(1030.0, "kg/m3"), viscosity=gm.units.Quantity(4e-4, "Pa.s")
+)
 
 
 def injector():
@@ -110,12 +119,13 @@ def injector():
     )
     plant._add_module("limb", limb)
     path = section_values(vertical_path(DEPTH, WIDE, 2e-5))
-    limb["well"].set_params(
+    si.set_params(
+        limb["well"],
         "",
         {
             **path,
             "soil_temperature": {"value": 50, "unit": "degC"},
-            "heat_transfer_coefficient": 0.0,
+            "heat_transfer_coefficient": gm.units.Quantity(0.0, "W/m2/K"),
         },
     )
     limb["sink"].set_params(
@@ -123,16 +133,16 @@ def injector():
         {
             "pressure": {"value": 280, "unit": "bar"},
             "temperature": {"value": 87, "unit": "degC"},
-            "permeability": 2e-13,
-            "aquifer_thickness": 100.0,
-            "drainage_radius": 1000.0,
-            "top_depth": 2450.0,
-            "injectivity_index": INJECTIVITY,
-            "wellbore_radius": 0.1,
+            "permeability": gm.units.Quantity(2e-13, "m2"),
+            "aquifer_thickness": gm.units.Quantity(100.0, "m"),
+            "drainage_radius": gm.units.Quantity(1000.0, "m"),
+            "top_depth": gm.units.Quantity(2450.0, "m"),
+            "injectivity_index": gm.units.Quantity(INJECTIVITY, "m3/s/Pa"),
+            "wellbore_radius": gm.units.Quantity(0.1, "m"),
         },
     )
     limb["well"].fluid = limb["sink"].fluid = BRINE
-    return plant
+    return with_values(plant)
 
 
 def needed(rate):

@@ -23,9 +23,10 @@ class Valve(Module):
     ``Phi_0 = 1 / rangeability``: linear ``Phi = Phi_0 + (1 - Phi_0) h`` and equal percentage
     ``Phi = Phi_0 exp(h ln(1 / Phi_0)) = R^(h - 1)``, ``Kv_eff = Phi(h) flow_coefficient`` for an
     opening ``h > 0``. A real valve leaves this curve below ``Phi_0`` and seals at ``h = 0``,
-    modelled as ``Kv_eff = 0``. The default characteristic is equal percentage, the most common
-    one for process control valves, and the default rangeability 50 is the typical inherent
-    rangeability of globe control valves (Emerson, Control Valve Handbook, 5th ed., 2017).
+    modelled as ``Kv_eff = 0``. The plant states the characteristic and the rangeability; equal
+    percentage is the most common characteristic of process control valves and 50 the typical
+    inherent rangeability of globe control valves (Emerson, Control Valve Handbook, 5th ed.,
+    2017).
 
     Simplifications: no choked flow or cavitation (check the outlet pressure against the vapour
     pressure; IEC 60534-2-1 ``F_L`` limits are not modelled), no installed-characteristic or
@@ -47,12 +48,10 @@ class Valve(Module):
         )
         self.characteristic = Parameter(
             Literal["linear", "equal_percentage"],
-            default="equal_percentage",
             description="Inherent flow characteristic of the valve",
         )
         self.rangeability = Parameter(
             Ratio,
-            default=hydraulics.DEFAULT_VALVE_RANGEABILITY,
             gt=1,
             description="Ratio of the largest to the smallest controllable flow coefficient",
         )

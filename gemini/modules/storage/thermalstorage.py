@@ -26,7 +26,7 @@ class ThermalStorage(Equipment, Module):
 
     The tank content is ``module.fluid`` at one uniform temperature, the state ``temperature``.
     Each circuit exchanges heat with the tank through a constant effectiveness ``e``
-    (``charge_effectiveness``, ``discharge_effectiveness``); the default ``e = 1`` is a direct
+    (``charge_effectiveness``, ``discharge_effectiveness``); ``e = 1`` is a direct
     connection, where the circuit leaves at the tank temperature. With ``C_i = m_dot_i * cp_i``
     the heat flows into the tank are ``Q_i = e_i * C_i * (T_i_in - T)`` and the circuit leaves
     at ``T_i_out = T_i_in - e_i * (T_i_in - T)``; the ambient exchange is
@@ -83,17 +83,19 @@ class ThermalStorage(Equipment, Module):
         )
         self.charge_effectiveness = Parameter(
             Fraction,
-            default=1,
             description=(
                 "Effectiveness of the charging circuit heat exchange; one is a direct connection"
             ),
         )
         self.discharge_effectiveness = Parameter(
             Fraction,
-            default=1,
             description=(
                 "Effectiveness of the discharging circuit heat exchange; one is a direct connection"
             ),
+        )
+
+        self.initial_temperature = Parameter(
+            Temperature, description="Temperature of the tank content at the start of the run"
         )
 
         # Inlets
@@ -102,7 +104,7 @@ class ThermalStorage(Equipment, Module):
         self.air_in = Inlet(Stream, kind="air")
 
         # States
-        self.temperature = State(Temperature, default=_physics.DEFAULT_TANK_TEMPERATURE)
+        self.temperature = State(Temperature)
 
         # Outputs
         self.tank_temperature = Output(

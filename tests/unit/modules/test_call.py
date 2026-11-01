@@ -5,13 +5,16 @@ import json
 import pytest
 
 import gemini as gm
+from gemini.units import Quantity
+from tests.fixtures import si
 from tests.fixtures.errors import raises
+from tests.fixtures.esp_design import ESP_MODULE
 
 ESP_PARAMETERS = {
     "stage_count": 12,
     "head_coefficients": [1.2e-10, -2.5e-6, 4e-3, 0.2, 5.0, 100.0],
     "power_coefficients": [1.0e-10, -1.0e-6, 3.0e-3, 0.3, 4.0, 200.0],
-}
+} | ESP_MODULE
 SUCTION = {
     "fluid_in": {
         "flow": {"value": 150, "unit": "m3/h"},
@@ -48,7 +51,7 @@ def test_evaluate_equals_a_direct_call_bit_for_bit():
     """The JSON call is the same call: a class, a name and a built module agree."""
     from gemini.modules.pumps import ESP
 
-    direct = ESP().set_params("", ESP_PARAMETERS)(
+    direct = si.set_params(ESP(), "", ESP_PARAMETERS)(
         gm.Stream(
             flow={"value": 150, "unit": "m3/h"},
             T={"value": 80, "unit": "degC"},
@@ -62,10 +65,53 @@ def test_evaluate_equals_a_direct_call_bit_for_bit():
         assert result["outputs"]["head"]["value"] == direct.outputs.head
 
 
-def test_evaluate_accepts_si_numbers_as_well_as_unit_strings():
-    """Plain numbers are SI."""
-    inlets = {"fluid_in": {"m_dot": 12.0, "T": 353.15, "p": 2e6}}
-    assert call(inlets=inlets)["errors"] == []
+def test_evaluate_accepts_quantities_in_any_unit_of_the_dimension():
+    """A ``Quantity`` or its dict converts: the same call in K and in degC gives the same result."""
+    kelvin = {"m_dot": Quantity(12.0, "kg/s"), "T": Quantity(353.15, "K"), "p": Quantity(2e6, "Pa")}
+    celsius = {"m_dot": Quantity(12.0, "kg/s"), "T": Quantity(80, "degC"), "p": Quantity(20, "bar")}
+    first = call(inlets={"fluid_in": kelvin})
+    assert first["errors"] == []
+    assert call(inlets={"fluid_in": celsius})["outlets"] == first["outlets"]
+
+
+@pytest.mark.parametrize(
+    ("changes", "path", "quantity"),
+    [
+        ({"parameters": ESP_PARAMETERS | {"setting_depth": 0}}, "setting_depth", "length"),
+        ({"controls": {"frequency": 50.0}}, "frequency", "frequency"),
+        (
+            {"inlets": {"fluid_in": SUCTION["fluid_in"] | {"T": 353.15}}},
+            "fluid_in.T",
+            "temperature",
+        ),
+        ({"inlets": {"fluid_in": SUCTION["fluid_in"] | {"p": 2e6}}}, "fluid_in.p", "pressure"),
+        (
+            {"inlets": {"fluid_in": SUCTION["fluid_in"] | {"flow": 0.04}}},
+            "fluid_in.flow",
+            "volume flow",
+        ),
+        (
+            {"inlets": {"fluid_in": SUCTION["fluid_in"] | {"m_dot": 12.0}}},
+            "fluid_in.m_dot",
+            "mass flow",
+        ),
+    ],
+)
+def test_a_bare_number_with_a_dimension_is_refused_naming_path_quantity_and_units(
+    changes, path, quantity
+):
+    """Zero too: the message names the path, the quantity and the accepted units."""
+    with raises(gm.errors.ValidationError, "invalid_value", match=quantity) as caught:
+        call(**changes)
+    assert caught.value.path == path and "accepted units" in str(caught.value)
+    recorded = call(on_error="record", **changes)["errors"]
+    assert [item["code"] for item in recorded] == ["invalid_value"]
+    assert recorded[0]["path"] == path
+
+
+def test_a_dimensionless_parameter_stays_a_plain_number():
+    """The stage count and a fraction are numbers without a unit."""
+    assert call(parameters=ESP_PARAMETERS | {"motor_efficiency": 0.9})["errors"] == []
 
 
 @pytest.mark.parametrize(
@@ -134,7 +180,7 @@ def test_a_wrong_map_of_units_follows_on_error():
 
 def test_a_volume_flow_goes_in_as_flow_with_the_fluid_of_the_inlet():
     """``flow`` converts with the density of the fluid given for the inlet, at any unit."""
-    brine = {"density": 1030.0}
+    brine = {"density": {"value": 1030.0, "unit": "kg/m3"}}
     for flow in ({"value": 150, "unit": "m3/h"}, {"value": 41.666666666666664, "unit": "l/s"}):
         inlets = {
             "fluid_in": {
@@ -169,11 +215,9 @@ def test_a_volume_flow_given_as_m_dot_points_to_flow(flow):
     assert recorded["code"] == "invalid_call" and recorded["suggestions"] == ["flow"]
 
 
-@pytest.mark.parametrize(
-    "flow", [{"value": 40, "unit": "kg/s"}, {"value": 144, "unit": "t/h"}, 40.0]
-)
+@pytest.mark.parametrize("flow", [{"value": 40, "unit": "kg/s"}, {"value": 144, "unit": "t/h"}])
 def test_a_mass_flow_stays_a_mass_flow(flow):
-    """A number or a mass unit goes through ``m_dot`` unchanged."""
+    """A mass unit goes through ``m_dot`` unchanged."""
     inlets = {
         "fluid_in": {
             "m_dot": flow,

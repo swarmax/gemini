@@ -10,7 +10,11 @@ from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
-FEED = Stream(m_dot=8, T=330, p=3e5)
+FEED = Stream(
+    m_dot=gm.units.Quantity(8, "kg/s"),
+    T=gm.units.Quantity(330, "K"),
+    p=gm.units.Quantity(3e5, "Pa"),
+)
 
 
 def test_bleed_split_conserves_mass_and_energy():
@@ -41,7 +45,14 @@ def test_limits():
 def test_blowdown_matches_traced():
     """The split traces and equals one call per row."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=310, p=2e5), blowdown_fraction=fraction)
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(310, "K"),
+                p=gm.units.Quantity(2e5, "Pa"),
+            ),
+            blowdown_fraction=fraction,
+        )
         for m_dot, fraction in [(0, 0.1), (10, 0), (30, 0.05), (30, 1)]
     ]
     assert_module_matches(Blowdown(), rows)

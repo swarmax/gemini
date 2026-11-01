@@ -10,6 +10,7 @@ import gemini as gm
 from gemini._utils.jsonable import to_plain
 from gemini.evaluate._utils.flows import Flows
 from gemini.evaluate.totals import KPI_NAMES
+from tests.fixtures.designs import with_values
 from tests.fixtures.result_tables import cold_ports, heat_ports, make_results
 
 
@@ -154,6 +155,7 @@ def overflowing():
     plant.connect("boiler.flue_out", "flue")
     plant.connect("boiler.loss_out", "loss")
     plant.users.fluid = gm.WATER
+    with_values(plant)
     index = pd.date_range("2027-01-01", periods=2, freq="D", tz="UTC", name="time")
     columns = {
         "users.heat_demand": 1e6,

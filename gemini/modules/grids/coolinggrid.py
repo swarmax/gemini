@@ -186,7 +186,7 @@ class CoolingGrid(Module):
                 "return_out; expected all three on a closed loop",
                 code="invalid_design",
             )
-        offered = Stream(
+        offered = Stream._si(
             m_dot=self.flow, T=self.return_temperature, p=self.return_pressure, fluid=self.fluid
         )
         return {"return_out": offered}

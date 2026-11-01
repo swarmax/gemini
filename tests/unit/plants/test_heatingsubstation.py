@@ -9,11 +9,16 @@ from gemini.modules import energy_balance, mass_balance
 from gemini.plants import HeatingSubstation
 from gemini.types import Stream
 from tests.fixtures.balance import assert_plant_closes
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
 CP = 4217.4
-NETWORK = Stream(m_dot=2.0, T=348.15, p=6e5)
+NETWORK = Stream(
+    m_dot=gm.units.Quantity(2.0, "kg/s"),
+    T=gm.units.Quantity(348.15, "K"),
+    p=gm.units.Quantity(6e5, "Pa"),
+)
 
 
 def counterflow_effectiveness(ua, c_min, c_max):
@@ -25,7 +30,7 @@ def counterflow_effectiveness(ua, c_min, c_max):
 
 def test_met_demand_closes_the_building_loop(plants):
     """With the demand met the return follows from e C_min (T_network - T_return) = Q."""
-    substation = plants["heating_substation"](HeatingSubstation())
+    substation = plants["heating_substation"](with_values(HeatingSubstation()))
     result = substation(supply_in=NETWORK)
     out = reading(result)
     effectiveness = counterflow_effectiveness(2e4, 2 * CP, 3 * CP)
@@ -55,7 +60,7 @@ def test_met_demand_closes_the_building_loop(plants):
 
 def test_large_demand_is_capped_at_the_return_floor(plants):
     """Beyond the exchanger's reach the return sits at the floor and the rest is unmet."""
-    substation = plants["heating_substation"](HeatingSubstation(), demand=5e5)
+    substation = plants["heating_substation"](with_values(HeatingSubstation()), demand=5e5)
     result = substation(supply_in=NETWORK)
     out = reading(result)
     effectiveness = counterflow_effectiveness(2e4, 2 * CP, 3 * CP)
@@ -69,7 +74,7 @@ def test_large_demand_is_capped_at_the_return_floor(plants):
 
 def test_stopped_or_cold_network_delivers_nothing(plants):
     """No network flow, or a supply below the return floor, leaves the demand unmet."""
-    substation = plants["heating_substation"](HeatingSubstation())
+    substation = plants["heating_substation"](with_values(HeatingSubstation()))
     result = substation(supply_in=NETWORK.with_(m_dot=0.0))
     stopped = reading(result)
     assert stopped.heat_supplied == 0
@@ -82,7 +87,7 @@ def test_stopped_or_cold_network_delivers_nothing(plants):
 
 def test_invalid_inputs_raise(plants):
     """A closed valve with flow and reverse flow raise; missing data names the parameters."""
-    substation = plants["heating_substation"](HeatingSubstation())
+    substation = plants["heating_substation"](with_values(HeatingSubstation()))
     substation.valve.opening = 0
     with pytest.raises(gm.errors.PhysicsError, match="closed valve"):
         substation(supply_in=NETWORK)
@@ -90,4 +95,4 @@ def test_invalid_inputs_raise(plants):
     with pytest.raises(gm.errors.PhysicsError):
         substation(supply_in=NETWORK.with_(m_dot=-1.0))
     with raises(gm.errors.ValidationError, "missing_value", match="pump.flow"):
-        HeatingSubstation()(supply_in=NETWORK)
+        with_values(HeatingSubstation())(supply_in=NETWORK)

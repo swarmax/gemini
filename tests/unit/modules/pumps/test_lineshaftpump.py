@@ -7,7 +7,10 @@ from gemini.errors import PhysicsError
 from gemini.modules._utils.balance import energy_balance, mass_balance
 from gemini.modules.pumps import ESP, LineShaftPump
 from gemini.types.flows import Stream
+from gemini.units import Quantity
+from tests.fixtures import si
 from tests.fixtures.equivalence import assert_module_matches
+from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.reading import reading
 
 CURVES = {
@@ -20,13 +23,17 @@ CURVES = {
 def pump(**changes):
     """Return a 12-stage pump set at 300 m with 5 W/m of shaft friction at 60 Hz."""
     params = dict(CURVES, setting_depth=300, shaft_friction_loss=5, motor_efficiency=0.9)
-    return LineShaftPump().set_params("", params | changes)
+    return si.set_params(LineShaftPump(), "", params | changes)
 
 
 def test_pump_stages_match_the_esp_basis_and_friction_scales_with_speed():
     """Head and pump power equal the ESP curves; friction is loss * depth * f / 60 Hz."""
-    suction = Stream(m_dot=units.m3h_to_m3s(200) * 1000, T=340, p=1e6)
-    esp = reading(ESP().set_params("", CURVES)(fluid_in=suction, frequency=50))
+    suction = Stream(
+        m_dot=Quantity(units.m3h_to_m3s(200) * 1000, "kg/s"),
+        T=Quantity(340, "K"),
+        p=Quantity(1e6, "Pa"),
+    )
+    esp = reading(si.set_params(ESP(), "", ESP_MODULE | CURVES)(fluid_in=suction, frequency=50))
     result = pump()(fluid_in=suction, frequency=50)
     out = reading(result)
     assert out.head == pytest.approx(esp.head)
@@ -42,7 +49,10 @@ def test_pump_stages_match_the_esp_basis_and_friction_scales_with_speed():
 def test_isothermal_electricity_is_unresolved_pump_power():
     """The audit reports all electricity as unresolved; the thermal part closes."""
     machine = pump()
-    result = machine(fluid_in=Stream(m_dot=40, T=340, p=1e6), frequency=55)
+    result = machine(
+        fluid_in=Stream(m_dot=Quantity(40, "kg/s"), T=Quantity(340, "K"), p=Quantity(1e6, "Pa")),
+        frequency=55,
+    )
     balance = energy_balance(machine, result)
     assert balance["unresolved_power"] == reading(result).electricity
     assert balance["relative_thermal_residual"] < 1e-12
@@ -51,7 +61,12 @@ def test_isothermal_electricity_is_unresolved_pump_power():
 
 def test_zero_flow_runs_at_shutoff():
     """At zero flow the pump holds its shutoff head and draws the shutoff power."""
-    out = reading(pump(shaft_friction_loss=0)(fluid_in=Stream(m_dot=0, T=340, p=1e6), frequency=60))
+    out = reading(
+        pump(shaft_friction_loss=0)(
+            fluid_in=Stream(m_dot=Quantity(0, "kg/s"), T=Quantity(340, "K"), p=Quantity(1e6, "Pa")),
+            frequency=60,
+        )
+    )
     assert out.head == pytest.approx(units.ft_head_to_pa(12 * 83.08389282))
     assert out.pump_power == pytest.approx(units.bhp_to_w(12 * 10.02089977))
     assert out.efficiency == 0
@@ -59,7 +74,7 @@ def test_zero_flow_runs_at_shutoff():
 
 def test_reverse_flow_and_off_curve_raise():
     """Reverse flow, a negative head and a negative pump power raise PhysicsError."""
-    suction = Stream(m_dot=40, T=340, p=1e6)
+    suction = Stream(m_dot=Quantity(40, "kg/s"), T=Quantity(340, "K"), p=Quantity(1e6, "Pa"))
     with pytest.raises(PhysicsError, match="reverse flow"):
         pump()(fluid_in=suction.with_(m_dot=-1), frequency=50)
     with pytest.raises(PhysicsError, match="head curve"):
@@ -71,7 +86,12 @@ def test_reverse_flow_and_off_curve_raise():
 def test_traced_call_matches_one_call_per_row():
     """Shutoff, running and stopped-efficiency rows trace and equal one call per row."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=330.0, p=3e5), frequency=frequency)
+        dict(
+            fluid_in=Stream(
+                m_dot=Quantity(m_dot, "kg/s"), T=Quantity(330.0, "K"), p=Quantity(3e5, "Pa")
+            ),
+            frequency=frequency,
+        )
         for m_dot, frequency in [(0.0, 50.0), (5.0, 50.0), (10.0, 60.0)]
     ]
     assert_module_matches(pump(), rows)

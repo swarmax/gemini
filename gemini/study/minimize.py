@@ -12,7 +12,7 @@ from gemini.study._utils.choices import STRUCTURE, from_choices, split
 from gemini.study._utils.parallel import mapped
 from gemini.study._utils.resize import resized
 from gemini.study._utils.roles import concrete, expanded, quantities
-from gemini.study._utils.target import is_case_name, parameter_value
+from gemini.study._utils.target import is_case_name
 from gemini.study._utils.trial import LARGEST_VIOLATION, checked_metric, limit_si, run_judged
 from gemini.types.shapes import Value, measure
 
@@ -91,7 +91,7 @@ def _design(plant, parameters):
     values = {k: q.value for k, q in parameters.items() if k != STRUCTURE and not is_case_name(k)}
     for name, number in expanded(design, values).items():
         path, _, parameter = name.rpartition(".")
-        design.set_params(path, {parameter: parameter_value(design, name, number)})
+        design._set_si_params(path, {parameter: number})
     return design
 
 

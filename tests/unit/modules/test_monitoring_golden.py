@@ -21,6 +21,7 @@ from gemini.physics import geometry
 from gemini.types.flows import Stream
 from scripts.legacy import tables
 from tests.fixtures import FIXTURES, OLD_PROJECT
+from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.evaluate import assert_values, configured
 from tests.fixtures.reading import reading
 
@@ -32,15 +33,15 @@ def _old_property(name):
 
 def _esp_theoretical_values(row, esp_property):
     """Evaluate the ESP curve in float32, as the old runtime did, and report bar."""
-    pump = configured(ESP, tables.esp_params_from_gemini(esp_property))
+    pump = configured(ESP, ESP_MODULE | tables.esp_params_from_gemini(esp_property))
     with gm.runtime.settings(precision="float32"):
         outputs = reading(
             pump(
                 frequency=row.ESP_freq,
                 fluid_in=Stream(
-                    m_dot=units.m3h_to_m3s(row.Qp) * 1000,
-                    T=300,
-                    p=units.bar_to_pa(row.ESP_Pin),
+                    m_dot=gm.units.Quantity(units.m3h_to_m3s(row.Qp) * 1000, "kg/s"),
+                    T=gm.units.Quantity(300, "K"),
+                    p=gm.units.Quantity(units.bar_to_pa(row.ESP_Pin), "Pa"),
                 ),
             )
         )
@@ -107,7 +108,10 @@ def _esp_vlp_values(row, well_property, esp_property, reservoir_property):
     mass = units.m3h_to_m3s(row.Qp) * density
     intake = well.intake_conditions(reservoir(production_rate=mass).outlets["sandface_out"])
     wellhead = Stream(
-        m_dot=mass, p=units.bar_to_pa(row.Pwh_prod), T=units.c_to_k(row.T_p_in), fluid=well.fluid
+        m_dot=gm.units.Quantity(mass, "kg/s"),
+        p=gm.units.Quantity(units.bar_to_pa(row.Pwh_prod), "Pa"),
+        T=gm.units.Quantity(units.c_to_k(row.T_p_in), "K"),
+        fluid=well.fluid,
     )
     discharge = well.discharge_from_wellhead(wellhead)
     slope, offset = tables.esp_params_from_gemini(esp_property)["correction_factors"]
@@ -132,9 +136,11 @@ def _injection_values(row):
     well.fluid = reservoir.fluid
     pressure, temperature = units.bar_to_pa(row.InjectorPump_Pout), units.c_to_k(row.T_p_out)
     wellhead = Stream(
-        m_dot=-units.m3h_to_m3s(row.Qp) * well.fluid.properties(pressure, temperature).rho_l,
-        p=pressure,
-        T=temperature,
+        m_dot=gm.units.Quantity(
+            -units.m3h_to_m3s(row.Qp) * well.fluid.properties(pressure, temperature).rho_l, "kg/s"
+        ),
+        p=gm.units.Quantity(pressure, "Pa"),
+        T=gm.units.Quantity(temperature, "K"),
         fluid=well.fluid,
     )
     outputs = reading(well(wellhead_in=wellhead))

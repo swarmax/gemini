@@ -6,6 +6,7 @@ import pytest
 
 import gemini as gm
 from gemini.errors import NotImplementedYet, ValidationError
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 
 
@@ -21,12 +22,16 @@ def chain():
     plant.connect("first.fluid_out", "second.fluid_in")
     plant.connect("degasser.gas_out", "gas_out")
     plant.connect("second.fluid_out", "product")
-    return plant
+    return with_values(plant)
 
 
 def stream():
     """Return a brine stream."""
-    return gm.Stream(m_dot=10.0, T=350.0, p=5e5)
+    return gm.Stream(
+        m_dot=gm.units.Quantity(10.0, "kg/s"),
+        T=gm.units.Quantity(350.0, "K"),
+        p=gm.units.Quantity(5e5, "Pa"),
+    )
 
 
 def test_a_plant_is_a_module_in_the_plant_category():
@@ -59,13 +64,11 @@ def test_an_unconnected_port_is_reported_with_its_path():
     plant.add("Degasser", "degasser")
     plant.connect("feed", "degasser.fluid_in")
     plant.connect("degasser.liquid_out", "product")
-    found = [
-        (item["path"], item["code"])
-        for item in gm.plants.validate(plant.to_dict(structure=True), on_error="record")
-    ]
+    with_values(plant)
+    found = [(item["path"], item["code"]) for item in gm.plants.validate(plant, on_error="record")]
     assert ("degasser.gas_out", "unconnected_port") in found
     with raises(ValidationError, "unconnected_port"):
-        gm.plants.validate(plant.to_dict(structure=True))
+        gm.plants.validate(plant)
     with raises(ValidationError, "unconnected_port") as caught:
         plant(feed=stream())
     assert caught.value.path == "degasser.gas_out"
@@ -152,12 +155,13 @@ def test_a_cycle_is_a_loop_and_a_state_connection_waits_for_scan():
     plant.add("Filter", "second")
     plant.connect("first.fluid_out", "second.fluid_in")
     plant.connect("second.fluid_out", "first.fluid_in")
-    assert plant._compiled().iterates
+    assert with_values(plant)._compiled().iterates
     plant = gm.Plant("Loop")
     plant.add("Filter", "first")
     plant.add("Filter", "second")
     plant.connect("first.fluid_out", "second.fluid_in")
     plant.connect("second.fluid_out", "first.fluid_in", type="state")
+    with_values(plant)
     with pytest.raises(NotImplementedYet):
         plant()
 
@@ -191,7 +195,7 @@ def test_connections_reach_through_groups_but_never_into_plants():
 
 def test_a_plant_child_in_a_false_cycle_is_opened():
     """The doublet loop through the surface equipment runs the doublet's children directly."""
-    plant = gm.plants.get("DoubletHeatPlant")
+    plant = with_values(gm.plants.get("DoubletHeatPlant"))
     paths = [step.path for step in plant._compiled().steps]
     assert [path for path in paths if path != "doublet.formation"] == [
         "doublet.reservoir",
@@ -221,7 +225,7 @@ def test_a_plant_child_outside_a_cycle_is_called_as_one_unit():
 
 def test_the_doublet_runs_injection_before_production():
     """Ties go to the first appearance in the connection list, as the handwritten forward."""
-    plant = gm.plants.get("Doublet")
+    plant = with_values(gm.plants.get("Doublet"))
     paths = [step.path for step in plant._compiled().steps]
     assert [path for path in paths if path != "formation"] == [
         "injector",
@@ -237,7 +241,7 @@ def test_to_spec_is_json_and_validate_is_empty(chain):
     """The spec is plain JSON, rebuilds an equal plant and has no problems."""
     spec = chain.to_dict()
     assert json.loads(json.dumps(spec, allow_nan=False)) == spec
-    found = gm.plants.validate(chain.to_dict(structure=True), on_error="record")
+    found = gm.plants.validate(chain, on_error="record")
     assert {item["code"] for item in found} == {"root_plant_port"}
     assert [item["path"] for item in found] == [
         "inlets.feed",
@@ -255,7 +259,7 @@ def test_a_plant_has_no_run_method():
 def test_a_standalone_plant_path_is_its_snake_case_name():
     """The root path keeps the name the class-based plant had, in events and messages."""
     assert gm.Plant("DoubletHeatPlant").path == "doublet_heat_plant"
-    assert gm.plants.get("DoubletHeatPlant").path == "doublet_heat_plant"
+    assert with_values(gm.plants.get("DoubletHeatPlant")).path == "doublet_heat_plant"
 
 
 def test_add_takes_one_dict_of_parameters_the_dict_of_set_params():

@@ -27,4 +27,6 @@ capex                                           38.92 MEUR
 opex                                             4.38 MEUR/yr
 LCTS                                            52.69 EUR/MWh
 CO2                                             14.49 kt
+electricity_bought: 5.321 MW, limit 6 MW
+  passed: True
 missing_assumption: assumptions.finance.capex.heat_pump

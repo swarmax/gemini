@@ -6,13 +6,16 @@ from gemini.errors import PhysicsError
 from gemini.modules._utils.balance import energy_balance, mass_balance
 from gemini.modules.cooling import AbsorptionUnit
 from gemini.types.flows import Stream
+from gemini.units import Quantity
+from tests.fixtures import si
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.reading import reading
 
 CP = 4217.4
-GENERATOR = Stream(m_dot=10, T=361.15, p=3e5)
-CHILLED = Stream(m_dot=10, T=285.15, p=3e5)
-COOLING = Stream(m_dot=25, T=303.15, p=3e5)
+GENERATOR = Stream(m_dot=Quantity(10, "kg/s"), T=Quantity(361.15, "K"), p=Quantity(3e5, "Pa"))
+CHILLED = Stream(m_dot=Quantity(10, "kg/s"), T=Quantity(285.15, "K"), p=Quantity(3e5, "Pa"))
+COOLING = Stream(m_dot=Quantity(25, "kg/s"), T=Quantity(303.15, "K"), p=Quantity(3e5, "Pa"))
 
 
 def unit(mode="chiller", **params):
@@ -26,7 +29,7 @@ def unit(mode="chiller", **params):
         evaporator_coefficient=1.2,
         auxiliary_power_ratio=0.01,
     )
-    return AbsorptionUnit().set_params("", design | params)
+    return si.set_params(with_values(AbsorptionUnit()), "", design | params)
 
 
 def call(machine, setpoint, **streams):

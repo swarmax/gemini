@@ -8,7 +8,7 @@ from gemini.types.fluid import grid_gas
 
 
 class GasGrid(Module):
-    """Gas grid: bought gas of ``composition``, by default the analysis of ``gas.GRID_COMPOSITION``.
+    """Gas grid: bought gas of ``composition``, which the plant states.
 
     ``gas_out`` is offered at normal conditions, without flow, and the taker returns what it burns:
     a burner on ``gas_out``, or a ``GasMakeup`` for the shortfall of the co-produced gas.
@@ -21,7 +21,6 @@ class GasGrid(Module):
         # Parameters
         self.composition = Parameter(
             dict[str, Fraction],
-            default=gas.GRID_COMPOSITION,
             structural=True,
             description="Mole or mass fractions of the gas components by name",
         )
@@ -31,7 +30,7 @@ class GasGrid(Module):
 
     def _offer(self, inlets):
         """Offer the grid gas at normal conditions."""
-        offered = Stream(
+        offered = Stream._si(
             m_dot=0.0,
             T=gas.NORMAL_TEMPERATURE,
             p=gas.NORMAL_PRESSURE,

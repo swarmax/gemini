@@ -19,22 +19,25 @@ TEMPLATE_PLANTS = (
 )
 """The plants whose values are the sample problem's, in ``inputs/examples/``, not an example."""
 FORMER_EXAMPLES = {
-    "ATESPlant": "6a0269fce3fa75cb6309b11779cad3ac605aa65d5089020cb76ff8aa7e8b8170",
-    "BoilerChpPlant": "a53a8beb1708973d3ec2341809dd846ae38c71feda6487585c36f13152da2bb6",
-    "CoolingSubstation": "64e2a52f01d79151750d6c90bd03b77ee1fef3e0f18111931cb8dd0cc025e24b",
-    "DistrictEnergyPlant": "ebce116425f8cb0bbbb10439e56a05def20c6bb3a9130daf005045042af64095",
-    "DistrictNetwork": "d9c9f286535f517fc5b575bd33d2861a5dcf45f65e1d2181c186d412b0c5ed94",
-    "Doublet": "5d90cbb7243c9aabe4658a70b11564202a55ae851525265f2669e413467a3038",
-    "DoubletHeatPlant": "eeaad3542d83772882955703e94ed0c16b8c2bfbdd22e968bee88b2226c324b4",
-    "HeatingSubstation": "4f28ac09ac50639d8f0d3be2dfaf53650cb414105622b4401c27ccbe143eb73c",
-    "MultiWellPlant": "46c5098567d2359ab81345d3d9112966977bafea19f93892c0e772dde61da0f7",
-    "NodalDoublet": "2b46f6fa46e86e6e0d3053a671768f8f561a21cde20a378310e88af36fee512c",
-    "ParallelExchangerPlant": "eeac3836a6bae051c4321d7f09072519cece13fbeaead14146d0ebbb988530c5",
+    "ATESPlant": "c701873fb9ab3804409b2cede107b27efda830d352bd2f2fe4d17af10da960e5",
+    "BoilerChpPlant": "9f59d42f48d2608f95a4784ce4ecbbf68b8cf84c71f55f8749c76c8a77e41e7e",
+    "CoolingSubstation": "3685c3ebc66824c6e0296386b373306ebe8254e9ad5d72b3cd2983fb7a2ba625",
+    "DistrictEnergyPlant": "dc4fa5c020d5b7367d4c6d1c636998e7204e07fe77a240858a6f05955a27a3e0",
+    "DistrictNetwork": "6f33b4f793e750d6efd7cc52934276a8a3ff2618ae5bd0b1c7c3106c90cdcab0",
+    "Doublet": "08ee186137e2860c6897461955c4555ff03b9843b3e4dec782b705f8d78556e7",
+    "DoubletHeatPlant": "a085cd3460fab5a645aa5e9fffb92aff9bce87a93ffd836084b5bfe59b977b8e",
+    "HeatingSubstation": "efb07bdf6b9e33ccad37d6fc0603938770d4142f3cb9dcacfcde1b12ae5ad48b",
+    "MultiWellPlant": "d51e558cc13c37f1744c156e189dc14ad1e4346c0097a5417a085a62737e6d46",
+    "NodalDoublet": "c9e66f2c96e83152a5cc44cbb6169dd2e7d55d0098077554553666e56299544f",
+    "ParallelExchangerPlant": "bc36d7c313e147191ef5ac30a2480d34fca3da8d44cd9771b6ba20875ad0490f",
 }
 """Hash of ``to_dict()`` of the plant built from each whole example file these values replaced.
 
 The hashes were taken again when the plant dict lost the values of the case and wrote every value
 with a unit as ``{"value", "unit"}``; the design values are those of the files.
+They were taken again when the declarations of the modules lost their default design values: each
+file now states, with the value it effectively used, what a declaration used to default (a
+roughness, an arrangement, an alarm threshold); no value changed.
 
 The template plants have no example: their values are in the sample problem. ``Doublet`` is hashed
 without ``outputs``, which its structure file has and its former example file lacked.
@@ -95,7 +98,9 @@ def test_the_doublet_examples_carry_the_shared_doublet_heat_values():
     """The doublet is the ``doublet`` child of the doublet heat plant."""
     shared = example_plant("DoubletHeatPlant").to_dict(structure=True)
     doublet = example_plant("Doublet")
-    expected = shared["modules"]["doublet"]["params"]
+    expected = {
+        name: value for name, value in shared["modules"]["doublet"]["params"].items() if "." in name
+    }
     assert {
         f"{path}.{name}": value
         for path, entry in doublet.to_dict(structure=True)["modules"].items()
@@ -127,7 +132,7 @@ def test_the_treatment_design_is_complete_and_valid():
     """Every port is connected and every parameter has a value."""
     plant = treatment_plant()
     assert plant.is_initialized
-    assert gm.plants.validate(plant.to_dict(structure=True), on_error="record") == []
+    assert gm.plants.validate(plant, on_error="record") == []
     assert plant.d0.reservoir.temperature == plant.d1.reservoir.temperature
     assert plant.heat_users.fluid == gm.WATER
 
@@ -139,3 +144,15 @@ def test_names_lists_the_plants_of_a_purpose():
     assert "Doublet" not in catalogue.names("both") + catalogue.names("heating")
     with raises(gm.errors.ValidationError, "unknown_name"):
         catalogue.names("steam")
+
+
+def test_validate_gives_the_same_for_a_plant_and_its_dict():
+    """A good plant and a broken one: the plant and its structure dict agree."""
+    good = treatment_plant()
+    assert gm.plants.validate(good, on_error="record") == gm.plants.validate(
+        good.to_dict(structure=True), on_error="record"
+    )
+    broken = gm.Plant("Open")
+    broken.add("Degasser", "degasser")
+    found = gm.plants.validate(broken, on_error="record")
+    assert found and found == gm.plants.validate(broken.to_dict(structure=True), on_error="record")

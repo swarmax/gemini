@@ -126,7 +126,7 @@ class Cooler(Equipment, Module):
                 "both on a closed loop",
                 code="invalid_design",
             )
-        offered = Stream(
+        offered = Stream._si(
             m_dot=self.flow, T=self.temperature_setpoint, p=self.loop_pressure, fluid=self.fluid
         )
         return {"fluid_out": offered}

@@ -6,19 +6,21 @@ from gemini.errors import PhysicsError, ValidationError
 from gemini.modules._utils.balance import energy_balance, mass_balance
 from gemini.modules.exchangers import Cooler
 from gemini.types.flows import Stream
+from gemini.units import Quantity
+from tests.fixtures import si
 from tests.fixtures.air import air
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
 CP = 4217.4
-HOT = Stream(m_dot=20, T=313.15, p=3e5)
+HOT = Stream(m_dot=Quantity(20, "kg/s"), T=Quantity(313.15, "K"), p=Quantity(3e5, "Pa"))
 
 
 def cooler(cooler_type, **params):
     """Return a 2 MW cooler with a 5 K approach and 2 % specific fan power."""
     design = dict(cooler_type=cooler_type, capacity=2e6, approach=5, specific_fan_power=0.02)
-    return Cooler().set_params("", design | params)
+    return si.set_params(Cooler(), "", design | params)
 
 
 def test_dry_cooler_approach_limit_and_closure():
@@ -95,7 +97,9 @@ def test_traced_call_matches_one_call_per_row(cooler_type):
     unit = cooler(cooler_type)
     rows = [
         dict(
-            fluid_in=Stream(m_dot=m_dot, T=T, p=3e5),
+            fluid_in=Stream(
+                m_dot=Quantity(m_dot, "kg/s"), T=Quantity(T, "K"), p=Quantity(3e5, "Pa")
+            ),
             temperature_setpoint=setpoint,
             air_in=air(wet_bulb),
         )

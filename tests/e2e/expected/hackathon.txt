@@ -10,20 +10,20 @@ HeatingPlant: 120 trials, feasible False, reasons ['cold_delivered']
   fixed heat_pump.capacity = None: the plant has no unit of the role 'heat_pump'
   fixed chiller.capacity = None: the plant has no unit of the role 'chiller'
                                lcts [EUR/MWh]  co2 [kt]  rank_lcts  rank_co2  pareto  feasible
-HackathonPlant                          44.25     13.05          4         4   False      True
-HeatingAbsorptionCoolingPlant           50.52     20.97          5         5   False      True
-HeatingCoolingPlant                     42.54     10.34          3         2   False      True
-HeatingFullCoolingPlant                 40.29     9.651          1         1    True      True
-HeatingHeatPumpCoolingPlant             40.34      12.9          2         3   False      True
-HeatingPlant                            29.45     7.622          6         6   False     False
-Pareto front of the feasible designs: ['HeatingFullCoolingPlant']
+HackathonPlant                          44.25     13.05          3         3   False      True
+HeatingAbsorptionCoolingPlant           50.52     20.97          4         4   False      True
+HeatingCoolingPlant                     42.54     10.34          2         1    True      True
+HeatingFullCoolingPlant                 55.59     23.47          5         5   False      True
+HeatingHeatPumpCoolingPlant             40.34      12.9          1         2    True      True
+HeatingPlant                            29.83     7.843          6         6   False     False
+Pareto front of the feasible designs: ['HeatingCoolingPlant', 'HeatingHeatPumpCoolingPlant']
                                    parameter metric  low  high value_unit  at_low  at_high  effect     unit
-0           case.environment.ground.gradient   lcts   25    35       K/km   55.79    39.95   15.84  EUR/MWh
-1     case.assumptions.finance.discount_rate   lcts 0.02  0.08          -   34.05    47.48   13.44  EUR/MWh
-2          case.assumptions.finance.opex.co2   lcts   30   110      EUR/t   38.36    44.07   5.702  EUR/MWh
-3  case.assumptions.finance.opex.electricity   lcts   80   140    EUR/MWh   38.17    43.11   4.931  EUR/MWh
-4          case.assumptions.finance.opex.gas   lcts   25    70    EUR/MWh   40.11    40.65  0.5399  EUR/MWh
-5    case.environment.reservoir.permeability   lcts  100   400         mD     NaN    37.93     NaN  EUR/MWh
+0           case.environment.ground.gradient   lcts   25    35       K/km   47.16    33.76    13.4  EUR/MWh
+1  case.assumptions.finance.opex.electricity   lcts   80   140    EUR/MWh   36.87    44.97   8.101  EUR/MWh
+2          case.assumptions.finance.opex.co2   lcts   30   110      EUR/t   37.77    45.39   7.621  EUR/MWh
+3          case.assumptions.finance.opex.gas   lcts   25    70    EUR/MWh   37.87    45.33   7.467  EUR/MWh
+4     case.assumptions.finance.discount_rate   lcts 0.02  0.08          -   37.02    44.17   7.151  EUR/MWh
+5    case.environment.reservoir.permeability   lcts  100   400         mD   41.92    39.58   2.337  EUR/MWh
 Draws of the best design: 5
-lcts  mean    44.74  p5    40.34  p95    52.76 EUR/MWh
-co2   mean    11.07  p5     9.14  p95    14.10 kt
+lcts  mean    44.56  p5    40.85  p95    49.41 EUR/MWh
+co2   mean    13.83  p5    12.54  p95    15.22 kt

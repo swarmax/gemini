@@ -64,20 +64,14 @@ class ESP(Module):
             calibratable=True,
             description="Polynomial coefficients of the power curve of one stage",
         )
-        self.pump_type = Parameter(
-            str | None, default=None, description="Catalogue name or label of the pump model"
-        )
-        self.setting_depth = Parameter(
-            Length, default=0, description="Depth at which the pump is set"
-        )
+        self.pump_type = Parameter(str, description="Catalogue name or label of the pump model")
+        self.setting_depth = Parameter(Length, description="Depth at which the pump is set")
         self.motor_efficiency = Parameter(
             Efficiency,
-            default=1,
             description="Efficiency of the motor: shaft power over electric power drawn",
         )
         self.minimum_flow = Parameter(
             VolumeFlow,
-            default=0,
             ge=0,
             description=(
                 "Lowest flow of the recommended operating window at the reference frequency"
@@ -85,7 +79,6 @@ class ESP(Module):
         )
         self.maximum_flow = Parameter(
             VolumeFlow,
-            default=1,
             gt=0,
             description=(
                 "Highest flow of the recommended operating window at the reference frequency"
@@ -93,13 +86,11 @@ class ESP(Module):
         )
         self.best_efficiency_flow = Parameter(
             VolumeFlow,
-            default=pumps.DEFAULT_BEP_FLOW,
             gt=0,
             description="Flow at which the pump reaches its best efficiency",
         )
         self.correction_factors = Parameter(
             tuple[Dimensionless, PressureDifference],
-            default=(1, 0),
             description=(
                 "Calibration factors of the pressure rise: a multiplier and an added pressure "
                 "difference"
@@ -115,7 +106,6 @@ class ESP(Module):
         )
         self.drift_threshold = Parameter(
             Fraction,
-            default=diagnostics.DEFAULT_DRIFT_THRESHOLD,
             gt=0,
             le=1,
             description="Relative drift from the prediction at which the health alarm is raised",
@@ -146,6 +136,13 @@ class ESP(Module):
         self.is_in_operating_window = Output(
             bool, description="True when the flow is inside the recommended operating window"
         )
+        self.intake_pressure = Output(
+            Pressure, soft_sensor=True, description="Pressure at the pump intake"
+        )
+        self.gas_volume_fraction = Output(
+            Fraction,
+            description="Free-gas volume over total volume of the stream at the pump intake",
+        )
         self.best_efficiency_ratio = Output(
             Ratio, description="Flow as a share of the best-efficiency flow at the current speed"
         )
@@ -173,7 +170,8 @@ class ESP(Module):
         head = self.head_function(flow, self.frequency)
         power = self.power_function(flow, self.frequency)
         scale = pumps.speed_ratio(self.frequency, constants.ESP_REFERENCE_FREQUENCY)
-        self._check_inside_curve(flow, head, power, scale)
+        gas = self._gas_volume_fraction(suction)
+        self._check_inside_curve(flow, head, power, scale, suction.p, gas)
 
         discharge = suction.with_(p=suction.p + head)
         power_in = energy.input_power(power, self.motor_efficiency)
@@ -186,6 +184,8 @@ class ESP(Module):
         self.is_in_operating_window = pumps.is_in_operating_window(
             flow, self.minimum_flow, self.maximum_flow, scale
         )
+        self.intake_pressure = suction.p
+        self.gas_volume_fraction = gas
         self.best_efficiency_ratio = pumps.best_efficiency_ratio(
             flow, scale, self.best_efficiency_flow
         )
@@ -193,15 +193,26 @@ class ESP(Module):
         outlets = dict(fluid_out=discharge, power_in=power_in)
         return outlets
 
-    def _check_inside_curve(self, flow, head, power, scale):
+    @staticmethod
+    def _gas_volume_fraction(suction):
+        """Return the free-gas volume fraction of the suction stream at its own pressure."""
+        fluid = suction.fluid
+        return pumps.intake_gas_volume_fraction(
+            fluid.properties(suction.p, suction.T).rho_l,
+            fluid.gas_density_at(suction.p, suction.T),
+            fluid.gas_mass_fraction,
+        )
+
+    def _check_inside_curve(self, flow, head, power, scale, intake, gas):
         """Fail the row where the polynomial curves are used outside the range they are valid for.
 
         The polynomials are fitted on a finite flow range and extrapolate outside it, to a power
         of any size or to a negative head or power. The range is the pump's own: the flow at most
         ``maximum_flow`` scaled by the speed ratio (affinity law), the head and the power at least
-        zero. The row fails with ``out_of_range`` naming the path, the flow, the head, the power
-        and the largest flow. ``minimum_flow`` is the recommended range, not this one: a flow
-        below it only raises the health alarm.
+        zero. The row fails with ``out_of_range`` naming the path, the flow, the head, the power,
+        the largest flow and the intake pressure and gas volume fraction that inflated the flow.
+        ``minimum_flow`` is the recommended range, not this one: a flow below it only raises the
+        health alarm.
         """
         largest = pumps.speed_scaled_flow(self.maximum_flow, scale)
         ops.check(
@@ -209,13 +220,16 @@ class ESP(Module):
             PhysicsError,
             "{path}: flow = {flow} m3/s gives head = {head} Pa and power = {power} W; expected "
             "flow at most {largest} m3/s (maximum_flow at this speed) and head and power at "
-            "least 0, the range the curves are valid for",
+            "least 0, the range the curves are valid for; intake pressure = {intake} Pa and gas "
+            "volume fraction = {gas}",
             code="out_of_range",
             path=self.path,
             flow=flow,
             head=head,
             power=power,
             largest=largest,
+            intake=intake,
+            gas=gas,
         )
 
     def head_function(self, flow: float, frequency: float) -> float:

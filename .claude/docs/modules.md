@@ -243,8 +243,10 @@ attributes). Containers compare and hash by identity like every module.
 
 ### A plant that sets its children's values
 
-A plant may derive its children's parameters from its own. It overrides `set_params`, computes the
-child values with functions from `gemini/physics/` and calls `super().set_params` with them:
+A plant may derive its children's parameters from its own. It overrides `_set_si_params`, which
+receives SI values, computes the child values with functions from `gemini/physics/` and calls
+`super()._set_si_params` with them. `set_params` is the public door: it refuses a bare number with a
+dimension, converts the quantities to SI and calls `_set_si_params`. Never override `set_params`:
 
 ```python
 from gemini.modules import Parameter, ProductionReservoir
@@ -266,16 +268,16 @@ class Column(Plant):
         self.height = Parameter(Length | None, default=None)
         self.density = Parameter(Density | None, default=None)
 
-    def set_params(self, path, params, valid_from=None):
+    def _set_si_params(self, path, params, valid_from=None):
         """Derive the reservoir pressure, unless the same call states it."""
         if path:
-            return super().set_params(path, params, valid_from)
+            return super()._set_si_params(path, params, valid_from)
         values = self._own_values(params, valid_from)
         derived = {}
         if values["height"] is not None and values["density"] is not None:
             pressure = hydraulics.hydrostatic_dp(values["density"], values["height"])
             derived["reservoir.pressure"] = pressure
-        return super().set_params("", self._keep_derived(derived, params) | params, valid_from)
+        return super()._set_si_params("", self._keep_derived(derived, params) | params, valid_from)
 ```
 
 `_own_values(params, valid_from)` gives the module's own values in force at that date with the ones
@@ -287,11 +289,11 @@ it keeps.
 
 Every route that sets parameters reaches this method: `add(..., params=)`, `from_dict`,
 `set_params(path, ...)` at any depth, a dated `set_params(..., valid_from=)`, a `param_history`
-section and attribute assignment. Setting the fluid of a plant passes it to every child and derives
+section and attribute assignment (a bare SI number, author-level). Setting the fluid of a plant passes it to every child and derives
 again.
 
 All of this is done once, in `Plant`: the formulas go into physics (`gemini/physics/doublet.py`) and
-the plant keeps a short `set_params`. `to_dict` stores the plant's own parameters and the explicit
+the plant keeps a short `_set_si_params`. `to_dict` stores the plant's own parameters and the explicit
 child values, never a derived value: `from_dict(p.to_dict())` derives them again and rebuilds the
 same numbers. Dated entries of a child that only hold derived values are left out in the same way.
 
@@ -299,8 +301,10 @@ same numbers. Dated entries of a child that only hold derived values are left ou
 
 Parameters, controls and boundaries are set by attribute assignment or in bulk:
 
-- `set_params(path, params, valid_from=None)` validates parameters by local or dotted name and
-  stores them, in the undated base entry or from a date on, and returns the module; `params_at(path,
+- `set_params(path, params, valid_from=None)` validates parameters by local or dotted name, takes a
+  quantity (`Quantity` or `{"value", "unit"}`) for every value with a dimension and refuses a bare
+  number for it (`invalid_value`), converts to SI and stores them (`_set_si_params` is the private
+  SI path of `gemini` itself), in the undated base entry or from a date on, and returns the module; `params_at(path,
   time)` returns the values active at an instant.
 - `module.frequency = 50` persists one control or boundary, and `module.stage_count = 12` sets a
   parameter as an override that wins over every date.
@@ -444,7 +448,9 @@ assert fast.outlets.fluid_out == a.outlets.fluid_out
 ## State and health
 
 Stateful equipment declares its carried values as `State(kind, default=...)` in the `# States`
-section; `default` is the initial state. `forward` reads a state as a plain attribute
+section; `default` is the initial state, a reference zero or constant. A state without a `default`
+(a design value) makes the module declare the parameter `initial_<name>` (`IceStorage.initial_temperature`),
+and a run without it raises `missing_value`. `forward` reads a state as a plain attribute
 (`self.temperature`), which gives its value at the start of the step. A stateful leaf implements
 `_advance_states(self, inlets, outlets, dt)`, returning the end-of-step value of every state, after
 `forward`; a state is never assigned directly. `module.stateful` is true

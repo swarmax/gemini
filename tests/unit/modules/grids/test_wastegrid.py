@@ -2,9 +2,10 @@
 
 from gemini.modules import WasteGrid
 from gemini.types import Stream
+from gemini.units import Quantity
 from tests.fixtures.equivalence import assert_module_matches
 
-BLOWDOWN = Stream(m_dot=0.4, T=350.0, p=2e5)
+BLOWDOWN = Stream(m_dot=Quantity(0.4, "kg/s"), T=Quantity(350.0, "K"), p=Quantity(2e5, "Pa"))
 
 
 def test_the_discarded_flows_end_at_the_port():

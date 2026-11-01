@@ -13,7 +13,8 @@ class Flare(Equipment, Module):
     """Flare burning its inlet gas, with the CO2 and methane its composition gives.
 
     ``flue_out`` carries the CO2 the gas carries plus what burning forms and the methane that passes
-    unburnt, to ``Atmosphere.gas_in``; ``combustion_efficiency`` defaults to 98 % (US EPA, AP-42,
+    unburnt, to ``Atmosphere.gas_in``; ``combustion_efficiency`` is stated by the plant; 98 % is the
+    figure for a well-operated flare (US EPA, AP-42,
     5th ed., section 13.5 "Industrial Flares", 2018). ``burned_mass_flow`` closes ``mass_balance``.
     The chemical power burned is ``fuel``; it leaves as heat through ``loss_out``.
     """
@@ -27,7 +28,6 @@ class Flare(Equipment, Module):
         # Parameters
         self.combustion_efficiency = Parameter(
             Efficiency,
-            default=float(combustion.FLARE_EFFICIENCY),
             structural=True,
             description="Share of the flared gas burned completely",
         )
@@ -82,7 +82,7 @@ class Flare(Equipment, Module):
         if inlet.fluid.gas_composition is None:
             return FLUE_CO2
         co2, methane = self._released(inlet, 1.0)
-        return Fluid(
+        return Fluid._si(
             kind="gas", gas_composition=gas.composition_of_masses({"CO2": co2, "CH4": methane})
         )
 

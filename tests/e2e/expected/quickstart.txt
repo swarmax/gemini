@@ -2,6 +2,8 @@ d0.reservoir.liquid_flow                      ok
 d0.brine_cooling                              ok
 d0.reservoir.liquid_flow                      ok
 d0.pump_efficiency                            ok
+d0.esp.intake_pressure                        ok
+d0.esp.gas_volume_fraction                    ok
 d0.volume_imbalance                           ok
 heating_consumer.supply_in.temperature        ok
 cooling_consumer.supply_in.temperature        ok

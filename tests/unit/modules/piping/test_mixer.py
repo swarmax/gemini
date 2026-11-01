@@ -10,8 +10,16 @@ from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
-HOT = Stream(m_dot=6, T=363.15, p=5e5)
-COLD = Stream(m_dot=2, T=323.15, p=4e5)
+HOT = Stream(
+    m_dot=gm.units.Quantity(6, "kg/s"),
+    T=gm.units.Quantity(363.15, "K"),
+    p=gm.units.Quantity(5e5, "Pa"),
+)
+COLD = Stream(
+    m_dot=gm.units.Quantity(2, "kg/s"),
+    T=gm.units.Quantity(323.15, "K"),
+    p=gm.units.Quantity(4e5, "Pa"),
+)
 
 
 def test_mixing_matches_hand_calculation():
@@ -40,7 +48,10 @@ def test_invalid_inputs_raise():
     with raises(gm.errors.ValidationError, "invalid_design", match="expected the same fluid"):
         Mixer()(branch1_in=HOT, branch2_in=COLD.with_(fluid=WATER))
     with raises(gm.errors.ValidationError, "invalid_design"):
-        Mixer()(branch1_in=HOT, branch2_in=COLD.with_(fluid=Fluid(density=1050)))
+        Mixer()(
+            branch1_in=HOT,
+            branch2_in=COLD.with_(fluid=Fluid(density=gm.units.Quantity(1050, "kg/m3"))),
+        )
     with pytest.raises(gm.errors.PhysicsError, match="mixer: branch1_in.m_dot = -1"):
         Mixer()(branch1_in=HOT.with_(m_dot=-1), branch2_in=COLD)
 
@@ -48,7 +59,18 @@ def test_invalid_inputs_raise():
 def test_mixer_matches_traced():
     """Either pressure lower, unequal flows and a stopped junction trace correctly."""
     rows = [
-        dict(branch1_in=Stream(m_dot=a, T=ta, p=pa), branch2_in=Stream(m_dot=b, T=tb, p=pb))
+        dict(
+            branch1_in=Stream(
+                m_dot=gm.units.Quantity(a, "kg/s"),
+                T=gm.units.Quantity(ta, "K"),
+                p=gm.units.Quantity(pa, "Pa"),
+            ),
+            branch2_in=Stream(
+                m_dot=gm.units.Quantity(b, "kg/s"),
+                T=gm.units.Quantity(tb, "K"),
+                p=gm.units.Quantity(pb, "Pa"),
+            ),
+        )
         for a, ta, pa, b, tb, pb in [
             (6, 363.15, 5e5, 2, 323.15, 4e5),
             (6, 363.15, 3e5, 2, 323.15, 4e5),

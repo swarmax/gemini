@@ -182,19 +182,19 @@ def _injection_inputs(conditions):
 
 def _needed_pressure(chain, temperature, rate):
     """Return the wellhead pressure [Pa] that injects ``rate``, or ``None`` with no pump."""
-    stream = Stream(m_dot=rate, T=temperature, p=WELLHEAD_PRESSURES[0], fluid=chain.well.fluid)
+    stream = Stream._si(m_dot=rate, T=temperature, p=WELLHEAD_PRESSURES[0], fluid=chain.well.fluid)
     return solves.solve_injection_pressure(chain.well, chain.sink, stream, WELLHEAD_PRESSURES)
 
 
 def _injected_rate(chain, temperature, pressure, rates):
     """Return the rate [kg/s] the wellhead pressure [Pa] pushes into the aquifer."""
-    stream = Stream(m_dot=rates[0], T=temperature, p=pressure, fluid=chain.well.fluid)
+    stream = Stream._si(m_dot=rates[0], T=temperature, p=pressure, fluid=chain.well.fluid)
     return solves.solve_injection_rate(chain.well, chain.sink, stream, rates)
 
 
 def _aquifer_pressure(chain, temperature, rate):
     """Return the sandface pressure [Pa] the aquifer needs to take ``rate``."""
-    stream = Stream(m_dot=rate, T=temperature, p=WELLHEAD_PRESSURES[0], fluid=chain.sink.fluid)
+    stream = Stream._si(m_dot=rate, T=temperature, p=WELLHEAD_PRESSURES[0], fluid=chain.sink.fluid)
     return chain.sink.required_pressure(stream)
 
 

@@ -23,21 +23,6 @@ CENTRIFUGAL_HEAD_COEFFICIENT_COUNT = 3
 """Number of coefficients ``c0, c1, c2`` of the quadratic centrifugal head curve."""
 
 
-DEFAULT_BEP_FLOW = 0.04
-"""Default best-efficiency flow of an ESP [m3/s] (retained GEMINI default)."""
-
-
-DEFAULT_CIRCULATION_PUMP_EFFICIENCY = 0.55
-"""Efficiency of a building circulation pump [-], from the electricity to the water.
-
-The low end of the 55 to 70 % peak of larger circulators in the trade press (Siegenthaler,
-Plumbing & Mechanical, Modern Hydronics), low because a fixed flow runs away from the peak.
-"""
-
-DEFAULT_INJECTION_PUMP_FREQUENCY = 60
-"""Default drive frequency [Hz] of an injection pump, the ESP catalogue frequency."""
-
-
 @ops.physics
 def power(volume_flow, frequency, stages, coefficients):
     """Return power [W] from flow [m3/s], frequency [Hz], stages and bhp coefficients.
@@ -260,3 +245,32 @@ def is_in_operating_window(flow, minimum_flow, maximum_flow, speed):
     Submersible Pumps Manual, 2009).
     """
     return ops.logical_and(minimum_flow * speed <= flow, flow <= maximum_flow * speed)
+
+
+@ops.physics
+def intake_gas_volume_fraction(liquid_density, gas_density, gas_mass_fraction):
+    """Return the free-gas volume fraction [-] of a mixture at the pump intake.
+
+    Parameters
+    ----------
+    liquid_density, gas_density : float
+        Phase densities [kg/m3] at the intake pressure and temperature, nonnegative gas density.
+    gas_mass_fraction : float
+        Free-gas mass fraction ``x`` [-], in ``[0, 1)``.
+
+    Returns
+    -------
+    float
+        Gas volume over total volume, ``x rho_l / (x rho_l + (1 - x) rho_g)``; it is ``(x / rho_g)
+        / (x / rho_g + (1 - x) / rho_l)`` written without a division by the gas density, so a
+        near-zero intake pressure gives a fraction near one.
+
+    Notes
+    -----
+    Homogeneous (no-slip) mixture at intake conditions, the volume basis of the mixture density
+    used for the stream volume flow. Source: a plain volume balance; no published source is needed.
+
+    Validity: positive liquid density; undefined for no gas and zero gas density together.
+    """
+    gas = gas_mass_fraction * liquid_density
+    return gas / (gas + (1 - gas_mass_fraction) * gas_density)

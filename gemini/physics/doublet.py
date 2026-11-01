@@ -6,7 +6,7 @@ from gemini.physics import geometry, ground, hydraulics, pumps
 COLUMN = ("depth", "gradient", "surface_temperature")
 """The design values of the water column and the geotherm."""
 
-FLOW_PATH = ("permeability", "thickness", "well_diameter")
+FLOW_PATH = ("permeability", "thickness", "well_diameter", "roughness")
 """The design values of the wells and the reservoir flow."""
 
 PUMP = ("nominal_flow", "pump_efficiency", "nominal_wellhead_pressure")
@@ -62,9 +62,7 @@ def _flow_paths(values, viscosity, skins):
     """Return the values that follow from the permeability, thickness and well diameter."""
     radius = values["well_diameter"] / 2
     path = geometry.section_values(
-        geometry.vertical_path(
-            values["depth"], values["well_diameter"], hydraulics.COMMERCIAL_STEEL_ROUGHNESS
-        )
+        geometry.vertical_path(values["depth"], values["well_diameter"], values["roughness"])
     )
     derived = {f"{well}.{name}": value for well in WELLS for name, value in path.items()}
     for name in RESERVOIRS:
@@ -102,7 +100,7 @@ def _pump(values, density, viscosity, pressure, derived):
         viscosity,
         values["depth"],
         values["well_diameter"],
-        hydraulics.COMMERCIAL_STEEL_ROUGHNESS,
+        values["roughness"],
         flow,
     )
     head_curve, power_curve = pumps.constant_head_curves(head, values["pump_efficiency"])

@@ -90,11 +90,23 @@ listing the units of the field. No code parses unit text (`units.parse` is gone;
 unit). A dimensionless value (an efficiency, a share, a count) is a number. Inside the code a
 value is SI.
 
-Known limit: the boundary refuses bare numbers with a dimension in the case, the plant dict
-(`params`, `inputs`), the bounds of `gm.study` and `Value`s; but `set_params`, `gm.call`,
-`gm.Stream` and `gm.Fluid` still take a bare number as SI, because the engine and the plants pass
-derived SI floats through them. Do not write a bare number with a dimension in new user-facing
-input.
+**The public door converts, SI inside.** A bare number with a dimension is refused at every public
+door (`Module.set_params`, `Plant.add`, `validate_params`, `Plant.set_inputs`, `Stream(...)`, `Fluid(...)`,
+`gm.call`, `gm.modules.check`, the plant dict, the case, `gm.study`): `ValidationError` `invalid_value`
+with the path, the quantity and the accepted units, zero included (`gemini/types/bare.py` is the one
+rule). `set_params` converts the quantities and calls the private `Module._set_si_params(path,
+params, valid_from=None)`; `Plant.set_inputs` calls `Plant._set_si_inputs`; `Stream._si(m_dot=, T=, p=,
+fluid=)` and `Fluid._si(...)` build from SI. `gemini` itself uses only the private path: the engine, the
+case apply, `gm.study`, the readers of checkpoints. A plant class that derives values for its children
+overrides `_set_si_params`, never `set_params`. Do not add a second public setter.
+
+Two author-level doors stay in SI and are not for users: attribute assignment on a module
+(`esp.frequency = 50`, `module.fluid = {...}`), the way a module author writes inside `forward` and
+`__init__`, and `Stream.with_(...)`, the hot path of the solvers, where a unit lookup per call costs
+more than the run. The stored forms of a plant dict (`fluids`, `param_history`) are quantities;
+`tree_dict` checkpoints and `state_dict` are SI by design. Tests wrap SI numbers through
+`tests/fixtures/si.py` (`si.set_params`, `si.stream`, `si.fluid`, ...) or use the private path to test
+private behaviour.
 
 ## No defaults
 
@@ -104,8 +116,19 @@ an absent value raises `ValidationError` (`missing_value`, or `missing_assumptio
 `assumptions` of the case) naming its path in the case or the plant. The only defaults in `gm.case`
 are `over="each"` and `when="always"` of `Constraint`, the signature the case gives;
 `test_the_case_has_no_default_but_absent` in `tests/unit/test_code_quality.py` allows exactly these
-two. A default that is a physical constant or a cited model constant (the Carnot fraction of a
-heat pump, with its source) is a parameter of its module, not a user decision.
+two. The rule holds in `gemini/modules` and `gemini/plants` too, and is tested:
+`test_no_declaration_has_a_default_but_the_listed_constants` allows a default of a `Parameter`,
+`Control`, `Boundary` or `State` only for the entries of `DECLARED_DEFAULTS` in
+`tests/unit/test_code_quality.py`, each with its reason, in three classes: a physical constant or
+standard reference whose source is in the docstring of its constant (the latent heat of ice, the
+normal pressure), the reference zero of an accumulator state (the heat charged so far), and the
+identity of a subclass (the `role` of a reservoir). The Carnot fraction of a heat pump is a design
+value of the plant, not a default: the cited constant is a source for the plant author. "Feature
+off" is `None` (a monitoring threshold, `HeatPump.minimum_part_load`, `CHP.no_load_fuel_fraction`);
+every design value or assumption has no default and the plant dict states it. A `State` without a
+default takes the parameter `initial_<name>` (`IceStorage.initial_ice_fraction`), and a run without
+it raises `missing_value`. A plant class passes no value to a child in `__init__`, and a derivation
+reads no hidden constant: `Doublet.roughness` is a parameter.
 
 ## Signatures
 
@@ -279,7 +302,7 @@ docstring, never a comment. `test_only_section_headers_and_tool_directives_are_c
 A module holds no `*`, `/`, `**`, numeric literal other than 0 and 1, `math.*`, NumPy maths or
 `ops.exp`-style call: `test_modules_hold_no_formulas` scans `gemini/modules/` except `plants/`, with
 the exceptions and their reasons in `FORMULA_EXCEPTIONS`. Bookkeeping of like quantities (`inlet.p -
-drop`, `m_1 + m_2`) stays in a module; a default value is a named physics constant.
+drop`, `m_1 + m_2`) stays in a module; a declared default is one of `DECLARED_DEFAULTS`, a sourced physics constant.
 `test_no_two_physics_functions_share_a_body` compares the normalised bodies of the physics functions,
 so a copy with renamed arguments fails; a body of one operator on two names is a definition and is
 not compared, and different relations of one form are listed in `SAME_FORM`.

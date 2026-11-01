@@ -6,10 +6,13 @@ from gemini.errors import PhysicsError
 from gemini.modules._utils.balance import energy_balance, mass_balance
 from gemini.modules.pumps import GasCompressor
 from gemini.types.flows import Stream
+from gemini.units import Quantity
+from tests.fixtures import si
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.reading import reading
 
-GAS = Stream(m_dot=0.2, T=300, p=1e5)
+GAS = Stream(m_dot=Quantity(0.2, "kg/s"), T=Quantity(300, "K"), p=Quantity(1e5, "Pa"))
 
 
 def compressor(**changes):
@@ -20,7 +23,7 @@ def compressor(**changes):
         gas_specific_heat=1005,
         motor_efficiency=0.95,
     )
-    return GasCompressor().set_params("", params | changes)
+    return si.set_params(with_values(GasCompressor()), "", params | changes)
 
 
 def test_single_stage_by_hand():
@@ -78,7 +81,12 @@ def test_zero_flow_unit_ratio_and_invalid_setpoints():
 def test_traced_call_matches_one_call_per_row():
     """Single and intercooled stages at several ratios trace and equal one call per row."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=300.0, p=p), pressure_setpoint=setpoint)
+        dict(
+            fluid_in=Stream(
+                m_dot=Quantity(m_dot, "kg/s"), T=Quantity(300.0, "K"), p=Quantity(p, "Pa")
+            ),
+            pressure_setpoint=setpoint,
+        )
         for m_dot, p, setpoint in [
             (0.2, 1e5, 4e5),
             (0.0, 1e5, 4e5),

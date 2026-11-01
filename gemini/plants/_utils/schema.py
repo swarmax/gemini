@@ -26,7 +26,8 @@ INPUTS = {
     "type": "object",
     "description": (
         "Inputs by path: a control or boundary such as heat_pump.temperature_setpoint, or a plant "
-        "inlet field such as heating_return.T, to a number in SI or a quantity {value, unit}."
+        "inlet field such as heating_return.T, to a quantity {value, unit}, or a plain number for "
+        "a value without a dimension."
     ),
     "additionalProperties": {"anyOf": [{"type": "number"}, {"type": "object"}]},
 }

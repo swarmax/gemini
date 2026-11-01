@@ -8,6 +8,8 @@ from gemini.modules.grids import ElectricityGrid
 from gemini.modules.heating import ElectricBoiler
 from gemini.modules.power import ORC
 from gemini.types import Power, Stream
+from gemini.units import Quantity
+from tests.fixtures import si
 from tests.fixtures.air import air
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.reading import reading
@@ -15,7 +17,7 @@ from tests.fixtures.reading import reading
 
 def grid(**changes):
     """Return a connection with ``changes``."""
-    return ElectricityGrid().set_params("", changes)
+    return si.set_params(ElectricityGrid(), "", changes)
 
 
 def test_import_and_export_within_unlimited_connection():
@@ -51,15 +53,17 @@ class GridPlant(Module):
         self.orc = ORC().set_params(
             "",
             {
-                "minimum_brine_outlet_temperature": 343.15,
-                "pinch": 5,
+                "minimum_brine_outlet_temperature": Quantity(343.15, "K"),
+                "pinch": Quantity(5, "K"),
                 "carnot_fraction": 0.5,
-                "condenser_approach": 15,
+                "condenser_approach": Quantity(15, "K"),
                 "parasitic_fraction": 0.15,
-                "capacity": 5e6,
+                "capacity": Quantity(5e6, "W"),
             },
         )
-        self.boiler = ElectricBoiler().set_params("", {"capacity": 1e6, "efficiency": 0.99})
+        self.boiler = ElectricBoiler().set_params(
+            "", {"capacity": Quantity(1e6, "W"), "efficiency": 0.99}
+        )
         self.grid = grid(export_limit={"value": 10, "unit": "MW"})
 
         # Inlets
@@ -98,7 +102,10 @@ def test_grid_is_not_counted_in_the_energy_audit():
     """Plant totals keep the ORC and boiler energy once; the grid adds none."""
     plant = GridPlant()
     result = plant(
-        fluid_in=Stream(m_dot=100, T=423.15, p=10e5), water_in=Stream(m_dot=5, T=313.15, p=3e5)
+        fluid_in=Stream(
+            m_dot=Quantity(100, "kg/s"), T=Quantity(423.15, "K"), p=Quantity(10e5, "Pa")
+        ),
+        water_in=Stream(m_dot=Quantity(5, "kg/s"), T=Quantity(313.15, "K"), p=Quantity(3e5, "Pa")),
     )
     orc, boiler = reading(result.children["orc"]), reading(result.children["boiler"])
     flows = collect_flows(result)
@@ -148,7 +155,11 @@ class Connected(Module):
 def test_traced_call_matches_one_call_per_row():
     """Import, export, limited and unlimited rows trace and equal one call per row."""
     rows = [
-        dict(rows=Stream(m_dot=1.0, T=300.0, p=1e5), consumption=consumption, generation=generation)
+        dict(
+            rows=Stream(m_dot=Quantity(1.0, "kg/s"), T=Quantity(300.0, "K"), p=Quantity(1e5, "Pa")),
+            consumption=consumption,
+            generation=generation,
+        )
         for consumption, generation in [(3e6, 1e6), (1e6, 4e6), (0.0, 2e6), (5e5, 5e5), (4e6, 0.0)]
     ]
     assert_module_matches(Connected(), rows)

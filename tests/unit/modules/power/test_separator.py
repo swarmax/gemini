@@ -9,7 +9,11 @@ from gemini.types import STEAM, Stream
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.reading import reading
 
-GEOFLUID = Stream(m_dot=100, T=523.15, p=40e5)
+GEOFLUID = Stream(
+    m_dot=gm.units.Quantity(100, "kg/s"),
+    T=gm.units.Quantity(523.15, "K"),
+    p=gm.units.Quantity(40e5, "Pa"),
+)
 """Liquid at 250 degC and 40 bar, a typical liquid-dominated wellhead feed."""
 
 
@@ -48,7 +52,11 @@ def test_inlet_below_its_saturation_pressure_uses_the_liquid_enthalpy():
 
 def test_subcooled_and_zero_flow():
     """A subcooled inlet passes as liquid at its temperature; zero flow splits nothing."""
-    subcooled = Stream(m_dot=50, T=393.15, p=10e5)
+    subcooled = Stream(
+        m_dot=gm.units.Quantity(50, "kg/s"),
+        T=gm.units.Quantity(393.15, "K"),
+        p=gm.units.Quantity(10e5, "Pa"),
+    )
     result = Separator()(fluid_in=subcooled, pressure_setpoint=6e5)
     assert result.outputs.steam_fraction == 0 and result.outlets.gas_out.m_dot == 0
     assert result.outlets.liquid_out.T == 393.15 and result.outlets.liquid_out.m_dot == 50
@@ -76,7 +84,14 @@ def test_invalid_inlets_and_setpoints_raise():
 def test_traced_call_matches_one_call_per_row():
     """Flashing and subcooled rows at several setpoints trace and equal one call per row."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=T, p=p), pressure_setpoint=setpoint)
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(T, "K"),
+                p=gm.units.Quantity(p, "Pa"),
+            ),
+            pressure_setpoint=setpoint,
+        )
         for m_dot, T, p, setpoint in [
             (100.0, 523.15, 40e5, 6e5),
             (50.0, 523.15, 8e5, 6e5),

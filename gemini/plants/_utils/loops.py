@@ -80,7 +80,7 @@ class Tear:
 
     def stream(self, trial):
         """Return the stream of ``values``."""
-        return Stream(fluid=self.fluid, **self.values(trial))
+        return Stream._si(fluid=self.fluid, **self.values(trial))
 
     def advance(self, image, tolerance, active):
         """Move every field of the rows of ``active``; return the rows where all have converged.
@@ -133,7 +133,7 @@ def _start(run, loop, tear, lower, upper):
     for other in pressures[1:]:
         pressure = ops.where(other > pressure, other, pressure)
     fluid = entering[0].fluid if entering else module.fluid
-    return Tear(Stream(m_dot=0.0, T=temperature, p=pressure, fluid=fluid), lower, upper)
+    return Tear(Stream._si(m_dot=0.0, T=temperature, p=pressure, fluid=fluid), lower, upper)
 
 
 def _limits(run, loop):
@@ -260,7 +260,7 @@ def _close_traced(run, loop, graph, tears, lower, upper):
         streams = []
         for index, tear in enumerate(tears):
             fields = dict(zip(names, carries[index * len(names) :]))
-            streams.append(Stream(fluid=tear.fluid, **fields))
+            streams.append(Stream._si(fluid=tear.fluid, **fields))
         images = _around(run, loop, streams, False)
         return [getattr(image, name) for image in images for name in names], _outlet_values(
             run, loop

@@ -121,3 +121,37 @@ def test_to_dict_shows_display_units_or_the_ones_given_and_the_report_stays_si()
     assert json.loads(str(report)) == plain
     with pytest.raises(gm.errors.ValidationError):
         report.to_dict(units={"heat_delivered": "kt"})
+
+
+def test_every_part_of_a_report_has_a_display_unit():
+    """Each ``{value, unit}`` of the dict, parts and nested dicts included, is in a display unit."""
+    from gemini.evaluate._utils.display import by_si_unit
+
+    shown = set(by_si_unit().values()) | {"-"}
+    plain = gm.evaluate.report(heating_plant(), case(), day()).to_dict()
+    found = []
+
+    def walk(item):
+        if isinstance(item, dict):
+            if "unit" in item:
+                found.append(item["unit"])
+            for part in item.values():
+                walk(part)
+        elif isinstance(item, list):
+            for part in item:
+                walk(part)
+
+    walk(plain)
+    assert set(found) <= shown
+    assert {"MEUR", "MEUR/yr", "MWh/yr", "kt", "d"} <= set(found)
+    assert plain["opex"]["components"]["electricity"]["unit"] == "MEUR/yr"
+    assert plain["co2"]["window"] == {"value": pytest.approx(1.0), "unit": "d"}
+
+
+def test_the_units_override_reaches_the_parts():
+    """A unit given for CO2 shows its mass parts in it; the report stays SI."""
+    report = gm.evaluate.report(heating_plant(), case(), day())
+    plain = report.to_dict(units={"co2": "t", "opex": "EUR/yr"})
+    assert plain["co2"]["electricity"] == {"value": pytest.approx(8.64e-4), "unit": "t"}
+    assert plain["opex"]["components"]["fixed"] == {"value": pytest.approx(10.0), "unit": "EUR/yr"}
+    assert report["co2"].parts["electricity"].unit == "kg"

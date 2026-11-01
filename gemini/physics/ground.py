@@ -9,7 +9,7 @@ temperature profile of a well in a linear geothermal gradient (Ramey 1962).
 
 import math
 
-from gemini import ops, units
+from gemini import ops
 from gemini.errors import PhysicsError
 from gemini.ops import Constant
 from gemini.physics import constants, heat_transfer
@@ -23,9 +23,6 @@ MIN_RAMEY_FOURIER = Constant(
     "-",
     "smallest dimensionless time alpha*t/r**2 for which the Ramey asymptote is within 1 %",
 )
-
-HALF_YEAR = 182.625 * units.SECONDS_PER_DAY
-"""Default storage period [s] of an aquifer store: one charge or discharge season."""
 
 _SMALL_ANGLE = 0.1
 """Streamline angle [rad] below which ``sin - theta*cos`` uses its Taylor series."""
@@ -135,15 +132,6 @@ def aquifer_volumetric_heat_capacity(
         porosity=porosity,
     )
     return porosity * fluid_heat_capacity + (1 - porosity) * rock_heat_capacity
-
-
-DOUBLET_WELL_SPACING = 1000.0
-"""Distance [m] between the wells of a doublet at reservoir level, as its drainage radius.
-
-The base case of Willems (2016) for the West Netherlands Basin, the lower end of the 1 to 2 km of
-Dutch doublets; the well distance is the length in the radial inflow of DoubletCalc (Mijnlieff et
-al. 2013, EGC, "Geothermal energy and support schemes in the Netherlands", slide 14).
-"""
 
 
 @ops.physics

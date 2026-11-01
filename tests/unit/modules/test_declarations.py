@@ -30,6 +30,7 @@ from gemini.types import (
     TemperatureDifference,
 )
 from gemini.types.bindings import DatedParams
+from tests.fixtures import si
 
 
 class Declared(Module):
@@ -75,7 +76,7 @@ class Declared(Module):
 def _declared(**params):
     """Return the fixture module with parameters set as explicit overrides."""
     module = Declared()
-    module.set_params("", params)
+    si.set_params(module, "", params)
     return module
 
 

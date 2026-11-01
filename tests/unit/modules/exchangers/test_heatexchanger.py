@@ -12,7 +12,8 @@ from gemini.types.flows import Stream
 from gemini.types.fluid import WATER
 from gemini.types.results import NOT_ASSESSED
 from scripts.legacy import tables as mapping
-from tests.fixtures import OLD_PROJECT
+from tests.fixtures import OLD_PROJECT, si
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_health_matches, assert_module_matches
 from tests.fixtures.errors import raises
 
@@ -57,13 +58,18 @@ def exchanger_for(row, measured, ua):
     )
     streams = {
         "hot_in": Stream(
-            m_dot=measured["m_dot_hot"], T=measured["hot_in_T"], p=units.bar_to_pa(row.HEX_Pin)
+            m_dot=gm.units.Quantity(measured["m_dot_hot"], "kg/s"),
+            T=gm.units.Quantity(measured["hot_in_T"], "K"),
+            p=gm.units.Quantity(units.bar_to_pa(row.HEX_Pin), "Pa"),
         ),
         "cold_in": Stream(
-            m_dot=measured["m_dot_cold"], T=measured["cold_in_T"], p=1e6, fluid=WATER
+            m_dot=gm.units.Quantity(measured["m_dot_cold"], "kg/s"),
+            T=gm.units.Quantity(measured["cold_in_T"], "K"),
+            p=gm.units.Quantity(1e6, "Pa"),
+            fluid=WATER,
         ),
     }
-    return HeatExchanger().set_params("", params), streams
+    return si.set_params(with_values(HeatExchanger()), "", params), streams
 
 
 def test_measured_heat_exchanger_performance():
@@ -97,8 +103,16 @@ def test_first_law_equal_capacity_and_limits(arrangement):
         hot_nominal_mass_flow=10,
         cold_nominal_mass_flow=10,
     )
-    c = HeatExchanger().set_params("", p)
-    hot, cold = Stream(m_dot=10, T=350, p=1e6), Stream(m_dot=10, T=300, p=1e6)
+    c = si.set_params(with_values(HeatExchanger()), "", p)
+    hot, cold = Stream(
+        m_dot=gm.units.Quantity(10, "kg/s"),
+        T=gm.units.Quantity(350, "K"),
+        p=gm.units.Quantity(1e6, "Pa"),
+    ), Stream(
+        m_dot=gm.units.Quantity(10, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e6, "Pa"),
+    )
     result = c(hot_in=hot, cold_in=cold)
     out, streams = result.outputs, result.outlets
     assert (hot.T - out.hot_out_T) * 10 * 4217.4 == pytest.approx(out.duty)
@@ -107,7 +121,7 @@ def test_first_law_equal_capacity_and_limits(arrangement):
     assert streams["hot_out"].p == hot.p - 1000
     out = c(hot_in=hot.with_(m_dot=0), cold_in=cold).outputs
     assert out.duty == 0
-    c.set_params("", {"thermal_conductance": 0})
+    c.set_params("", {"thermal_conductance": gm.units.Quantity(0, "W/K")})
     out = c(hot_in=hot, cold_in=cold).outputs
     assert out.duty == 0 and out.hot_out_T == hot.T
     out = c(hot_in=hot, cold_in=cold.with_(T=350)).outputs
@@ -122,26 +136,28 @@ def test_invalid_measurements():
 
 def test_health_is_not_assessed_when_measurements_cannot_determine_ua():
     """E-modules-011/012: zero flow or zero design UA mean not assessed, not an error."""
-    exchanger = HeatExchanger().set_params(
+    exchanger = with_values(HeatExchanger()).set_params(
         "",
         {
-            "thermal_conductance": 100000,
-            "hot_nominal_pressure_drop": 1000,
-            "cold_nominal_pressure_drop": 1000,
-            "hot_nominal_mass_flow": 10,
-            "cold_nominal_mass_flow": 10,
+            "thermal_conductance": gm.units.Quantity(100000, "W/K"),
+            "hot_nominal_pressure_drop": gm.units.Quantity(1000, "Pa"),
+            "cold_nominal_pressure_drop": gm.units.Quantity(1000, "Pa"),
+            "hot_nominal_mass_flow": gm.units.Quantity(10, "kg/s"),
+            "cold_nominal_mass_flow": gm.units.Quantity(10, "kg/s"),
         },
     )
     stopped = exchanger(
-        hot_in=Stream(m_dot=0, T=350, p=1e6), cold_in=Stream(m_dot=10, T=300, p=1e6)
+        hot_in=Stream(**si.stream(m_dot=0, T=350, p=1e6)),
+        cold_in=Stream(**si.stream(m_dot=10, T=300, p=1e6)),
     )
     measured = dict(hot_out_T=340, cold_out_T=310)
     assert exchanger.health(stopped, measured) is None
     running = exchanger(
-        hot_in=Stream(m_dot=10, T=350, p=1e6), cold_in=Stream(m_dot=10, T=300, p=1e6)
+        hot_in=Stream(**si.stream(m_dot=10, T=350, p=1e6)),
+        cold_in=Stream(**si.stream(m_dot=10, T=300, p=1e6)),
     )
     assert exchanger.health(running, measured) is not None
-    exchanger.set_params("", {"thermal_conductance": 0})
+    exchanger.set_params("", {"thermal_conductance": gm.units.Quantity(0, "W/K")})
     assert exchanger.health(running, measured) is None
     with raises(gm.errors.ValidationError, "unknown_name", match="arrangement"):
         gm.analysis.estimate_conductance(
@@ -152,19 +168,30 @@ def test_health_is_not_assessed_when_measurements_cannot_determine_ua():
 @pytest.mark.parametrize("arrangement", ["parallel", "counterflow"])
 def test_traced_call_matches_one_call_per_row(arrangement):
     """Unequal, equal, stopped and pinched rows trace and equal one call per row."""
-    exchanger = HeatExchanger().set_params(
+    exchanger = with_values(HeatExchanger()).set_params(
         "",
         {
-            "thermal_conductance": 100000,
+            "thermal_conductance": gm.units.Quantity(100000, "W/K"),
             "arrangement": arrangement,
-            "hot_nominal_pressure_drop": 1000,
-            "cold_nominal_pressure_drop": 2000,
-            "hot_nominal_mass_flow": 10,
-            "cold_nominal_mass_flow": 10,
+            "hot_nominal_pressure_drop": gm.units.Quantity(1000, "Pa"),
+            "cold_nominal_pressure_drop": gm.units.Quantity(2000, "Pa"),
+            "hot_nominal_mass_flow": gm.units.Quantity(10, "kg/s"),
+            "cold_nominal_mass_flow": gm.units.Quantity(10, "kg/s"),
         },
     )
     rows = [
-        dict(hot_in=Stream(m_dot=hot, T=hot_T, p=1e6), cold_in=Stream(m_dot=cold, T=300, p=1e6))
+        dict(
+            hot_in=Stream(
+                m_dot=gm.units.Quantity(hot, "kg/s"),
+                T=gm.units.Quantity(hot_T, "K"),
+                p=gm.units.Quantity(1e6, "Pa"),
+            ),
+            cold_in=Stream(
+                m_dot=gm.units.Quantity(cold, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e6, "Pa"),
+            ),
+        )
         for hot, cold, hot_T in [
             (10, 10, 350),
             (5, 12, 360),
@@ -179,15 +206,15 @@ def test_traced_call_matches_one_call_per_row(arrangement):
 
 
 def _health_exchanger(arrangement):
-    return HeatExchanger().set_params(
+    return with_values(HeatExchanger()).set_params(
         "",
         {
-            "thermal_conductance": 100000,
+            "thermal_conductance": gm.units.Quantity(100000, "W/K"),
             "arrangement": arrangement,
-            "hot_nominal_pressure_drop": 1000,
-            "cold_nominal_pressure_drop": 2000,
-            "hot_nominal_mass_flow": 10,
-            "cold_nominal_mass_flow": 10,
+            "hot_nominal_pressure_drop": gm.units.Quantity(1000, "Pa"),
+            "cold_nominal_pressure_drop": gm.units.Quantity(2000, "Pa"),
+            "hot_nominal_mass_flow": gm.units.Quantity(10, "kg/s"),
+            "cold_nominal_mass_flow": gm.units.Quantity(10, "kg/s"),
             "fouling_threshold": 0.15,
         },
     )
@@ -197,7 +224,18 @@ def _health_exchanger(arrangement):
 def test_health_on_arrays_matches_one_call_per_row(arrangement):
     """Fouled, clean and better-than-design rows give the scores, alarms and messages per row."""
     exchanger = _health_exchanger(arrangement)
-    streams = dict(hot_in=Stream(m_dot=10, T=350, p=1e6), cold_in=Stream(m_dot=10, T=300, p=1e6))
+    streams = dict(
+        hot_in=Stream(
+            m_dot=gm.units.Quantity(10, "kg/s"),
+            T=gm.units.Quantity(350, "K"),
+            p=gm.units.Quantity(1e6, "Pa"),
+        ),
+        cold_in=Stream(
+            m_dot=gm.units.Quantity(10, "kg/s"),
+            T=gm.units.Quantity(300, "K"),
+            p=gm.units.Quantity(1e6, "Pa"),
+        ),
+    )
     result = exchanger(**streams)
     clean = result.outputs
     rows = [
@@ -215,7 +253,16 @@ def test_health_on_arrays_marks_undetermined_rows_not_assessed():
     """A row with a gross duty mismatch is not assessed; a chunk without any gives None."""
     exchanger = _health_exchanger("counterflow")
     result = exchanger(
-        hot_in=Stream(m_dot=10, T=350, p=1e6), cold_in=Stream(m_dot=10, T=300, p=1e6)
+        hot_in=Stream(
+            m_dot=gm.units.Quantity(10, "kg/s"),
+            T=gm.units.Quantity(350, "K"),
+            p=gm.units.Quantity(1e6, "Pa"),
+        ),
+        cold_in=Stream(
+            m_dot=gm.units.Quantity(10, "kg/s"),
+            T=gm.units.Quantity(300, "K"),
+            p=gm.units.Quantity(1e6, "Pa"),
+        ),
     )
     outputs = result.outputs
     measured = dict(

@@ -50,7 +50,6 @@ class HeatExchanger(Equipment, Module):
         )
         self.arrangement = Parameter(
             Literal["counterflow", "parallel"],
-            default="counterflow",
             description="Flow arrangement of the two streams",
         )
         self.hot_nominal_pressure_drop = Parameter(
@@ -74,11 +73,14 @@ class HeatExchanger(Equipment, Module):
             description="Mass flow of the cold side at which its nominal pressure drop holds",
         )
         self.fouling_threshold = Parameter(
-            Fraction,
-            default=diagnostics.DEFAULT_FOULING_THRESHOLD,
+            Fraction | None,
+            default=None,
             gt=0,
             le=1,
-            description="Relative loss of conductance at which fouling is reported",
+            description=(
+                "Relative loss of conductance at which fouling is reported; empty switches the "
+                "fouling check off"
+            ),
         )
 
         # Inlets
@@ -206,6 +208,8 @@ class HeatExchanger(Equipment, Module):
             measured = measured | _inlet_measurements(result.inlets)
         keys = ("hot_in_T", "hot_out_T", "cold_in_T", "cold_out_T", "m_dot_hot", "m_dot_cold")
         if not set(keys) <= measured.keys() or not self.thermal_conductance:
+            return None
+        if self.fouling_threshold is None:
             return None
         apparent, code, _, _, _ = heat_transfer.apparent_conductance(
             self.arrangement,

@@ -8,11 +8,16 @@ import gemini as gm
 from gemini.modules import energy_balance, mass_balance
 from gemini.modules.power import ORC
 from gemini.types import Stream
+from tests.fixtures import si
 from tests.fixtures.air import air
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.reading import reading
 
-BRINE = Stream(m_dot=100, T=423.15, p=10e5)
+BRINE = Stream(
+    m_dot=gm.units.Quantity(100, "kg/s"),
+    T=gm.units.Quantity(423.15, "K"),
+    p=gm.units.Quantity(10e5, "Pa"),
+)
 """Brine at 150 degC and 100 kg/s."""
 
 
@@ -26,7 +31,7 @@ def orc(**changes):
         parasitic_fraction=0.15,
         capacity={"value": 5, "unit": "MW"},
     )
-    return ORC().set_params("", params | changes)
+    return si.set_params(ORC(), "", params | changes)
 
 
 def test_hand_calculated_lorenz_power():
@@ -89,7 +94,14 @@ def test_idle_zero_flow_and_reverse_flow():
 def test_traced_call_matches_one_call_per_row():
     """Running, capped, idle (inlet too cold) and stopped rows trace and equal one call per row."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=T, p=10e5), air_in=air(ambient))
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(T, "K"),
+                p=gm.units.Quantity(10e5, "Pa"),
+            ),
+            air_in=air(ambient),
+        )
         for m_dot, T, ambient in [
             (100.0, 423.15, 288.15),
             (400.0, 423.15, 288.15),

@@ -58,7 +58,7 @@ class Block:
             if (port, name) in self.fields
         }
         try:
-            Stream(**values, fluid=self.fluids[port])
+            Stream._si(**values, fluid=self.fluids[port])
         except Exception as error:
             return error
 
@@ -115,7 +115,7 @@ def _check_stream(block, twin, port, defaults):
     for name, value in defaults.items():
         block.fields.setdefault((port, name), np.full(block.size, value))
     fluid = twin.defaults.get(port, {}).get("fluid", twin.module.fluid)
-    block.fluids[port] = Fluid.model_validate(fluid)
+    block.fluids[port] = Fluid._of(fluid)
     present = [(port, name) in block.fields for name in STREAM_FIELDS]
     if not all(present):
         block.status[block.status == 0] = -(block.ports.index(port) + 1)

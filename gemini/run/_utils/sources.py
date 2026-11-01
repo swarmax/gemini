@@ -78,8 +78,8 @@ def heat_pump_cop(module, heating, sink_outlet, source_outlet):
     """Return the COP of a heat pump at design outlet temperatures [K].
 
     The fraction is the parameter of the module's COP model: ``carnot_fraction``, or
-    ``lorenz_fraction`` for a Lorenz machine. A plant states it, or the default of the parameter
-    applies, whose source is ``refrigeration.DEFAULT_CARNOT_FRACTION``.
+    ``lorenz_fraction`` for a Lorenz machine. The plant states it (the module has no default); the
+    cited figure of the Carnot fraction is ``refrigeration.DEFAULT_CARNOT_FRACTION``.
 
     NOTE(refactor): this is a design estimate at the setpoint and a source outlet. A Lorenz machine
     takes its fraction on the outlet temperatures, because the glides need the simulation.

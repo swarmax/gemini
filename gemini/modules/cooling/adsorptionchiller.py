@@ -39,7 +39,7 @@ class AdsorptionChiller(Equipment, Module):
     ``is_capped`` is true whenever the delivered duty falls short of the setpoint request,
     whether capacity, the characteristic equation or the driving temperature limits it.
 
-    Assumptions: constant cycle-averaged thermal COP, 0.55 by default: Wang and Oliveira (2006),
+    Assumptions: constant cycle-averaged thermal COP: Wang and Oliveira (2006),
     "Adsorption refrigeration - an efficient way to make good use of waste heat and solar
     energy", Progress in Energy and Combustion Science 32, 424-458, report about 0.5 to 0.6 for
     commercial silica-gel/water chillers. No pressure loss, casing heat loss or cycle dynamics;
@@ -81,7 +81,6 @@ class AdsorptionChiller(Equipment, Module):
         )
         self.thermal_cop = Parameter(
             Ratio,
-            default=_physics.ADSORPTION_THERMAL_COP,
             gt=0,
             description="Thermal coefficient of performance: useful duty over driving heat",
         )
@@ -90,12 +89,10 @@ class AdsorptionChiller(Equipment, Module):
         )
         self.minimum_driving_temperature = Parameter(
             Temperature,
-            default=_physics.ADSORPTION_MINIMUM_DRIVING_TEMPERATURE,
             description="Lowest driving hot-water temperature at which the machine operates",
         )
         self.maximum_driving_temperature = Parameter(
             Temperature,
-            default=_physics.ADSORPTION_MAXIMUM_DRIVING_TEMPERATURE,
             description="Highest driving hot-water temperature the machine accepts",
         )
 

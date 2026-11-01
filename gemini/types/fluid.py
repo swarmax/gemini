@@ -1,7 +1,8 @@
 """Immutable stream composition and cached constant-property models."""
 
+from collections.abc import Mapping
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic import ValidationError as PydanticError
@@ -13,6 +14,7 @@ from gemini.errors import ValidationError
 from gemini.physics import constants, gas
 from gemini.physics.chemistry import henry_constant
 from gemini.physics.fluid import DEFAULT_LIQUID_DENSITY, FluidProperties, mixture_density
+from gemini.types import bare
 from gemini.types.quantities import (
     Density,
     Fraction,
@@ -24,14 +26,25 @@ from gemini.types.quantities import (
     Viscosity,
 )
 
-_FIELD_UNITS = {
-    "density": "kg/m3",
-    "viscosity": "Pa.s",
-    "specific_heat": "J/kg/K",
-    "thermal_conductivity": "W/m/K",
-    "gas_liquid_ratio": "-",
-}
-"""The SI unit of each ``Fluid`` field that takes a unit string."""
+
+def _declared_quantities():
+    """Return ``{field: (SI unit, quantity)}`` of the fields whose type is an annotated quantity."""
+    options = {name: get_args(field.annotation) for name, field in Fluid.model_fields.items()}
+    extras = {
+        name: [meta.json_schema_extra or {} for meta in _metadata(options[name])]
+        for name in options
+    }
+    return {
+        name: (extra["unit"], extra["quantity"])
+        for name, found in extras.items()
+        for extra in found
+        if "unit" in extra
+    }
+
+
+def _metadata(options):
+    """Return the ``Field`` metadata that the annotated options of a type carry."""
+    return [meta for option in options for meta in getattr(option, "__metadata__", ())]
 
 
 class Fluid(BaseModel):
@@ -41,7 +54,11 @@ class Fluid(BaseModel):
     matching the cited manufacturer table. Constant STP does not infer brine density or viscosity
     from salt concentration; supply measured values. ``density``, ``viscosity``, ``specific_heat``
     and ``thermal_conductivity`` describe the liquid of a brine or water fluid and the gas of a gas
-    fluid; a mixture density is a computed property, never an input. Numbers are SI.
+    fluid; a mixture density is a computed property, never an input. The public constructor takes
+    a ``gm.units.Quantity`` (or its ``{"value", "unit"}`` dict) for the four properties, whose
+    types declare a dimension, and a plain number for the dimensionless fields; a bare number for
+    a property raises ``ValidationError`` (``invalid_value``). ``Fluid._si`` is the one private
+    constructor of SI values that ``gemini`` itself uses.
 
     Free gas is given as ``gas_liquid_ratio`` (normal m3 of free gas per m3 of produced liquid, at
     0 degC and 1.01325 bar a) with ``gas_composition`` (mole fractions summing to one, the species
@@ -79,10 +96,55 @@ class Fluid(BaseModel):
 
     def __init__(self, **data):
         """Build a fluid; a value that does not fit raises ``gm.errors.ValidationError``."""
+        for name, (unit, quantity) in _QUANTITIES.items():
+            if name in data:
+                bare.refuse(f"Fluid.{name}", data[name], unit, quantity)
+        self._build(data)
+
+    def _build(self, data):
+        """Validate ``data`` into this fluid, wrapping a pydantic error."""
         try:
             super().__init__(**data)
         except PydanticError as error:
             raise ValidationError(f"Fluid: {error}", code=_code_of(error)) from error
+
+    @classmethod
+    def _si(cls, **data):
+        """Return the fluid of SI values, as ``gemini`` builds its own: no unit rule applies."""
+        fluid = cls.__new__(cls)
+        fluid._build(data)
+        return fluid
+
+    def _to_dict(self):
+        """Return the plant dict form: ``{"value", "unit"}`` for the fields with a dimension."""
+        data = self.model_dump(mode="json")
+        for name, (unit, _) in _QUANTITIES.items():
+            if unit != "-" and data.get(name) is not None:
+                data[name] = {"value": data[name], "unit": unit}
+        return data
+
+    @classmethod
+    def model_validate(cls, obj, **options):
+        """Read the SI data that ``model_dump`` writes; a mapping holds SI numbers or quantities.
+
+        This is the reader of stored data, as ``gemini`` itself uses it. A fluid a user gives
+        goes through the constructor, which refuses a bare number for a property.
+        """
+        if isinstance(obj, Mapping) and not options:
+            return cls._si(**obj)
+        return super().model_validate(obj, **options)
+
+    @classmethod
+    def _given(cls, value):
+        """Return ``value`` as a ``Fluid`` for a public boundary: a mapping needs quantities."""
+        return cls(**value) if isinstance(value, Mapping) else cls._of(value)
+
+    @classmethod
+    def _of(cls, value):
+        """Return ``value`` as a ``Fluid``: an instance, or the fluid of a mapping of SI values."""
+        if isinstance(value, cls):
+            return value
+        return cls._si(**value) if isinstance(value, Mapping) else cls.model_validate(value)
 
     def __hash__(self):
         """Hash every field; a composition by its items, because a dictionary has no hash."""
@@ -99,10 +161,7 @@ class Fluid(BaseModel):
         """Convert the unit strings of the quantity fields to SI."""
         if not isinstance(data, dict):
             return data
-        return {
-            key: units.value_in_si(value, _FIELD_UNITS.get(key), f"Fluid.{key}")
-            for key, value in data.items()
-        }
+        return {key: _in_si(key, value) for key, value in data.items()}
 
     @model_validator(mode="after")
     def composition(self):
@@ -240,6 +299,16 @@ class Fluid(BaseModel):
         }
 
 
+_QUANTITIES = _declared_quantities()
+"""The SI unit and the quantity of each ``Fluid`` field that declares one, from its type."""
+
+
+def _in_si(name, value):
+    """Return the field ``name`` in SI: a quantity converts, anything else passes unchanged."""
+    unit, quantity = _QUANTITIES.get(name, (None, None))
+    return units.value_in_si(value, unit, f"Fluid.{name}", quantity)
+
+
 _GLYCOL_30_PROPERTIES = dict(rho_l=1029.85, cp_l=3841, k_l=0.4622, mu_l=0.0016295)
 
 _OVERRIDES = (
@@ -299,7 +368,7 @@ def _free_gas(fluid: Fluid) -> Fluid:
     """Return the gas fluid of the free gas of ``fluid``, cached by its complete value."""
     if fluid.gas_composition is None:
         return fluid
-    return Fluid(
+    return Fluid._si(
         kind="gas",
         gas_composition=fluid.gas_composition,
         specific_heat=fluid.properties(0, 0).cp_l,
@@ -308,14 +377,16 @@ def _free_gas(fluid: Fluid) -> Fluid:
 
 def grid_gas(composition):
     """Return the gas fluid of a gas grid of ``composition``, marked as grid gas."""
-    return Fluid(kind="gas", gas_composition=composition, grid_composition=composition)
+    return Fluid._si(kind="gas", gas_composition=composition, grid_composition=composition)
 
 
-AIR = Fluid(kind="gas", gas_composition=gas.AIR_COMPOSITION, specific_heat=gas.AIR_SPECIFIC_HEAT)
-FLUE_CO2 = Fluid(kind="gas", gas_composition={"CO2": 1.0})
+AIR = Fluid._si(
+    kind="gas", gas_composition=gas.AIR_COMPOSITION, specific_heat=gas.AIR_SPECIFIC_HEAT
+)
+FLUE_CO2 = Fluid._si(kind="gas", gas_composition={"CO2": 1.0})
 """What a burner releases, as the CO2 that leaves it: combustion air is not modelled."""
 
-BRINE = Fluid()
-WATER = Fluid(kind="water")
-GLYCOL_30 = Fluid(kind="glycol_water", glycol_fraction=0.3)
-STEAM = Fluid(kind="steam")
+BRINE = Fluid._si()
+WATER = Fluid._si(kind="water")
+GLYCOL_30 = Fluid._si(kind="glycol_water", glycol_fraction=0.3)
+STEAM = Fluid._si(kind="steam")

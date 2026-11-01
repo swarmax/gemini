@@ -6,21 +6,25 @@ import pytest
 from gemini.compiler.graph import GraphCache, run
 from gemini.modules.wells import ProductionWell
 from gemini.types.flows import Stream
+from gemini.types.fluid import BRINE as DEFAULT_FLUID
+from gemini.units import Quantity
 from scripts.legacy import tables as mapping
-from tests.fixtures import OLD_PROJECT
+from tests.fixtures import OLD_PROJECT, si
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_function_matches, assert_module_matches
 
 
 def test_split_esp_traversal():
     """Split at 600 m inside a section; pumping raises the resulting wellhead pressure."""
-    c = ProductionWell().set_params(
+    c = si.set_params(
+        with_values(ProductionWell()),
         "",
         mapping.productionwell_params_from_gemini(
             mapping.from_property(OLD_PROJECT / "production_well_c774.param"),
             esp_property=mapping.from_property(OLD_PROJECT / "esp_1ee3.param"),
         ),
     )
-    stream = Stream(m_dot=40, T=353.15, p=25e6)
+    stream = Stream(m_dot=Quantity(40, "kg/s"), T=Quantity(353.15, "K"), p=Quantity(25e6, "Pa"))
     intake = c.intake_conditions(stream)
     out = c.wellhead_from_discharge(intake.with_(p=intake.p + 3e6))
     passive = c.wellhead_from_discharge(intake)
@@ -33,12 +37,14 @@ def test_split_esp_traversal():
 
 
 def _well(**changes):
-    return ProductionWell().set_params(
+    return si.set_params(
+        with_values(ProductionWell()),
         "",
         mapping.productionwell_params_from_gemini(
             mapping.from_property(OLD_PROJECT / "production_well_c774.param"),
             esp_property=mapping.from_property(OLD_PROJECT / "esp_1ee3.param"),
         )
+        | {"segment": "full"}
         | changes,
     )
 
@@ -53,7 +59,7 @@ def test_traversals_match_on_arrays():
     rows = [(40.0, 353.15, 25e6), (-10.0, 340.0, 20e6), (0.0, 353.15, 25e6), (5.0, 300.0, 1e6)]
 
     def stream(m_dot, T, p):
-        return Stream(m_dot=m_dot, T=T, p=p)
+        return Stream._si(m_dot=m_dot, T=T, p=p, fluid=DEFAULT_FLUID)
 
     def intake(m_dot, T, p):
         return _outlet(well.intake_conditions(stream(m_dot, T, p)))
@@ -71,16 +77,30 @@ def test_traversals_match_on_arrays():
 def test_production_well_traces_with_its_section_profiles():
     """The per-section lists are vector outputs: the module traces and equals one call per row."""
     rows = [
-        {"bottom_in": Stream(m_dot=40.0, T=353.15, p=25e6)},
-        {"bottom_in": Stream(m_dot=10.0, T=340.0, p=20e6)},
-        {"bottom_in": Stream(m_dot=25.0, T=300.0, p=5e6)},
+        {
+            "bottom_in": Stream(
+                m_dot=Quantity(40.0, "kg/s"), T=Quantity(353.15, "K"), p=Quantity(25e6, "Pa")
+            )
+        },
+        {
+            "bottom_in": Stream(
+                m_dot=Quantity(10.0, "kg/s"), T=Quantity(340.0, "K"), p=Quantity(20e6, "Pa")
+            )
+        },
+        {
+            "bottom_in": Stream(
+                m_dot=Quantity(25.0, "kg/s"), T=Quantity(300.0, "K"), p=Quantity(5e6, "Pa")
+            )
+        },
     ]
     assert_module_matches(_well(), rows)
     traced = run(
         _well(),
         {
             "bottom_in": Stream(
-                m_dot=np.array([40.0, 10.0]), T=np.array([353.15, 340.0]), p=np.array([25e6, 20e6])
+                m_dot=Quantity(np.array([40.0, 10.0]), "kg/s"),
+                T=Quantity(np.array([353.15, 340.0]), "K"),
+                p=Quantity(np.array([25e6, 20e6]), "Pa"),
             )
         },
     )
@@ -96,4 +116,13 @@ def test_another_esp_depth_and_path_length_reuse_the_graph():
     for well in (first, other):
         cache.graph(well, {name: well.fluid for name in well._fed_inlets()})
     assert cache.traces == 1
-    assert_module_matches(other, [{"bottom_in": Stream(m_dot=40.0, T=353.15, p=25e6)}])
+    assert_module_matches(
+        other,
+        [
+            {
+                "bottom_in": Stream(
+                    m_dot=Quantity(40.0, "kg/s"), T=Quantity(353.15, "K"), p=Quantity(25e6, "Pa")
+                )
+            }
+        ],
+    )
