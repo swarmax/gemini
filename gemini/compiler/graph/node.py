@@ -25,7 +25,8 @@ class Node:
     ``shape`` of one row (``()`` or ``(n,)`` for a vector parameter). A ``check`` node carries
     its error class, message and message values in ``attributes`` and its error ``code``.
     ``guards`` lists the check nodes whose errors travel with this node's value. ``source`` is
-    the file and line of the physics code that created the node.
+    the file and line of the physics code that created the node. ``body`` is the loop body that
+    owns the node, ``None`` for a node of the outer graph (see ``body``).
     """
 
     index: int
@@ -40,6 +41,7 @@ class Node:
     code: int = 0
     guards: list = field(default_factory=list)
     source: str = ""
+    body: object = None
 
     def label(self):
         """Return ``%index`` with the input name, for graph listings."""

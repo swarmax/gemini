@@ -1,9 +1,9 @@
 """Root break: a module that cannot be traced is called for real, row by row.
 
-``root_break_graph`` gives a graph without nodes whose ``root`` is the module. Its inputs are
+``root_break_graph`` gives a graph without nodes that is marked ``root_break``. Its inputs are
 the fields of the inlets and every control and boundary of the tree, named as a traced graph
 names them, so ``graph_feeds`` and the engine feed it like any graph. ``evaluate`` runs it with
-``gemini.engine.rows.run_rows``, which calls the module for real on each row.
+``gemini.engine.rows.run_rows``, which calls the module it is evaluated for on each row.
 """
 
 from gemini.compiler.graph.graph import Graph
@@ -23,7 +23,7 @@ def root_break_graph(module, fluids, stepped, reason):
     for role, declarations in (("control", module.controls()), ("boundary", module.boundaries())):
         for path, declaration in declarations.items():
             graph.input(path, role, declaration.unit)
-    graph.root = module
+    graph.root_break = True
     graph.stepped = stepped and any(member.stateful for member in module.modules())
     graph.inlet_fluids = {port: fluids[port] for port in module._fed_inlets()}
     graph.breaks.append((module.path, reason))

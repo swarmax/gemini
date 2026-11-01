@@ -85,6 +85,9 @@ class _Numbering:
         self.graph.outputs = {
             name: self._merged(operand) for name, operand in self.graph.outputs.items()
         }
+        kept = set(self.kept)
+        for body in self.graph.bodies:
+            body.remap(self._merged, kept)
         if self.graph.result is not None:
             self.graph.result = self.graph.result.mapped(self._merged_value)
 
@@ -126,8 +129,13 @@ def _certain_nodes(graph):
 
 
 def _key(node):
-    """Return the hashable identity of a node: op, operands and attributes."""
-    return (node.op, tuple(map(_operand_key, node.operands)), _attributes_key(node.attributes))
+    """Return the hashable identity of a node: op, operands, attributes and loop body."""
+    return (
+        node.op,
+        tuple(map(_operand_key, node.operands)),
+        _attributes_key(node.attributes),
+        node.body,
+    )
 
 
 def _operand_key(operand):

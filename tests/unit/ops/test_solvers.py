@@ -10,6 +10,7 @@ from gemini import ops
 from gemini.compiler.graph import Graph
 from gemini.compiler.graph.passes.cse import eliminate_common_subexpressions
 from gemini.errors import ValidationError
+from gemini.ops.solvers import wegstein
 from tests.fixtures.equivalence import RTOL
 from tests.fixtures.errors import raises
 from tests.fixtures.graph_run import graph_outputs
@@ -141,3 +142,39 @@ def test_brentq_does_not_swallow_a_failed_check_on_floats():
         ops.brentq(residual, 0.0, 1.0)
     with pytest.raises(PhysicsError):
         ops.brentq(residual, np.array([0.0]), np.array([1.0]))
+
+
+WEGSTEIN = [
+    (10.0, 20.0, 10.0, 10.0),
+    (10.0, 20.0, 10.0, 15.0),
+    (10.0, 15.0, 0.0, 10.0),
+    (10.0, 30.0, 0.0, 10.0),
+    (10.0, 20.0, 0.0, 20.0),
+    (350.0, 340.0, 300.0, 330.0),
+    (10.0, float("nan"), 0.0, 10.0),
+]
+
+
+@pytest.mark.parametrize(
+    ("current", "image", "previous", "previous_image"),
+    [WEGSTEIN[0], WEGSTEIN[1], WEGSTEIN[3], WEGSTEIN[4]],
+)
+def test_wegstein_substitutes_without_history_or_with_a_slope_of_one_or_more(
+    current, image, previous, previous_image
+):
+    """No history, no change of the iterate, and a slope of one or more give the image."""
+    assert wegstein(current, image, previous, previous_image) == image
+
+
+def test_wegstein_accelerates_a_slope_below_one():
+    """The secant root of a linear pass: ``image = 0.5 x + 170`` has its fixed point at 340."""
+    assert wegstein(300.0, 320.0, 280.0, 310.0) == pytest.approx(340.0, abs=1e-12)
+
+
+def test_wegstein_on_arrays_is_the_step_of_each_element_alone():
+    """Every element takes the step it takes alone, bit for bit; a zero divisor raises nothing."""
+    columns = [np.array(column) for column in zip(*WEGSTEIN)]
+    together = wegstein(*columns)
+    for index, row in enumerate(WEGSTEIN):
+        alone = wegstein(*row)
+        assert together[index] == alone or (np.isnan(alone) and np.isnan(together[index]))

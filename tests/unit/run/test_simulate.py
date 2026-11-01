@@ -254,10 +254,12 @@ def test_two_calls_on_one_plant_trace_once_and_match_two_fresh_plants(shared_pla
     """A new numeric value needs no new trace; the numbers are those of two fresh plants."""
     data = fast_dataset.window(end=fast_dataset.start + pd.Timedelta(hours=2))
     plant, other = copy.deepcopy(shared_plant), copy.deepcopy(shared_plant)
+    graph_cache().clear()
+    traces = graph_cache().traces
     first = gm.simulate(plant, plan=data)
     plant.heat_exchanger.thermal_conductance = 5e6
     second = gm.simulate(plant, plan=data)
-    assert graph_cache(plant).traces == 1
+    assert graph_cache().traces == traces + 1
     _same(first, gm.simulate(other, plan=data))
     other.heat_exchanger.thermal_conductance = 5e6
     _same(second, gm.simulate(copy.deepcopy(other), plan=data))
@@ -270,12 +272,12 @@ def test_a_structural_change_retraces():
     """A hook is a guard of the cache, so the next call traces again; no change does not."""
     module = pair_plant()
     gm.replay(module, _pairs())
-    traces = graph_cache(module).traces
+    traces = graph_cache().traces
     gm.replay(module, _pairs())
-    assert graph_cache(module).traces == traces
+    assert graph_cache().traces == traces
     module.first.register_forward_hook(lambda module, inlets, outlets: None)
     gm.replay(module, _pairs())
-    assert graph_cache(module).traces > traces
+    assert graph_cache().traces > traces
 
 
 def test_a_call_without_a_case_or_a_plan_is_refused():

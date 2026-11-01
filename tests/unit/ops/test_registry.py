@@ -21,5 +21,5 @@ def test_unknown_ops_and_kinds_raise():
     """An unknown op name suggests a close one; an unknown kind is refused."""
     with raises(ValidationError, "unknown_name", match="did you mean 'where'"):
         registry.get("wher")
-    with raises(ValidationError, "unknown_name", match="kind = 'loop'"):
-        registry.register("loop_op", "loop", 1)
+    with raises(ValidationError, "unknown_name", match="kind = 'spin'"):
+        registry.register("spin_op", "spin", 1)

@@ -6,7 +6,8 @@ records them. The kind is what graph passes rely on: ``elementwise`` ops apply r
 ``solver`` ops (``brentq``, ``newton``) find roots with per-row stopping and keep their function
 and settings in node attributes (the arity counts the fixed operands, ``args`` follow), and
 ``scan`` carries state from step to step. A ``break`` node runs one module that cannot be
-traced, row by row on the plain path; its outputs are ``break_output`` nodes.
+traced, row by row on the plain path; its outputs are ``break_output`` nodes. A ``loop`` node is
+the masked fixed point of a plant loop: its body runs inside the interpreter, pass by pass.
 """
 
 from dataclasses import dataclass
@@ -14,7 +15,7 @@ from dataclasses import dataclass
 from gemini._utils.strings import did_you_mean
 from gemini.errors import ValidationError
 
-KINDS = ("elementwise", "index", "reduction", "interp", "check", "solver", "scan", "break")
+KINDS = ("elementwise", "index", "reduction", "interp", "check", "solver", "scan", "break", "loop")
 
 _OPS = {}
 

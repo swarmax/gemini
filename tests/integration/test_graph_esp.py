@@ -199,7 +199,7 @@ def test_hooks_on_the_traced_esp(esp, week, plain_week, motor_loss_week, untrace
     traced = run(esp, inlets, inputs)
     reader.remove()
     expected_heads = [row.outputs.head for row in plain_week]
-    assert traced.graph.root is esp and "only reads" in traced.breaks[0]
+    assert traced.graph.root_break and "only reads" in traced.breaks[0]
     assert isinstance(seen[0], Proxy)
     assert seen[1:] == pytest.approx(expected_heads, rel=RTOL)
 
@@ -211,5 +211,5 @@ def test_hooks_on_the_traced_esp(esp, week, plain_week, motor_loss_week, untrace
 
     esp.register_forward_hook(_untraceable)
     broken = run(esp, inlets, inputs)
-    assert broken.graph.root is esp and "forward hook" in broken.breaks[0]
+    assert broken.graph.root_break and "forward hook" in broken.breaks[0]
     _assert_equal(broken, untraceable_week)

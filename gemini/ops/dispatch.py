@@ -10,6 +10,7 @@ operators through the same entry.
 import numpy as np
 
 from gemini.ops import kernels, registry
+from gemini.ops.failures import FailedRows, applied
 
 SCALARS = frozenset({float, int, bool, type(None), np.float64, np.int64, np.bool_})
 """Exact types of the scalars of the fast path: Python numbers, ``None`` (a ``where`` branch)
@@ -28,13 +29,17 @@ class Symbolic:
 
 def dispatch(name, *operands, attributes=None):
     """Apply the op ``name`` to ``operands``: record it on traced values, else evaluate it."""
+    failing = False
     for operand in operands:
         if isinstance(operand, Symbolic):
             return operand.record(registry.get(name), operands, attributes)
+        failing = failing or type(operand) is FailedRows
     values = tuple(
         operand.value if isinstance(operand, Constant) else operand for operand in operands
     )
     method = kernels.implementation(kernels.select(values), name)
+    if failing:
+        return applied(name, method, values, attributes)
     return method(*values, **(attributes or {}))
 
 
