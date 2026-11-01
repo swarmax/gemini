@@ -26,6 +26,7 @@ KEYS = {
     "constraints",
     "passed",
     "failed_steps",
+    "failures",
     "services",
 }
 
@@ -56,6 +57,7 @@ def test_the_report_holds_the_energy_the_costs_the_checks_and_the_failed_steps()
     assert report["opex"].value == pytest.approx(10.0 + 2e-8 * 100.0 * SECONDS_PER_YEAR)
     assert report["co2"].value == pytest.approx(100.0 * 24 * 3600 * 1e-7)
     assert report["failed_steps"] == 0
+    assert report["failures"].to_dict() == {"total": 0, "groups": []}
     assert report["boiler_heat"].value is None
     assert [item["name"] for item in report["constraints"]] == ["heat.unmet_demand"]
     assert report["passed"] is True

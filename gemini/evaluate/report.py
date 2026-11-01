@@ -12,6 +12,7 @@ from gemini.evaluate.capacities import capacities
 from gemini.evaluate.capex import capex
 from gemini.evaluate.co2 import co2
 from gemini.evaluate.constraints import constraints
+from gemini.evaluate.failures import failures
 from gemini.evaluate.lcoc import lcoc
 from gemini.evaluate.lcoh import lcoh
 from gemini.evaluate.lcts import lcts
@@ -79,7 +80,9 @@ def report(plant, case, results):
         ``opex``, ``lcts``, ``lcoh``, ``lcoc`` and ``co2`` (values; ``capex`` and ``opex`` keep
         their parts, per module and per kind), ``constraints`` (the list of ``constraints``),
         ``passed`` (``False`` if any constraint failed, ``True`` if none failed and one passed,
-        else ``None``), ``failed_steps`` (the number of steps that failed) and ``services`` (the
+        else ``None``), ``failed_steps`` (the number of steps that failed), ``failures`` (the failed and skipped
+        rows grouped by module path and code, see ``failures``; empty when nothing failed) and
+        ``services`` (the
         services the case asks for, ``"heating"`` and ``"cooling"``, which ``compare`` needs to
         see that a design delivers them). ``to_dict(units=None)`` gives plain JSON in display units.
     """
@@ -101,6 +104,7 @@ def report(plant, case, results):
         constraints=checks,
         passed=verdict([item["passed"] for item in checks]),
         failed_steps=len(results.errors()),
+        failures=failures(results),
         services=_services(case),
     )
 
