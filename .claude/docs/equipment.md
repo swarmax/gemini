@@ -1738,7 +1738,7 @@ Reusable production and reinjection limbs of a geothermal doublet (`gm.plants.ge
 ```python
 import gemini as gm
 
-doublet = example_plant("DoubletHeatPlant").doublet
+doublet = gm.Plant.from_json("inputs/doublet_heat/plant.json").doublet
 doublet.reservoir.production_rate = {"value": 42.4, "unit": "kg/s"}
 doublet.esp.frequency = {"value": 55.5, "unit": "Hz"}
 result = doublet(return_in=gm.Stream(m_dot=40, T={"value": 45, "unit": "C"}, p={"value": 20, "unit": "bar"}, fluid=doublet.fluid))
@@ -1817,7 +1817,7 @@ dict.
 ```python
 import gemini as gm
 
-doublet = example_plant("DoubletHeatPlant").doublet
+doublet = gm.Plant.from_json("inputs/doublet_heat/plant.json").doublet
 field = gm.plants.MultiWellPlant(producers=2, injectors=2)
 for limb, rate in zip(field.producers, (40.0, 30.0)):
     for name in ("reservoir", "well", "esp", "riser"):

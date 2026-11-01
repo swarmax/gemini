@@ -162,7 +162,8 @@ or `gm.study`, not in modules; a plant class belongs in `gemini/plants/`, never 
 2. Constructor sections are `# Parameters`, `# Inlets`, `# Controls`, `# Boundaries`, `# States`,
    `# Outputs`, `# Outlets` for a leaf and `# Modules`, `# Parameters`, `# Inlets`, `# Boundaries`,
    `# Outlets`, `# Connections`, `# Constraints`, `# Outputs` for a plant, in that order, with empty
-   sections omitted. The `__init__` of a plant class has no length limit. Stateful equipment declares `State(kind, default=...)` values and implements
+   sections omitted. The `__init__` of a module or plant class has no length limit: it is one list of declarations
+   (one `description` each). Stateful equipment declares `State(kind, default=...)` values and implements
    `_advance_states(self, inlets, outlets, dt)`; see [modules.md](modules.md#state-and-health).
 3. Controls are settable commands; boundaries are uncontrollable external conditions.
 4. `forward` is exactly `forward(self, inlets)` and reads declared streams through the immutable
@@ -267,6 +268,8 @@ docstring, never a comment. `test_only_section_headers_and_tool_directives_are_c
   and write no `else` after `return` or `raise`.
 - Small functions: about 40 lines of body and one job each. The documented exceptions, each with
   its reason, are listed in `LONG_FUNCTIONS` in `tests/unit/test_code_quality.py`.
+  The `__init__` of a module or plant class under `gemini/modules/` or `gemini/plants/` is exempt:
+  it is a list of declarations, not logic.
 - McCabe complexity at most 10 (`max-complexity = 10` in the `[tool.flake8]` section of
   `pyproject.toml`).
 - Just enough code: no dead code, unused options or parameters, speculative generality or golfed
