@@ -66,7 +66,8 @@ plant or on copies of it (`Problem.apply_site` and a design study copy the plant
 structure once, and an `Engine` shares the same graphs. The key of [`GraphCache`](native-engine.md)
 decides: a changed numeric parameter does not retrace, a changed structure does (a class, a
 connection, a hook, a fluid, a non-numeric or structural value, a path). A graph holds no module:
-each call evaluates it for its own plant, so a copy never sees the values of another. The eager
+each call evaluates it for its own plant, so a copy never sees the values of another. The ESP
+depth and the pipe path of a well are numeric, so a study over depths shares one graph. The eager
 executor keeps nothing.
 
 The arguments are those of `Engine` and of the matching method, with `plant` first. On `simulate`

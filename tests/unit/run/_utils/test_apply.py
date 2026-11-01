@@ -3,7 +3,7 @@
 import pytest
 
 import gemini as gm
-from gemini.run._utils.apply import apply_case
+from gemini.run._utils.apply import apply_case, applied_in_place
 from gemini.units import Quantity
 from tests.fixtures.errors import raises
 from tests.fixtures.sample_cases import sample_case, template_dict
@@ -103,3 +103,15 @@ def test_a_value_the_plant_needs_and_the_case_lacks_is_named_by_its_path():
     with raises(gm.errors.ValidationError, "missing_value") as caught:
         apply_case(sample_plant(), case)
     assert caught.value.path == "environment.ground.gradient"
+
+
+def test_a_copy_that_carries_the_case_is_not_copied_again():
+    """``applied_in_place`` sets the values on the plant, and ``apply_case`` of that case keeps it."""
+    case = sample_case()
+    plant = gm.Plant.from_dict(template_dict("HeatingCoolingPlant"))
+    applied = applied_in_place(plant, case)
+    assert applied is plant and plant.d0.gradient == pytest.approx(0.03)
+    assert apply_case(plant, case) is plant
+    other = case.model_copy()
+    assert apply_case(plant, other) is not plant
+    assert apply_case(sample_plant(), case) is not plant

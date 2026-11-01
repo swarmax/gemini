@@ -104,6 +104,20 @@ def _assert_close(left, right, rtol):
     np.testing.assert_allclose(left, right, rtol=rtol, atol=1e-12, equal_nan=True)
 
 
+def _assert_sections_inside(actual, expected, rtol):
+    """Compare per-section rows when the segment of a well lists every section of its path.
+
+    The ESP depth is a number of the graph, so ``section_pressure`` and ``section_temperature``
+    of a well cut at the ESP have one item for every section of the path, and a section outside the
+    segment repeats the value it is entered at. The captured row holds the sections inside the
+    segment only: its items must be those of the new row, in order.
+    """
+    for new, old in zip(actual, expected):
+        found = iter(new)
+        for value in old:
+            assert any(np.isclose(value, other, rtol=rtol, atol=1e-12) for other in found)
+
+
 def _assert_values_identical(actual, expected, rtol=REPLAY_RTOL):
     """Compare frames: floats and float-list cells within ``rtol``, everything else exactly."""
     actual = actual.reindex(columns=expected.columns)
@@ -116,7 +130,10 @@ def _assert_values_identical(actual, expected, rtol=REPLAY_RTOL):
             continue
         left_rows, right_rows = _float_rows(left), _float_rows(right)
         if left_rows is not None and right_rows is not None:
-            _assert_close(left_rows, right_rows, rtol)
+            if left_rows.shape == right_rows.shape:
+                _assert_close(left_rows, right_rows, rtol)
+            else:
+                _assert_sections_inside(left_rows, right_rows, rtol)
             continue
         pd.testing.assert_series_equal(
             left.astype(object).fillna("<missing>").map(str),
@@ -124,6 +141,15 @@ def _assert_values_identical(actual, expected, rtol=REPLAY_RTOL):
             check_names=False,
             check_dtype=False,
         )
+
+
+SECTION_FIELDS = {
+    "length": "length",
+    "inclination": "inclination",
+    "diameter": "inner_diameter",
+    "roughness": "roughness",
+}
+"""Each list of a well's pipe path, with the field of the old section it comes from."""
 
 
 def test_state_and_full_results_match_phase_zero(dataset_name, selected_dataset, fresh_plant):
@@ -138,7 +164,11 @@ def test_state_and_full_results_match_phase_zero(dataset_name, selected_dataset,
         old_params.pop("coefficient_precision", None)
         old_params = {key: value for key, value in old_params.items() if key not in FLUID_NAMES}
         if "path" in old_params:
-            old_params["pipe_path"] = old_params.pop("path")
+            sections = old_params.pop("path")["sections"]
+            old_params |= {
+                f"section_{name}": [section[field] for section in sections]
+                for name, field in SECTION_FIELDS.items()
+            }
         assert old_params | NEW_PARAMS.get(old_path, {}) == new["params"]
         assert fluid_names(old["fluid"]) == new["fluid"]
 

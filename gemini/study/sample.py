@@ -6,7 +6,8 @@ from gemini import units
 from gemini._utils.jsonable import to_plain
 from gemini.errors import ValidationError
 from gemini.study._utils.target import quantities
-from gemini.study._utils.trial import checked_metric, run_trial
+from gemini.study._utils.parallel import mapped
+from gemini.study._utils.trial import checked_metric, drawn_trial
 from gemini.study._utils.uncertain import declared
 from gemini.types.shapes import measure
 
@@ -110,7 +111,8 @@ def sample(plant, case, metrics, count, seed, *, plan=None):
     ``missing_value``. Plant parameters are design decisions and are never drawn. Each draw copies
     the plant and the case, sets the drawn values on the copy of the case, simulates the copy
     (``gm.simulate`` plans the demand on that design) and reads the metrics. The plant and the
-    case themselves are not changed. A draw that breaks the bounds of a value of the case, such as
+    case themselves are not changed. With ``gm.runtime.settings(processes=n)`` the draws run in
+    ``n`` worker processes and give the same result. A draw that breaks the bounds of a value of the case, such as
     a negative price, is a draw whose run failed.
 
     Parameters
@@ -147,12 +149,13 @@ def sample(plant, case, metrics, count, seed, *, plan=None):
     names = [checked_metric(name) for name in metrics]
     found = declared(case, "sample")
     generator = np.random.default_rng(seed)
+    draws = [
+        {name: _draw(generator, name, uncertainty, value) for name, uncertainty, value in found}
+        for _ in range(count)
+    ]
+    runs = mapped(drawn_trial, (plant, case, plan, names), draws)
     samples = []
-    for _ in range(count):
-        drawn = {
-            name: _draw(generator, name, uncertainty, value) for name, uncertainty, value in found
-        }
-        run, reason = run_trial(plant, case, plan, drawn, names)
+    for drawn, (run, reason) in zip(draws, runs):
         failed = {"reason": reason} if reason else {}
         samples.append({"parameters": quantities(plant, case, drawn), "metrics": run, **failed})
     summary = {name: _spread(samples, name) for name in names}

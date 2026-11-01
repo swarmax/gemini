@@ -8,7 +8,7 @@ import pytest
 import gemini as gm
 from gemini import units
 from gemini.analysis import wells
-from gemini.physics.geometry import vertical_path
+from gemini.physics.geometry import section_values, vertical_path
 from gemini.types.flows import Stream
 from tests.fixtures.errors import raises
 from tests.fixtures.sample_cases import example_plant
@@ -109,11 +109,11 @@ def injector():
         {"well": gm.modules.InjectionWell(), "sink": gm.modules.InjectionReservoir()}
     )
     plant._add_module("limb", limb)
-    path = vertical_path(DEPTH, WIDE, 2e-5).model_dump()
+    path = section_values(vertical_path(DEPTH, WIDE, 2e-5))
     limb["well"].set_params(
         "",
         {
-            "pipe_path": path,
+            **path,
             "soil_temperature": {"value": 50, "unit": "degC"},
             "heat_transfer_coefficient": 0.0,
         },

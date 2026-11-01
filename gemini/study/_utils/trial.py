@@ -7,6 +7,7 @@ from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import GeminiError, ValidationError
 from gemini.evaluate import annualised_cost, co2, constraints, lcoc, lcoh, lcts, totals
 from gemini.evaluate.totals import KPI_NAMES
+from gemini.run._utils.apply import applied_in_place
 from gemini.run.simulate import simulate
 from gemini.study._utils.target import is_case_name, parameter_value, with_case_values
 
@@ -69,6 +70,7 @@ def _run(plant, case, plan, values):
             path, _, parameter = name.rpartition(".")
             trial.set_params(path, {parameter: parameter_value(trial, name, number)})
     changed = with_case_values(case, {k: v for k, v in values.items() if is_case_name(k)})
+    trial = applied_in_place(trial, changed)
     return trial, changed, simulate(trial, changed, plan=plan)
 
 
@@ -121,3 +123,12 @@ def run_judged(plant, case, plan, values, names):
         return (metrics, *judged(trial, changed, results))
     except GeminiError as error:
         return {}, str(error), LARGEST_VIOLATION
+
+
+def drawn_trial(shared, values):
+    """Return ``run_trial`` of ``values`` with the ``(plant, case, plan, names)`` it shares.
+
+    The function ``gemini.study._utils.parallel.mapped`` runs in a worker process.
+    """
+    plant, case, plan, names = shared
+    return run_trial(plant, case, plan, values, names)

@@ -282,7 +282,7 @@ class Column(Plant):
 of this call, in SI, so a dated call derives from the design of its date. A value that has not been
 given yet derives nothing: the values may arrive one call at a time. `_keep_derived(derived, params)`
 does the bookkeeping: an explicit child value in the call wins, now and in later calls
-(`{"depth": {"value": 3000, "unit": "m"}, "well.pipe_path": [...]}` keeps the given pipe path), and it records the names
+(`{"depth": {"value": 3000, "unit": "m"}, "well.section_length": [2600.0], ...}` keeps the given pipe path), and it records the names
 it keeps.
 
 Every route that sets parameters reaches this method: `add(..., params=)`, `from_dict`,

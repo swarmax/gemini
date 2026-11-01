@@ -6,20 +6,32 @@ Both wells traverse a geothermal pipe path using the original GEMINI DPDT equati
 
 from typing import Literal
 
+from gemini import ops
 from gemini.errors import PhysicsError
 from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Parameter
 from gemini.modules.module import Module
 from gemini.physics import geometry, hydraulics
-from gemini.types import Dimensionless, HeatTransferCoefficient, PressureDifference, Temperature
+from gemini.types import (
+    Angle,
+    Dimensionless,
+    HeatTransferCoefficient,
+    Length,
+    PressureDifference,
+    Temperature,
+)
 
 
 class _Well(Equipment, Module):
     """Pipe path, correlations, soil heat loss and affine pressure correction of one well.
 
-    ``flow_direction`` is the direction the brine flows: ``"up"`` in a production well and
-    ``"down"`` in an injection well. A well is drilled: its capex is the drilling factor times
-    the length it traverses.
+    The path is the parallel lists ``section_length``, ``section_inclination``, ``section_diameter``
+    and ``section_roughness``, one item per constant-diameter section from the surface to the
+    bottom; they are numeric parameters, so a graph traced for a well serves any lengths and
+    diameters, as long as the number of sections stays (``pipe_path`` gives them as a
+    ``PipePath``). ``flow_direction`` is the direction the brine flows: ``"up"`` in a production
+    well and ``"down"`` in an injection well. A well is drilled: its capex is the drilling factor
+    times the length it traverses.
     """
 
     abstract = True
@@ -32,7 +44,10 @@ class _Well(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.pipe_path = Parameter(geometry.PipePath)
+        self.section_length = Parameter(list[Length])
+        self.section_inclination = Parameter(list[Angle])
+        self.section_diameter = Parameter(list[Length])
+        self.section_roughness = Parameter(list[Length])
         self.friction_correlation = Parameter(Literal["darcy_weisbach"], default="darcy_weisbach")
         self.two_phase_friction_correlation = Parameter(Literal["BeggsBrill"], default="BeggsBrill")
         self.correction_factors = Parameter(
@@ -46,23 +61,51 @@ class _Well(Equipment, Module):
             calibratable=True,
         )
 
+    @property
+    def pipe_path(self):
+        """Return the validated ``PipePath`` of the section lists."""
+        return geometry.path_of(
+            self.section_length,
+            self.section_inclination,
+            self.section_diameter,
+            self.section_roughness,
+        )
+
+    @property
+    def total_length(self):
+        """Return the measured length [m] of the path."""
+        return sum(self.section_length)
+
     def capex(self, finance):
         """Return the cost of drilling the length of the well that this module traverses."""
         return self.capex_of(finance, self._drilled_length())
 
     def _drilled_length(self):
         """Return the measured length [m] of the well."""
-        return self.pipe_path.total_length
+        return self.total_length
 
     def traverse(self, stream, from_md: float, to_md: float, direction: Literal["up", "down"]):
         """Traverse an arbitrary depth interval [m], returning uncorrected SI conditions."""
-        if (direction == "up" and to_md > from_md) or (direction == "down" and to_md < from_md):
-            raise PhysicsError(
-                f"{self.path}: depth interval {from_md} m -> {to_md} m conflicts with "
-                f"direction {direction}"
-            )
+        wrong = to_md > from_md if direction == "up" else to_md < from_md
+        ops.check(
+            ops.logical_not(wrong),
+            PhysicsError,
+            "{path}: depth interval {from_md} m -> {to_md} m conflicts with direction {direction}",
+            path=self.path,
+            from_md=from_md,
+            to_md=to_md,
+            direction=direction,
+        )
+        path = geometry.path_between(
+            self.section_length,
+            self.section_inclination,
+            self.section_diameter,
+            self.section_roughness,
+            from_md,
+            to_md,
+        )
         return hydraulics.pipe_path_profile(
-            self.pipe_path.subpath(from_md, to_md),
+            path,
             stream,
             stream.fluid,
             direction,

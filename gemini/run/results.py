@@ -245,13 +245,19 @@ class Results:
 
     def _built_series(self, units):
         """Return a new table of the series in ``units``."""
-        output = OutputUnits(units)
         frame = self._cached_frame().copy()
+        keys = list(frame.columns)
+        if not units:
+            frame.columns = [join_path(*key) for key in keys]
+            frame.attrs["units"] = _ColumnUnits(
+                {join_path(path, field): self.unit(path, field) for path, field in keys}
+            )
+            return frame
+        output = OutputUnits(units)
         stated = {}
-        for key in list(frame.columns):
+        for key in keys:
             column, stated[join_path(*key)] = self._column(frame[key], *key, output)
-            if units:
-                frame[key] = column
+            frame[key] = column
         frame.columns = list(stated)
         frame.attrs["units"] = _ColumnUnits(stated)
         return frame

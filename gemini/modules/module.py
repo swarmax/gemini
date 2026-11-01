@@ -356,7 +356,6 @@ class Module:
         object.__setattr__(self, "boundary", {})
         object.__setattr__(self, "_param_history", [DatedParams(params={})])
         object.__setattr__(self, "_param_overrides", {})
-        object.__setattr__(self, "_executor_cache", None)
 
     @property
     def name(self):

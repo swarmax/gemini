@@ -23,9 +23,12 @@ def production_well():
 
 
 def test_both_wells_share_the_design_parameters_in_order():
-    """The shared base declares the same six parameters first in both wells."""
+    """The shared base declares the same nine parameters first in both wells."""
     shared = [
-        "pipe_path",
+        "section_length",
+        "section_inclination",
+        "section_diameter",
+        "section_roughness",
         "friction_correlation",
         "two_phase_friction_correlation",
         "correction_factors",
@@ -33,7 +36,7 @@ def test_both_wells_share_the_design_parameters_in_order():
         "heat_transfer_coefficient",
     ]
     assert list(dict(InjectionWell().named_parameters())) == shared
-    assert list(dict(ProductionWell().named_parameters()))[:6] == shared
+    assert list(dict(ProductionWell().named_parameters()))[:9] == shared
 
 
 def test_correction_applies_the_affine_pressure_factors():
@@ -59,6 +62,14 @@ def test_esp_split_needs_a_configured_depth():
     """Splitting at the ESP without an ESP depth inside the path is a configuration error."""
     well = production_well()
     well.esp_depth = None
+    with raises(gm.errors.ValidationError, "invalid_design", match="esp_depth"):
+        well.intake_conditions(Stream(m_dot=40, T=353.15, p=25e6))
+
+
+def test_esp_split_needs_the_depth_inside_the_path():
+    """An ESP below the bottom of the path is a configuration error that names the depth."""
+    well = production_well()
+    well.esp_depth = well.total_length + 1
     with raises(gm.errors.ValidationError, "invalid_design", match="esp_depth"):
         well.intake_conditions(Stream(m_dot=40, T=353.15, p=25e6))
 

@@ -7,6 +7,7 @@ temperatures on the heating and cooling consumers. One private function does eac
 the plant needs and the case lacks raises ``missing_value`` naming its path in the case.
 """
 
+import weakref
 from copy import deepcopy
 
 import numpy as np
@@ -22,20 +23,44 @@ from gemini.types import Fluid
 RESERVOIRS = (ProductionReservoir, InjectionReservoir)
 """The classes that are a reservoir."""
 
+_APPLIED = weakref.WeakKeyDictionary()
+"""Each plant ``applied_in_place`` made, with a weak reference to the case it carries."""
+
 
 def apply_case(plant, case):
     """Return a copy of ``plant`` with the values of ``case`` set by class.
 
     The plant of the user never changes. A plant without a module of a class needs none of its
-    values, so a case may leave them out.
+    values, so a case may leave them out. A plant that ``applied_in_place`` or this function
+    already made for the same ``case`` object is returned as it is, so a run and the metrics read
+    from it share one copy.
     """
-    applied = deepcopy(plant)
+    if _carries(plant, case):
+        return plant
+    return applied_in_place(deepcopy(plant), case)
+
+
+def _carries(plant, case):
+    """Return whether ``plant`` is a copy that already has the values of this ``case`` object."""
+    found = _APPLIED.get(plant)
+    return found is not None and found() is case
+
+
+def applied_in_place(plant, case):
+    """Set the values of ``case`` by class on ``plant`` itself and return it.
+
+    For a copy the caller owns, such as the working copy of one trial of a study: it saves the
+    second copy ``apply_case`` makes. The plant is then known to carry ``case``, so ``apply_case``
+    of the same case returns it without copying; set no value of the case on it afterwards.
+    """
+    applied = plant
     doublets = [path for path, module in applied.named_modules() if isinstance(module, Doublet)]
     _formations(applied, case, doublets)
     _reservoirs(applied, case, doublets)
     _doublets(applied, case, doublets)
     _air(applied, case)
     _consumers(applied, case)
+    _APPLIED[applied] = weakref.ref(case)
     return applied
 
 
