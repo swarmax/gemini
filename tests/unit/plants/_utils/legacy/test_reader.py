@@ -4,12 +4,13 @@ import gemini as gm
 from gemini.plants._utils.legacy import reader as legacy_project
 from tests.fixtures import OLD_PROJECT
 from tests.fixtures.errors import raises
+from tests.fixtures.sample_cases import example_plant
 
 
 def test_the_example_project_converts_to_the_shared_plant_file():
     """The old example project gives the spec of the shared doublet heat plant, exactly."""
     spec = legacy_project.from_folder(OLD_PROJECT).to_dict()
-    assert spec == gm.plants.example("DoubletHeatPlant").to_dict()
+    assert spec == example_plant("DoubletHeatPlant").to_dict()
     assert gm.plants.validate(spec) == []
     assert gm.Plant.from_dict(spec).to_dict() == spec
 

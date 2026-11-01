@@ -295,22 +295,9 @@
     "backend",
     "apply"
    ],
-   "calibrate_corrosion": [
-    "logs"
-   ],
-   "calibrate_pump": [
-    "plant",
-    "pump",
-    "measured"
-   ],
    "corrosion_forecast": [
     "model",
     "until",
-    "units"
-   ],
-   "erosion": [
-    "plant",
-    "well",
     "units"
    ],
    "estimate_conductance": [
@@ -340,11 +327,6 @@
    "fit_head_correction": [
     "measured",
     "theoretical",
-    "units"
-   ],
-   "injectivity": [
-    "data",
-    "well",
     "units"
    ],
    "nodal": [
@@ -404,16 +386,7 @@
     "step",
     "quantity"
    ],
-   "profile_schema": [],
-   "synthesize": [
-    "heating",
-    "cooling",
-    "start",
-    "step",
-    "length",
-    "season",
-    "seed"
-   ]
+   "profile_schema": []
   },
   "evaluate": {
    "annualised_cost": [
@@ -457,6 +430,9 @@
    "energy_balance": [
     "plant",
     "case",
+    "results"
+   ],
+   "failures": [
     "results"
    ],
    "lcoc": [
@@ -796,9 +772,6 @@
    "ParallelExchangerPlant": "class",
    "Plant": "class",
    "capabilities": [],
-   "example": [
-    "name"
-   ],
    "get": [
     "name"
    ],

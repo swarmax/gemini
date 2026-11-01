@@ -25,8 +25,9 @@ class ParallelExchangerPlant(Plant):
     and a filter, is divided over the exchangers in ``SHARES``, remixed, filtered again and
     injected, with the injection pump set to the wellhead pressure the injector needs. The
     secondary water is divided in the same shares, set as the ``split_fraction`` of the two
-    splitter cascades, and remixed after the exchangers. ``gm.plants.example`` carries the well,
-    reservoir, ESP and exchanger data of the upstream example.
+    splitter cascades, and remixed after the exchangers.
+    ``inputs/plants/ParallelExchangerPlant.json`` carries the well, reservoir, ESP and exchanger
+    data of the upstream example.
 
     Not schedulable: its doublet is a ``NodalDoublet``, and a run sets its splits and setpoints.
     """

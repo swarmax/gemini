@@ -3,14 +3,18 @@
 from dataclasses import dataclass
 from typing import Any
 
+from gemini.plants.plant import Plant
 from gemini.types.shapes import Value
+from gemini.units import Quantity
 
 
 @dataclass(frozen=True, eq=False)
 class Best(Value):
     """The objective of the best trial, a ``Value``, and the ``plant`` that gave it.
 
-    ``best["plant"]`` is the plant too. The plant is no part of the JSON form, ``to_dict``.
+    ``best["plant"]`` is the plant too. ``to_dict`` is plain JSON: the plant as its plant dict
+    (``None`` with no plant), the parameters of the trial as ``{value, unit}``; ``from_dict`` reads
+    it back.
     """
 
     plant: Any = None
@@ -23,5 +27,26 @@ class Best(Value):
         """Return the value in ``unit``, with the same plant."""
         converted = super().to(unit, quantity)
         return Best(converted.value, converted.unit, converted.reason, converted.parts, self.plant)
+
+    def to_dict(self):
+        """Return the JSON value of the objective with the ``plant`` as its plant dict."""
+        plant = None if self.plant is None else self.plant.to_dict()
+        return super().to_dict() | {"plant": plant}
+
+    @classmethod
+    def from_dict(cls, data):
+        """Return the ``Best`` of ``to_dict``: parameters as quantities, the plant rebuilt."""
+        parts = {
+            key: item
+            for key, item in data.items()
+            if key not in ("value", "unit", "reason", "plant")
+        }
+        parameters = parts.get("parameters")
+        if parameters is not None:
+            parts["parameters"] = {
+                name: Quantity.from_dict(item) for name, item in parameters.items()
+            }
+        plant = None if data["plant"] is None else Plant.from_dict(data["plant"])
+        return cls(data["value"], data["unit"], data.get("reason"), parts, plant)
 
     __hash__ = Value.__hash__

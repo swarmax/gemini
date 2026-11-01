@@ -1,4 +1,4 @@
-"""Well performance: nodal analysis, injectivity and the pump head curve."""
+"""Well performance: nodal analysis and the pump head curve."""
 
 from copy import deepcopy
 from dataclasses import dataclass
@@ -11,7 +11,7 @@ from gemini._utils.jsonable import to_plain
 from gemini._utils.strings import split_path
 from gemini.analysis import solves
 from gemini.analysis.fits import fit_head_correction
-from gemini.errors import GeminiError, NotImplementedYet, PhysicsError, ValidationError
+from gemini.errors import GeminiError, PhysicsError, ValidationError
 from gemini.errors.base import check_on_error
 from gemini.modules.pumps import ESP
 from gemini.modules.subsurface import InjectionReservoir, ProductionReservoir
@@ -315,33 +315,6 @@ def nodal(plant, well, conditions, on_error="raise", units=None):
     )
 
 
-def injectivity(data, well, units=None):
-    """Return the Hall integral, its derivative and the skin lines of an injection well.
-
-    Parameters
-    ----------
-    data : Dataset or DataFrame
-        Injection history with a UTC time index: wellhead or bottomhole pressure [Pa] and
-        injection rate [m3/s].
-    well : str
-        Dotted path of the injection well in the plant the data belongs to.
-    units : dict, optional
-        A map from quantity to unit for the returned values.
-
-    Returns
-    -------
-    dict
-        Plain JSON with the Hall integral [Pa s], its derivative against cumulative injected
-        volume [Pa s/m3] and the fitted skin lines, each with its unit.
-
-    Raises
-    ------
-    NotImplementedYet
-        Always: the Hall analysis is not built yet.
-    """
-    raise NotImplementedYet("analysis.injectivity")
-
-
 def _points(measured):
     """Return the measured head points in SI as a list of ``{flow, frequency, head}``."""
     return [
@@ -457,30 +430,3 @@ def pump_curve(plant, pump, measured=None, units=None):
         "measured": [_measured_point(point, output) for point in points],
         "correction": _correction(points, units),
     }
-
-
-def calibrate_pump(plant, pump, measured):
-    """Return the pump parameters that make the model match measured operation.
-
-    Parameters
-    ----------
-    plant : Module
-        A plant with parameter values.
-    pump : str
-        Dotted path of an ``ESP``.
-    measured : Dataset or DataFrame
-        Operation with bound ``head``, ``power`` or ``discharge_pressure`` columns and at least
-        six distinct flows.
-
-    Returns
-    -------
-    dict
-        Plain JSON ``{pump, params, rms_before, rms_after}``, ``params`` ready for
-        ``plant.set_params(pump, params)`` (``head_coefficients`` and ``power_coefficients``).
-
-    Raises
-    ------
-    NotImplementedYet
-        Always: it will run ``gm.analysis.calibrate`` and report the result in this form.
-    """
-    raise NotImplementedYet("analysis.calibrate_pump")

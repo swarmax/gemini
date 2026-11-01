@@ -3,7 +3,10 @@
 import json
 
 import gemini as gm
-from gemini._utils import paths
+from gemini._utils import paths, registry
+from gemini._utils.files import from_json
+from gemini.modules._utils.serialization import Report, from_sections
+from gemini.plants._utils import reader
 from gemini.run._utils.apply import apply_case
 
 HACKATHON_2026 = paths.INPUTS / "examples/hackathon_2026"
@@ -50,4 +53,21 @@ def template_plant(name):
 
 def filled_plant(name):
     """Return plant ``name`` with values: of the sample case for a template, else its example."""
-    return template_plant(name) if name in (SAMPLE_PLANT, *TEMPLATES) else gm.plants.example(name)
+    return template_plant(name) if name in (SAMPLE_PLANT, *TEMPLATES) else example_plant(name)
+
+
+def example_plant(name):
+    """Return plant ``name`` with the design values of ``inputs/plants/<name>.json``.
+
+    The file gives ``size``, ``params`` and any ``fluids``, ``boundary``, ``bindings``,
+    ``param_history`` and ``inputs`` under the keys of a plant dict. ``Doublet`` and
+    ``DoubletHeatPlant`` carry the values of the measured doublet, the other plants the values
+    their unit tests use. Only tests, scripts and examples read ``inputs/``.
+    """
+    values = from_json(paths.plant_values(name))
+    plant = registry.get(name)(**values.get("size", {}))
+    plant.set_params("", values["params"])
+    from_sections(plant, values, Report(strict=True))
+    reader.set_sections(plant, values)
+    plant._stated[""] = {}
+    return plant.set_inputs(values.get("inputs", {}))

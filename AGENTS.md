@@ -153,10 +153,10 @@ gemini/
 ├── engine/           # Engine, Clock, executor.py, eager.py, rows.py, loader, runner, chunks, checkpoint, callbacks
 ├── run/              # schedule, simulate, replay, live, resume, call, Results, Dataset; _utils/ (apply: the case on a plant copy, roles, limits, sources)
 ├── compiler/         # graph/ (Tracer, Graph, passes, cache), executor.py, gm.compiler.compile; optional, registers itself
-├── data/             # from_csv, from_values, profile_schema, synthesize (stub), legacy/ (old CSV files and the way back to the old project)
+├── data/             # from_csv, from_values, profile_schema, legacy/ (old CSV files and the way back to the old project)
 ├── study/            # size, minimize, sample, sensitivity; _utils/ (trial, choices, target)
 ├── evaluate/         # totals, constraints, balances, bounds, run_all, capex, opex, lcoh, lcoc, lcts, annualised_cost, co2, npv, payback; capacities, report, compare
-└── analysis/         # calibrate, nodal, injectivity, pump curve, corrosion, erosion, fits
+└── analysis/         # calibrate, nodal, pump curve, corrosion forecast, fits
 docs/schemas/         # generated JSON Schemas and samples of the exchanged documents
 inputs/               # not installed: examples/ (sample cases), plants/ (example values), doublet_heat/, legacy_project/
 examples/             # five flat scripts: quickstart, hackathon, costs, uncertainty, plant

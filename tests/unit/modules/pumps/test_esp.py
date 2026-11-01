@@ -10,6 +10,7 @@ from gemini.modules.pumps import ESP
 from gemini.ops import kernels
 from gemini.types.flows import Stream
 from tests.fixtures.equivalence import assert_health_matches, assert_module_matches
+from tests.fixtures.sample_cases import example_plant
 
 ESP_PARAMS = {
     "pump_type": "HC27000",
@@ -109,7 +110,7 @@ def test_traced_call_matches_one_call_per_row_on_every_backend():
 
 def _design():
     """Return an ESP with the values of the example doublet."""
-    design = gm.plants.example("Doublet").esp
+    design = example_plant("Doublet").esp
     values = {name: parameter.value for name, parameter in design.named_parameters()}
     return ESP().set_params("", values)
 

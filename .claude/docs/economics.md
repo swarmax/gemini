@@ -6,8 +6,7 @@ The packages `gemini.evaluate`, `gemini.analysis` and `gemini.study` sit above t
 `(plant, case, results, ...)`, and its return is a `Value` or a check in the
 [return shapes](api.md#return-shapes): in Python a `gm.units.Quantity` in SI that also holds a
 `reason` and its `parts`, and `to_plain` gives the plain JSON (no NumPy types, `NaN` and infinity
-are `null`). A value the inputs cannot give is never a guess. Each name is
-`real` or raises `NotImplementedYet` with its final signature and a full docstring.
+are `null`). A value the inputs cannot give is never a guess. Every name is real.
 
 ## What a run gives
 
@@ -216,10 +215,6 @@ as a result column; that is a change to the engine, not to this package.
 | `nodal(plant, well, conditions)` | real | IPR, VLP and operating point from `gemini/analysis/solves.py`, for production and injection wells; the plant is not changed |
 | `pump_curve(plant, pump, measured=None)` | real | the polynomial head curve of the pump at 60 Hz (the private `_head_curve` of `gemini/analysis/wells.py`), theoretical head of measured points, `gm.analysis.fit_head_correction` |
 | `corrosion_forecast(model, until)` | real | `co2_corrosion_rate`, `wall_loss`, `time_to_minimum_wall` |
-| `injectivity(data, well)` | `NotImplementedYet` | Hall analysis not built |
-| `calibrate_pump(plant, pump, measured)` | `NotImplementedYet` | no module applies the `correction_factors` of `ESP` (only the legacy import and export read it); it will run `gm.analysis.calibrate` |
-| `calibrate_corrosion(logs)` | `NotImplementedYet` | no fit of the correlation constants to logs exists |
-| `erosion(plant, well)` | `NotImplementedYet` | a plant holds neither flow nor solids content, and the retained model has no solids fraction |
 
 `nodal` takes `conditions` as one dict or a list of dicts (a what-if): `wellhead_pressure` [Pa],
 `rates` as the `[low, high]` bracket [kg/s] and `frequency` [Hz] for an ESP; quantities such as

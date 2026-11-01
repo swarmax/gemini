@@ -1726,7 +1726,7 @@ Reusable production and reinjection limbs of a geothermal doublet (`gm.plants.ge
 ```python
 import gemini as gm
 
-doublet = gm.plants.example("DoubletHeatPlant").doublet
+doublet = example_plant("DoubletHeatPlant").doublet
 doublet.reservoir.production_rate = {"value": 42.4, "unit": "kg/s"}
 doublet.esp.frequency = {"value": 55.5, "unit": "Hz"}
 result = doublet(return_in=gm.Stream(m_dot=40, T={"value": 45, "unit": "C"}, p={"value": 20, "unit": "bar"}, fluid=doublet.fluid))
@@ -1805,7 +1805,7 @@ dict.
 ```python
 import gemini as gm
 
-doublet = gm.plants.example("DoubletHeatPlant").doublet
+doublet = example_plant("DoubletHeatPlant").doublet
 field = gm.plants.MultiWellPlant(producers=2, injectors=2)
 for limb, rate in zip(field.producers, (40.0, 30.0)):
     for name in ("reservoir", "well", "esp", "riser"):
@@ -2096,7 +2096,7 @@ upstream adds the injector's 5.20 bar friction instead of subtracting it, see
 recalibrates the injectivity to 2.8430 m3/h/bar, which restores 44.47 bar. `BoilerChpPlant` (upstream `doublet_plant`) adds a boiler and a CHP on the secondary
 side and reports `emissions`; its 3100 m injector needs no pump, so the injection pump draws zero
 electricity. Both open the doublet, because the surface equipment sits between its limbs, and
-`gm.plants.example(name)` gives each with its upstream data.
+`example_plant(name)` of `tests/fixtures/sample_cases.py` gives each with its upstream data.
 A run sets `esp.frequency`, `wellhead_pressure`, the `split_fraction`s and the setpoints as inputs.
 
 ```python
@@ -2137,7 +2137,7 @@ reservoir.production_rate = rate
 
 ### The plants of the cases
 
-`gm.plants.example(name)` gives each plant with a file in `inputs/plants/` with its design values; controls and
+`example_plant(name)` of `tests/fixtures/sample_cases.py` gives each plant with a file in `inputs/plants/` with its design values; controls and
 boundaries stay inputs of the run.
 
 - `DistrictEnergyPlant` (`plants/districtenergyplant.py`): a `DistrictNetwork` of two heating

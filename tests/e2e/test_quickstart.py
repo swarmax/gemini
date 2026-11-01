@@ -5,6 +5,7 @@ import pytest
 
 import gemini as gm
 from tests.fixtures.doublet_day import doublet_day
+from tests.fixtures.sample_cases import example_plant
 
 pytestmark = pytest.mark.e2e
 
@@ -12,7 +13,7 @@ pytestmark = pytest.mark.e2e
 @pytest.fixture
 def plant():
     """Return the shared example plant, new for each test."""
-    return gm.plants.example("DoubletHeatPlant")
+    return example_plant("DoubletHeatPlant")
 
 
 @pytest.fixture
