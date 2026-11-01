@@ -23,7 +23,7 @@ def _evaluation(module, inputs, rows, backend=None, cache=None):
     graph = (cache or GraphCache()).graph(module, {"fluid_in": inlets["fluid_in"].fluid})
     feeds = graph_feeds(graph, module, inlets, inputs)
     with runtime.settings(backend=backend):
-        return evaluate(graph, feeds, rows)
+        return evaluate(graph, feeds, rows, module=module)
 
 
 def _leaves(result):

@@ -35,3 +35,30 @@ def test_an_executor_prepares_a_graph_and_evaluates_it_over_the_rows():
     evaluation = executor.evaluate(prepared, 3, {})
     assert evaluation.breaks == [] and not evaluation.failed.any()
     assert evaluation.result.outputs["rise"].tolist() == [2.0, 4.0, 6.0]
+
+
+def test_copies_with_other_numeric_values_trace_once_and_give_the_numbers_of_a_fresh_trace():
+    """A copy reuses the graph of the first and is evaluated with its own parameter values."""
+    streams = {
+        "fluid_in": gm.Stream(
+            m_dot=np.full(3, 1.0), T=np.full(3, 300.0), p=np.full(3, 1e5), fluid=gm.WATER
+        )
+    }
+    inputs = {"level": np.array([1.0, 2.0, 3.0])}
+    cache = gm.compiler.graph.graph_cache()
+    cache.clear()
+    traces = cache.traces
+    rises = []
+    for gain in (2.0, 5.0, 7.0):
+        module = Booster()
+        module.gain = gain
+        executor = gm.compiler.compile(module)
+        evaluation = executor.evaluate(executor.prepare(module, streams, inputs, False), 3, {})
+        rises.append(evaluation.result.outputs["rise"].tolist())
+    assert cache.traces == traces + 1
+    assert rises == [[2.0, 4.0, 6.0], [5.0, 10.0, 15.0], [7.0, 14.0, 21.0]]
+    module = Booster()
+    module.gain = 5.0
+    module.register_forward_hook(lambda module, inlets, outlets: None)
+    gm.compiler.compile(module).prepare(module, streams, inputs, False)
+    assert cache.traces == traces + 2

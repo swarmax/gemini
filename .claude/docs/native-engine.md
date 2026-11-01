@@ -33,8 +33,8 @@ interpreter -> backend: python | numpy | numba (later) | C++ (later)
   (graph break), the rest stays in the graph.
 - Shapes: the IR is multi-dimensional from day one (scenario x time). Only the time dimension is
   implemented first.
-- Cache: graphs are cached and re-traced only when the plant structure, a module, or input
-  types change (guards).
+- Cache: graphs are cached by structure, for the process, and re-traced only when the plant
+  structure, a module, or input types change (guards); a copy of a plant shares them.
 - Autodiff: not implemented; the IR must allow adding it later. GPU: out of scope, IR must not
   block it.
 
@@ -326,8 +326,17 @@ Where the implementation differs from sections 1 to 11, and why:
   (a plant with a loop or a constraint, float32), or a stepped root with a stateful module, is a graph with
   one root break that runs the real module per row (`module(streams)` or `module.step`). Its rows are
   real `ModuleResult` trees, so children and combinations stay exact. `GraphCache` stores
-  graphs only and the module that an engine runs holds it (`graph_cache`), so its graphs outlive the
-  engine; `stepped` is a guard. The design's "only that module breaks" holds for leaves; a
+  graphs only, by a structure key (the guards: the root path, every module's class, declarations,
+  output formulas, hooks, fluid and non-numeric or structural parameters, the connections and
+  constraints of a plant, the shapes of numeric parameters, and the inlet fluids, `stepped`, outputs
+  mode and precision), in the one cache of the process (`graph_cache`, 16 graphs, least recently
+  used dropped, a lock around the table), so its graphs outlive the engine and are shared by every
+  copy of a plant. A graph names no module: `Graph.root_break` marks a root break and a break node
+  holds the path of its module below the root, and `evaluate(graph, feeds, rows, context, module)`
+  runs the module it is given, so a copy runs with its own parameters and `graph_feeds` reads the
+  numbers of the module at hand. A graph still refers, through the declarations of its checks and
+  outputs, to the plant it was traced from until the cache drops it. The key costs about 1 ms for 30
+  modules (plus 1 ms to hash it) against a trace of 10 to 70 ms. The design's "only that module breaks" holds for leaves; a
   composite that cannot be traced breaks the root, because its parent reads its leaves' records.
 - **One runner.** `Engine._run` builds a `BindingPlan` (one `Twin` per evaluated module: the twins of
   a replay, the plant in simulate) and gives the `Loader` arrays to `Runner`. A run is chunks of

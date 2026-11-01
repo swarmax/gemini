@@ -23,9 +23,13 @@ class Graph:
     ``(module path, reason)`` and ``vectors`` the length of every list-valued output.
 
     ``result`` is the ``ModuleResult`` tree of the trace, with children, whose values are traced
-    values; an evaluation maps it to arrays. ``root`` is the module of a **root break**, a graph
-    without nodes whose evaluation calls the real module row by row (``inlet_fluids`` are the
-    fluids of its inlets and ``stepped`` tells that it advances states with ``Module.step``).
+    values; an evaluation maps it to arrays. ``root_break`` marks a **root break**, a graph
+    without nodes whose evaluation calls the module row by row (``inlet_fluids`` are the fluids
+    of its inlets and ``stepped`` tells that it advances states with ``Module.step``).
+
+    A graph names no module: the one it is evaluated for, which may be a copy of the module it
+    was traced from, is given to ``evaluate``, and a break node holds the path of its module
+    below that root. So a graph can be shared by every module of the same structure.
     """
 
     def __init__(self, module_path):
@@ -42,7 +46,7 @@ class Graph:
         self.frames = []
         self.unframed = []
         self.result = None
-        self.root = None
+        self.root_break = False
         self.stepped = False
         self.inlet_fluids = {}
 
@@ -232,8 +236,8 @@ class Graph:
         lines.append("outputs:")
         lines.extend(f"  {name} = {_describe(value)}" for name, value in self.outputs.items())
         lines.extend(f"break: {path}: {reason}" for path, reason in self.breaks)
-        if self.root is not None:
-            lines.append(f"root break: {self.root.path} runs eagerly, row by row")
+        if self.root_break:
+            lines.append(f"root break: {self.module_path} runs eagerly, row by row")
         return "\n".join(lines)
 
 

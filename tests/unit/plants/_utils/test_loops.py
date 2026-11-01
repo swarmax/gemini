@@ -175,7 +175,7 @@ def test_a_loop_runs_the_same_on_every_backend():
     """A plant that iterates is a root break: the same calls row by row on every backend."""
     plant = circuit()
     graph = Tracer().trace(plant, {})
-    assert graph.root is plant and "closes a loop" in graph.breaks[0][1]
+    assert graph.root_break and "closes a loop" in graph.breaks[0][1]
     results = {}
     for backend in BACKENDS:
         with runtime.settings(backend=backend):

@@ -52,11 +52,14 @@ unless a `plan` is given and runs the plan. A building block has no demand: `cas
 only with a `plan`, else `ValidationError` (code `missing_value`).
 
 No object is kept between calls of the functions, except the traced graphs of the compiled
-executor, which the plant holds (`gemini.compiler.graph.graph_cache`): calling a function hundreds
-of times on one plant traces it once, and an `Engine` built on the plant shares the same graphs. The
-guards of [`GraphCache`](native-engine.md) decide: a changed numeric parameter does not retrace, a
-changed structure does. A copied or pickled plant starts with an empty cache. The eager executor
-keeps nothing.
+executor, which the process holds (`gemini.compiler.graph.graph_cache`, at most 16 graphs, the least
+recently used dropped): calling a function hundreds of times with other parameter values, on one
+plant or on copies of it (`Problem.apply_site` and a design study copy the plant), traces its
+structure once, and an `Engine` shares the same graphs. The key of [`GraphCache`](native-engine.md)
+decides: a changed numeric parameter does not retrace, a changed structure does (a class, a
+connection, a hook, a fluid, a non-numeric or structural value, a path). A graph holds no module:
+each call evaluates it for its own plant, so a copy never sees the values of another. The eager
+executor keeps nothing.
 
 The arguments are those of `Engine` and of the matching method, with `plant` first. On `simulate`
 and `replay`, `checkpoint=path` writes a checkpoint at the end of the run, also one that stops

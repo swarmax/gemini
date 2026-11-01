@@ -411,11 +411,10 @@ reason it is needed:
   through data, and a check outside any physics function (inline in `forward`) guards every graph
   output, as it raises at once when eager. Never put the `repr`
   of a physical value in a message (it reads `np.float64(1.0)`) and use `ops.round`, not `round`.
-- A module holds its `GraphCache` in `_graph_cache` (`None` until `gemini.compiler.graph.graph_cache` first
-  asks for it), so traced graphs outlive an engine and a run function does not trace the plant
-  again. It sits on the module because a graph refers to its module, so a cache outside would keep
-  the module alive; a copied or pickled module starts with an empty cache
-  (`GraphCache.__reduce__`).
+- Traced graphs live in the one `GraphCache` of the process (`gemini.compiler.graph.graph_cache`),
+  keyed by structure, so an engine, a run function and a copy of a plant with other numeric values
+  trace nothing again. A graph holds no module (a break node holds a path, `evaluate` is given the
+  module), and the cache is bounded and locked: plants are not shared across threads, the cache is.
 - During a trace the `_Call` record carries the traced parameter values, which
   `Module.__getattr__` returns instead of the stored values, and records outputs without
   validating them (`gemini/compiler/graph/tracer.py`).

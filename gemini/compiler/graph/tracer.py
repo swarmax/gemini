@@ -134,7 +134,13 @@ class Trace:
                 raise
             self._rollback(mark)
             outlets, outputs, inputs, settled = record_break(
-                self.graph, module, inlets, supplied, outputs_enabled(), str(error)
+                self.graph,
+                module,
+                self._prefix(module),
+                inlets,
+                supplied,
+                outputs_enabled(),
+                str(error),
             )
             records = []
         result = ModuleResult.of(module, outputs, outlets, settled, inputs, records)

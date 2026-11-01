@@ -57,15 +57,15 @@ def test_hooks_are_classified_by_what_they_do(gain):
 
     handle = gain.register_forward_hook(doubles)
     graph = Tracer().trace(gain, {"fluid_in": gain.fluid})
-    assert graph.root is None and graph.outputs["outputs.boost"].op == "mul"
+    assert not graph.root_break and graph.outputs["outputs.boost"].op == "mul"
     handle_reads = gain.register_forward_hook(reads)
     reading = Tracer().trace(gain, {"fluid_in": gain.fluid})
-    assert reading.root is gain and "only reads and runs on real values" in reading.breaks[0][1]
+    assert reading.root_break and "only reads and runs on real values" in reading.breaks[0][1]
     handle.remove()
     handle_reads.remove()
     gain.register_forward_hook(lambda module, inlets, outlets: float(module.rise))
     broken = Tracer().trace(gain, {"fluid_in": gain.fluid})
-    assert broken.root is gain and re.search("forward hook .*float", broken.breaks[0][1])
+    assert broken.root_break and re.search("forward hook .*float", broken.breaks[0][1])
 
 
 def test_unassigned_outputs_fail_at_trace_time(gain):
@@ -84,11 +84,11 @@ def test_unassigned_outputs_fail_at_trace_time(gain):
 def test_untraceable_modules_name_every_reason(gain, tank):
     """Stateful modules, pre-hooks and float32 precision make the root a break, never an error."""
     graph = Tracer().trace(tank, {"fluid_in": gain.fluid})
-    assert graph.root is tank and "stateful" in graph.breaks[0][1]
+    assert graph.root_break and "stateful" in graph.breaks[0][1]
     gain.register_forward_pre_hook(lambda module, inlets: None)
     with gm.runtime.settings(precision="float32"):
         graph = Tracer().trace(gain, {"fluid_in": gain.fluid})
-    assert graph.root is gain and "pre-hooks; runtime precision" in graph.breaks[0][1]
+    assert graph.root_break and "pre-hooks; runtime precision" in graph.breaks[0][1]
 
 
 def test_parameter_shapes():
