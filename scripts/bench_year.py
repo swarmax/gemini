@@ -1,22 +1,23 @@
 """Time a daily year and an hourly month of the sample plants, eager and compiled.
 
-Run ``PYTHONPATH=. python scripts/bench_year.py`` from the repository root. The cases are the
-hackathon plant, the hackathon plant with treatment and the shallow district plant, each with the
-``problem.json`` of its folder, plus the doublet heat plant, which has no loop or constraint, on a
-constant plan. Each case runs a daily year and an hourly month, with ``compile=False`` and
-``compile=True``.
+Run ``PYTHONPATH=. python scripts/bench_year.py`` from the repository root. The cases are the two
+doublet heating and cooling plant of the hackathon (``hackathon``) and every other plant of
+``inputs/examples/hackathon_2027/plants`` that has a loop, each with the ``case.json`` of its
+folder, the shallow district plant with its own ``case.json``, plus the doublet heat plant, which
+has no loop or constraint, on a constant plan. Each case runs a daily year and an hourly month,
+with ``compile=False`` and ``compile=True``.
 
 A demand may be daily or hourly. The other cadence is derived with public functions only: the
 demand frame is resampled to the step (the mean to a coarser step, the last value to a finer one),
-repeated cyclically to the wanted number of rows, rebuilt with ``gm.data.from_values`` and joined
-with ``pd.concat``, and a ``gm.Problem`` is built from it with the site, constraints and
-assumptions of the original. The plan of the plain plant is a constant profile on a
-``gm.engine.Clock``. A case that cannot run a cadence is recorded with its error, not fatal.
+repeated cyclically to the wanted number of rows, and a ``gm.Case`` is built from it with the
+environment, choices, constraints and assumptions of the original on a ``gm.case.Time`` of the
+wanted number of steps. The plan of the plain plant is a constant profile on a ``gm.engine.Clock``.
+A case that cannot run a cadence is recorded with its error, not fatal.
 
 Per run it prints the median wall time of ``gm.simulate`` after one warm-up call, the time of the
 first call, of a call on a copy of the plant and the cProfile counts: rows run row by row
-(``_call_row``), the rows on arrays, loop closures (``loops.close``), tear advances (passes times
-tears), constraint solves and ``Module._trial`` calls, then the top ten functions by cumulative
+(``_call_row``), the rows on arrays, loop closures (``loops.close``), tear advances (``_advance``
+calls), constraint solves and ``Module._trial`` calls, then the top ten functions by cumulative
 time of one extra profiled call. The counts come from the call counts of private functions, found
 by name in the profile; the script itself calls public names. ``--baseline FILE`` compares the
 times with a file this script wrote; the file of a run is ``.tmp/speed/bench-<label>.json`` below
@@ -46,19 +47,18 @@ EXAMPLES = paths.INPUTS / "examples"
 DELTAS = {"1d": pd.Timedelta(days=1), "1h": pd.Timedelta(hours=1)}
 CADENCES = {"daily-year": ("1d", 365), "hourly-month": ("1h", 744)}
 MODES = {"eager": False, "compiled": True}
+PLANTS = EXAMPLES / "hackathon_2027" / "plants"
 SAMPLES = (
-    ("hackathon", "hackathon_2027", "plant.json", "problem.json"),
-    (
-        "hackathon-treatment",
-        "hackathon_2027",
-        "plant_with_treatment.json",
-        "problem_with_treatment.json",
-    ),
-    ("shallow-district", "shallow_district", "plant.json", "problem.json"),
+    ("hackathon", "hackathon_2027", PLANTS / "HeatingCoolingPlant.json"),
+    ("hackathon-structure", "hackathon_2027", PLANTS / "HackathonPlant.json"),
+    ("hackathon-absorption", "hackathon_2027", PLANTS / "HeatingAbsorptionCoolingPlant.json"),
+    ("hackathon-full-cooling", "hackathon_2027", PLANTS / "HeatingFullCoolingPlant.json"),
+    ("shallow-district", "shallow_district", EXAMPLES / "shallow_district" / "plant.json"),
 )
 COUNTED = {
     "rows_by_row": ("engine/rows.py", "_call_row"),
     "loop_closures": ("plants/_utils/loops.py", "close"),
+    "tear_advances": ("plants/_utils/loops.py", "_advance"),
     "constraint_solves": ("plants/_utils/constraints.py", "solve"),
     "trial_calls": ("modules/module.py", "_trial"),
 }
@@ -75,14 +75,14 @@ class Case:
 
     name: str
     plant: object
-    problem: object = None
+    case: object = None
 
     def inputs(self, cadence):
         """Return the keyword arguments of ``gm.simulate`` for ``cadence``."""
         step, count = CADENCES[cadence]
-        if self.problem is None:
+        if self.case is None:
             return plain_inputs(step, count)
-        return {"problem": rebuilt(self.problem, step, count)}
+        return {"case": rebuilt(self.case, step, count)}
 
 
 def plain_inputs(step, count):
@@ -96,30 +96,32 @@ def plain_inputs(step, count):
     return {"plan": gm.Dataset.from_profiles(profiles), "clock": clock}
 
 
-def rebuilt(problem, step, count):
-    """Return ``problem`` with its demand at ``step``, repeated cyclically to ``count`` rows."""
-    demand = problem.demand
-    current = demand.index[1] - demand.index[0]
-    resampler = demand.resample(DELTAS[step])
+def rebuilt(case, step, count):
+    """Return ``case`` with its demand at ``step`` and ``count`` rows, repeated cyclically."""
+    frame = case.demand.frame
+    current = frame.index[1] - frame.index[0]
+    resampler = frame.resample(DELTAS[step])
     frame = resampler.mean() if DELTAS[step] >= current else resampler.ffill()
-    columns = [
-        gm.data.from_values(
-            np.resize(frame[name].to_numpy(), count), "W", frame.index[0], step, name
-        )
-        for name in frame
-    ]
-    return gm.Problem(
-        pd.concat(columns, axis=1), problem.site, problem.constraints, problem.assumptions
+    index = pd.date_range(case.time.start, periods=count, freq=DELTAS[step], name="time")
+    values = {name: np.resize(frame[name].to_numpy(), count) for name in frame}
+    resized = pd.DataFrame(values, index=index)
+    resized.attrs = frame.attrs
+    sections = {name: getattr(case, name) for name in type(case).model_fields}
+    sections["time"] = gm.case.Time(
+        start=case.time.start,
+        end=index[-1] + DELTAS[step],
+        step={"value": DELTAS[step].total_seconds(), "unit": "s"},
     )
+    sections["demand"] = case.demand.model_copy(update={"frame": resized})
+    return gm.Case(**sections)
 
 
 def cases(only=None):
     """Return the cases whose name contains ``only``, or all of them."""
     found = []
-    for name, folder, plant_file, problem_file in SAMPLES:
-        plant = gm.Plant.from_json(EXAMPLES / folder / plant_file)
-        problem = gm.Problem.from_json(EXAMPLES / folder / problem_file)
-        found.append(Case(name, plant, problem))
+    for name, folder, plant_file in SAMPLES:
+        plant = gm.Plant.from_json(plant_file)
+        found.append(Case(name, plant, gm.Case.from_json(EXAMPLES / folder / "case.json")))
     found.append(Case("doublet-heat-plain", gm.plants.example("DoubletHeatPlant")))
     return [case for case in found if only is None or only in case.name]
 
@@ -145,13 +147,9 @@ def counts(profiler):
     """Return the counted calls of the profile and its top ten functions by cumulative time."""
     stats = pstats.Stats(profiler)
     found = {name: 0 for name in COUNTED}
-    advances = {}
-    for (path, line, function), (_, calls, _, _, _) in stats.stats.items():
+    for (path, _, function), (_, calls, _, _, _) in stats.stats.items():
         for name, (suffix, wanted) in COUNTED.items():
             found[name] += calls if path.endswith(suffix) and function == wanted else 0
-        if path.endswith("plants/_utils/loops.py") and function == "advance":
-            advances[line] = calls
-    found["tear_advances"] = advances[max(advances)] if advances else 0
     ranked = sorted(stats.stats.items(), key=lambda item: item[1][3], reverse=True)
     found["top"] = [
         [f"{Path(path).name}:{line}:{function}", values[1], round(values[3], 3)]

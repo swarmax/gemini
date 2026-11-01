@@ -204,6 +204,7 @@ def test_a_tear_stream_with_flow_still_converges_on_every_field():
 class Curved(Relaxer):
     """A relaxer with a saturating rule, so the loop needs several accelerated steps."""
 
+    abstract = True
     scale = 20.0
 
     def forward(self, inlets):
@@ -264,6 +265,8 @@ def _cooled(temperature, target):
 
 class Guarded(Relaxer):
     """A relaxer whose rule is a physics function that refuses a negative target."""
+
+    abstract = True
 
     def forward(self, inlets):
         """Move half way to the target."""
@@ -345,6 +348,8 @@ def _watched(temperature):
 class Probed(Relaxer):
     """A relaxer with a second outlet, checked in the window and connected to nothing."""
 
+    abstract = True
+
     def __init__(self):
         """Declare the second outlet."""
         super().__init__()
@@ -408,6 +413,8 @@ def _bounded(temperature):
 
 class DoubleProbed(Probed):
     """A relaxer that also fails a second check on the side outlet, after the first."""
+
+    abstract = True
 
     def forward(self, inlets):
         """Probe the window, then the bound."""

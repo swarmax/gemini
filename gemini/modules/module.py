@@ -227,24 +227,25 @@ def _row_output(declaration, item):
     return item
 
 
-def _output_rows(value):
-    """Return the rows of an array output (a column's values once) or of a list of arrays."""
-    if not isinstance(value, list):
-        rows = value.tolist()
-        return list(dict.fromkeys(rows)) if value.ndim == 1 else rows
-    columns = [item.tolist() if _is_column(item) else repeat(item) for item in value]
-    return [list(row) for row in zip(*columns)]
-
-
 def _is_column(item):
+    """Return whether ``item`` is an array of rows."""
     return isinstance(item, np.ndarray) and item.ndim > 0
 
 
-def _holds_rows(value):
-    """Return whether ``value`` is an array or a list that holds one, so a call made many rows."""
-    if isinstance(value, list):
-        return any(_is_column(item) for item in value)
-    return _is_column(value)
+def _output_rows(value):
+    """Return the rows of an array output (a column's values once) or of a list holding arrays.
+
+    A call that made one row returns ``None``.
+    """
+    if not isinstance(value, list):
+        if not _is_column(value):
+            return None
+        rows = value.tolist()
+        return list(dict.fromkeys(rows)) if value.ndim == 1 else rows
+    if not any(_is_column(item) for item in value):
+        return None
+    columns = [item.tolist() if _is_column(item) else repeat(item) for item in value]
+    return [list(row) for row in zip(*columns)]
 
 
 def _plain_outlet(value):
@@ -460,8 +461,9 @@ class Module:
             call.outputs[name] = value
             return
         declaration = self._outputs[name]
-        if _holds_rows(value):
-            for item in _output_rows(value):
+        rows = _output_rows(value)
+        if rows is not None:
+            for item in rows:
                 declaration.validate(_row_output(declaration, item))
             call.outputs[name] = value
             return
