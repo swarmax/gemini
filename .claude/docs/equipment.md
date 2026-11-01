@@ -33,8 +33,9 @@ Shared conventions, stated once here and not repeated per module:
   are the graph breaks, which run tick by tick: `ThermalDecline`, `AquiferStorage`,
   `BoreholeField`, `ThermalStorage`, `IceStorage` and `PIDController`, stateful until `scan` exists
   (see [native-engine.md](native-engine.md)). Structural parameters, fixed in a trace and a graph
-  cache guard, are `ProductionReservoir`/`InjectionReservoir` `drainage_radius`,
-  `ProductionWell.esp_depth` and `Degasser.separation_efficiency`.
+  cache guard, are `ProductionReservoir`/`InjectionReservoir` `drainage_radius` and
+  `Degasser.separation_efficiency`. The ESP depth and the pipe path of a well are numeric, so one
+  graph serves every depth of a study.
 
 ## Overview
 
@@ -1261,11 +1262,18 @@ Swamee–Jain friction, Beggs–Brill two-phase flow and explicit heat loss
 (`hydraulics.pipe_path_profile`).
 
 - **Ports**: `bottom_in` -> `wellhead_out`, `loss_out` (power).
-- **Parameters**: `pipe_path` (`geometry.PipePath`, required), `soil_temperature` (required),
+- **Parameters**: the pipe path as four parallel lists with one item per constant-diameter section
+  from the surface to the bottom, `section_length` [m], `section_inclination` [rad],
+  `section_diameter` [m] and `section_roughness` [m] (all required; plain SI numbers; `well.pipe_path`
+  reads them as a validated `geometry.PipePath`), `soil_temperature` (required),
   `heat_transfer_coefficient` (default 10 W/m2/K, calibratable), `correction_factors` (affine pressure
   correction, default `(1, 0)`, calibratable), `friction_correlation` (`"darcy_weisbach"`),
   `two_phase_friction_correlation` (`"BeggsBrill"`). The production well adds `segment` (`"full"`,
-  `"below_esp"`, `"above_esp"`, default full) and `esp_depth` (default `None`).
+  `"below_esp"`, `"above_esp"`, default full) and `esp_depth` (default `None`). The lists and `esp_depth` are graph inputs: a traced well serves any
+  lengths, diameters and ESP depth with the same number of sections. A segment keeps every section
+  of the path, each with the length that lies in the segment (zero outside it), so
+  `section_pressure` and `section_temperature` have one item per section of the whole path, a
+  section outside the segment repeating the value it was entered at.
 - **Outputs**: `friction_pressure_drop`, `gravity_pressure_drop`, `section_pressure`,
   `section_temperature`.
 - **Model**: see [physics.md](physics.md) and [refactor-notes.md](refactor-notes.md); the
@@ -1282,11 +1290,10 @@ import math
 
 import gemini as gm
 from gemini.modules import ProductionWell
-from gemini.physics.geometry import PipePath, PipeSection
+from gemini.physics.geometry import section_values, vertical_path
 
-vertical = PipeSection(length=1500, inclination=math.pi / 2, inner_diameter=0.2, roughness=2e-5)
-path = PipePath(sections=[vertical])
-well = ProductionWell().set_params("", {"pipe_path": path, "soil_temperature": {"value": 40, "unit": "C"}})
+path = vertical_path(1500, 0.2, 2e-5)
+well = ProductionWell().set_params("", {**section_values(path), "soil_temperature": {"value": 40, "unit": "C"}})
 result = well(bottom_in=gm.Stream(m_dot=40, T={"value": 80, "unit": "C"}, p={"value": 180, "unit": "bar"}))
 assert round(result.outputs.gravity_pressure_drop / 1e5, 2) == 147.15
 assert round(result.outlets.loss_out) == 376991
@@ -1773,7 +1780,7 @@ temperature and pressure at the doublet's own depth from the two rules of `gemin
 is refused (`invalid_value`, naming the case path).
 
 `drainage_radius` defaults to `ground.DOUBLET_WELL_SPACING`, 1000 m. Every derived value can be
-overridden in the same call, by a child name such as `reservoir.pressure` or `well.pipe_path`, and
+overridden in the same call, by a child name such as `reservoir.pressure` or `well.section_length`, and
 stays explicit. `esp.frequency` remains a control; the pump head is the design head at
 `ESP_REFERENCE_FREQUENCY`. The old way, setting every child value directly, keeps working. Setting
 `fluid` gives it to every child and derives again.
@@ -2107,7 +2114,7 @@ A run sets `esp.frequency`, `wellhead_pressure`, the `split_fraction`s and the s
 ```python
 from gemini.modules import ESP, ProductionReservoir, ProductionWell
 from gemini.analysis import solves
-from gemini.physics.geometry import build_path
+from gemini.physics.geometry import build_path, section_values
 
 path = build_path([dict(MD=d, TVD=d, ID=0.15, roughness=0.01) for d in (0, 300, 400, 600, 2400)])
 reservoir = ProductionReservoir().set_params("", {
@@ -2122,7 +2129,7 @@ reservoir = ProductionReservoir().set_params("", {
 })
 well, riser = (
     ProductionWell().set_params("", {
-    "pipe_path": path,
+    **section_values(path),
     "soil_temperature": {"value": 20, "unit": "C"},
     "segment": segment,
     "esp_depth": 650,

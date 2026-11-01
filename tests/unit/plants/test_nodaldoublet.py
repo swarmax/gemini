@@ -3,7 +3,7 @@
 import pytest
 
 import gemini as gm
-from gemini.physics.geometry import build_path
+from gemini.physics.geometry import build_path, section_values
 from tests.fixtures.sample_cases import example_plant
 
 PRODUCER_SURVEY = [
@@ -40,8 +40,9 @@ RETURNED = gm.Stream(
 
 
 def path_of(stations):
-    """Return the well path of survey stations with 2e-5 m roughness."""
-    return build_path([dict(MD=md, TVD=tvd, ID=bore, roughness=2e-5) for md, tvd, bore in stations])
+    """Return the section lists of the well path of survey stations with 2e-5 m roughness."""
+    path = build_path([dict(MD=md, TVD=tvd, ID=bore, roughness=2e-5) for md, tvd, bore in stations])
+    return section_values(path)
 
 
 HEAD_COEFFICIENTS = [
@@ -68,7 +69,7 @@ def deviated():
         },
     )
     producer = dict(
-        pipe_path=path_of(PRODUCER_SURVEY),
+        **path_of(PRODUCER_SURVEY),
         soil_temperature={"value": 20, "unit": "degC"},
         esp_depth=550,
     )
@@ -81,7 +82,7 @@ def deviated():
             "head_coefficients": HEAD_COEFFICIENTS,
         },
     )
-    doublet.injector.set_params("", {"pipe_path": path_of(INJECTOR_SURVEY)})
+    doublet.injector.set_params("", path_of(INJECTOR_SURVEY))
     doublet.sink.set_params(
         "",
         {

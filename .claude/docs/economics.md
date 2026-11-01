@@ -299,8 +299,8 @@ trial with its `reason` (`None` when feasible; the first failed check, a dict, o
 `parts["violation"]`. The result is `{best, feasible, fixed, history, evaluations}`; `best` is the
 objective as a `Value` whose `parts["parameters"]` are `{name: Quantity}` and whose `["plant"]` is
 the best feasible plant, or with none the least violating trial that ran, then `feasible` is
-`False`. A real run takes about 0.7 s per trial on the three-week shallow case and seconds on a
-year, so the multi-run tests are in the e2e tier.
+`False`. A trial costs about 1.5 times one `gm.simulate` of the same plant and case (0.15 s against
+0.10 s on the year of the hackathon sample), see below.
 
 `gm.study.sample(plant, case, distributions, metrics, count, seed=0, *, plan=None)` draws `normal`,
 `uniform` and `triangular` values (a plant parameter or `case.<path>`, each field a `Quantity`) with
@@ -310,6 +310,23 @@ year, so the multi-run tests are in the e2e tier.
 and its `high` with the others as they are, and returns a list of `{parameter, metric, low, high,
 at_low, at_high, effect}`, the largest effect first, with `to_frame(units=None)`: the metric columns
 in the display unit of the metric, or the unit of `units`, and a `unit` column.
+
+**What a trial costs.** A trial copies the plant once, sets its variables and the values of the case
+on that copy (`applied_in_place` of `gemini/run/_utils/apply.py`), and the run and every metric read
+that copy: `apply_case` returns a copy that already carries the same case object, so it copies
+nothing again. The ESP depth and the pipe path of a well (`section_length`, `section_inclination`,
+`section_diameter`, `section_roughness`, `esp_depth`) are numeric graph inputs, so one traced graph
+serves every trial of a study (a different number of sections, or an ESP that is added or removed,
+traces once more). `Results.to_frame()` of a finished run builds its table with the unit of each
+column without touching the columns one by one.
+
+**Parallel trials.** `with gm.runtime.settings(processes=4):` runs the independent trials of
+`sample` and `sensitivity` in four worker processes, and the searches of `minimize` for the
+different doublet counts (a search over one count is sequential: each candidate uses the
+generation before it). The results are those of a serial run, in the same order. Workers start from
+a `forkserver`, so a script needs the `if __name__ == "__main__":` guard; the first parallel call of
+a process pays the import of gemini once (about a second and a half) and every worker traces its
+own graphs, so a study of fewer than a dozen trials is faster serial.
 
 A metric is a KPI or total of `gm.evaluate.totals` or one of `lcoh`, `lcoc`, `lcts`,
 `annualised_cost`, `co2`; the economic ones read the assumptions of `case`, so they need a case with

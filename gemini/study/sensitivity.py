@@ -5,8 +5,9 @@ import pandas as pd
 from gemini import units
 from gemini._utils.jsonable import to_plain
 from gemini.evaluate._utils.display import display_units, in_unit
+from gemini.study._utils.parallel import mapped
 from gemini.study._utils.target import quantities
-from gemini.study._utils.trial import checked_metric, run_trial
+from gemini.study._utils.trial import checked_metric, drawn_trial
 from gemini.study._utils.uncertain import declared
 from gemini.types.shapes import measure
 from gemini.study.sample import value_of
@@ -105,7 +106,8 @@ def sensitivity(plant, case, metrics, *, plan=None):
     the others at their values in the case: ``min`` and ``max`` when the declaration has them,
     else ``value - std`` and ``value + std`` of a ``normal``. A run is a copy of the plant and the
     case simulated on the case, as in ``minimize``. The plant and the case themselves are not
-    changed.
+    changed. With ``gm.runtime.settings(processes=n)`` the runs go to ``n`` worker processes and
+    give the same result.
 
     Parameters
     ----------
@@ -129,13 +131,15 @@ def sensitivity(plant, case, metrics, *, plan=None):
         first, the failed last. ``to_frame()`` gives the table and ``to_dict()`` plain JSON.
     """
     names = [checked_metric(name) for name in metrics]
+    limits = [(name, un.limits(value)) for name, un, value in declared(case, "sensitivity")]
+    jobs = [{name: end} for name, ends in limits for end in ends]
+    runs = mapped(drawn_trial, (plant, case, plan, names), jobs)
     rows = []
-    for name, uncertainty, value in declared(case, "sensitivity"):
-        ends = uncertainty.limits(value)
+    for index, (name, ends) in enumerate(limits):
+        pair = runs[2 * index : 2 * index + 2]
         shown = tuple(quantities(plant, case, {name: end})[name] for end in ends)
-        runs = [run_trial(plant, case, plan, {name: end}, names) for end in ends]
         for metric in names:
-            found = [_metric(items, metric, reason) for items, reason in runs]
+            found = [_metric(items, metric, reason) for items, reason in pair]
             rows.append(_row(name, metric, shown, found))
     order = {metric: index for index, metric in enumerate(names)}
     rows.sort(

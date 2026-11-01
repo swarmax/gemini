@@ -127,12 +127,13 @@ def test_the_skin_of_a_reservoir_enters_its_index():
 def test_an_explicit_child_value_wins_over_the_derived_one():
     """A stated pressure and pipe path stay, and the pump is sized on the stated pressure."""
     path = {
-        "sections": [
-            {"length": 2600.0, "inclination": 1.0, "inner_diameter": 0.2, "roughness": 1e-5}
-        ]
+        "well.section_length": [2600.0],
+        "well.section_inclination": [1.0],
+        "well.section_diameter": [0.2],
+        "well.section_roughness": [1e-5],
     }
     _, doublet = designed(
-        **{"reservoir.pressure": {"value": 250, "unit": "bar(g)"}, "well.pipe_path": path} | PUMP
+        **{"reservoir.pressure": {"value": 250, "unit": "bar(g)"}} | path | PUMP
     )
     assert doublet.reservoir.pressure == pytest.approx(250e5 + 101325)
     assert doublet.well.pipe_path.total_length == 2600

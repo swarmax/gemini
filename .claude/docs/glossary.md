@@ -117,7 +117,7 @@ emission empty energy error esp evaporation evaporator excess exhaust export ext
 fan feed first flow flue fluid fouling fraction freezing frequency friction fuel full gain gas
 generated generation generator geothermal gradient gravity grid gross ground groundwater head heat
 heating hot humidity hydraulic hydrostatic ice imbalance import in index indoor injected
-injection injectivity inlet inner input integral is isentropic latent length lift limit limited
+injection injectivity inclination inlet inner input integral is isentropic latent length lift limit limited
 liquid load log loop lorenz loss margin mass maximum mean measurement methane minimum mixed mode
 model motor net network no nominal opening operating or out outlet output overpressure parasitic
 part path period permeability phase pinch pipe point porosity power pressure previous price

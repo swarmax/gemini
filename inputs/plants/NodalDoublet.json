@@ -20,34 +20,10 @@
     "reservoir.skin": 0.0,
     "reservoir.wellbore_radius": {"value": 0.1, "unit": "m"},
     "reservoir.decline_threshold": 0.15,
-    "well.pipe_path": {
-      "sections": [
-        {
-          "length": 300.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 100.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 200.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 1800.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        }
-      ]
-    },
+    "well.section_length": [300.0, 100.0, 200.0, 1800.0],
+    "well.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.5707963267948966],
+    "well.section_diameter": [0.15, 0.15, 0.15, 0.15],
+    "well.section_roughness": [0.01, 0.01, 0.01, 0.01],
     "well.friction_correlation": "darcy_weisbach",
     "well.two_phase_friction_correlation": "BeggsBrill",
     "well.correction_factors": [
@@ -87,34 +63,10 @@
     ],
     "esp.tubing": null,
     "esp.drift_threshold": 0.1,
-    "riser.pipe_path": {
-      "sections": [
-        {
-          "length": 300.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 100.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 200.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 1800.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        }
-      ]
-    },
+    "riser.section_length": [300.0, 100.0, 200.0, 1800.0],
+    "riser.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.5707963267948966],
+    "riser.section_diameter": [0.15, 0.15, 0.15, 0.15],
+    "riser.section_roughness": [0.01, 0.01, 0.01, 0.01],
     "riser.friction_correlation": "darcy_weisbach",
     "riser.two_phase_friction_correlation": "BeggsBrill",
     "riser.correction_factors": [
@@ -130,34 +82,10 @@
     "injection_pump.efficiency": 0.8,
     "injection_pump.head_coefficients": null,
     "injection_pump.power_coefficients": null,
-    "injector.pipe_path": {
-      "sections": [
-        {
-          "length": 300.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 100.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 200.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        },
-        {
-          "length": 2500.0,
-          "inclination": 1.5707963267948966,
-          "inner_diameter": 0.15,
-          "roughness": 0.01
-        }
-      ]
-    },
+    "injector.section_length": [300.0, 100.0, 200.0, 2500.0],
+    "injector.section_inclination": [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.5707963267948966],
+    "injector.section_diameter": [0.15, 0.15, 0.15, 0.15],
+    "injector.section_roughness": [0.01, 0.01, 0.01, 0.01],
     "injector.friction_correlation": "darcy_weisbach",
     "injector.two_phase_friction_correlation": "BeggsBrill",
     "injector.correction_factors": [

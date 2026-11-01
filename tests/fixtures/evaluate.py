@@ -187,7 +187,7 @@ def _well(is_production, parameters, inputs):
     )
     well = configured(
         module_class,
-        dict(pipe_path=_pipe_path(parameters), soil_temperature=inputs["temperature_ambient"]),
+        dict(**geometry.section_values(_pipe_path(parameters)), soil_temperature=inputs["temperature_ambient"]),
     )
     stream = Stream(m_dot=inputs["flowrate"] * 1000, p=inputs["pressure"], T=inputs["temperature"])
     evaluated = well(**{inlet: stream})

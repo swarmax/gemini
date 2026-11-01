@@ -126,6 +126,15 @@ def _assert_values_identical(actual, expected, rtol=REPLAY_RTOL):
         )
 
 
+SECTION_FIELDS = {
+    "length": "length",
+    "inclination": "inclination",
+    "diameter": "inner_diameter",
+    "roughness": "roughness",
+}
+"""Each list of a well's pipe path, with the field of the old section it comes from."""
+
+
 def test_state_and_full_results_match_phase_zero(dataset_name, selected_dataset, fresh_plant):
     """State, replay and simulation remain numerically identical after documented renames."""
     plant = fresh_plant
@@ -138,7 +147,11 @@ def test_state_and_full_results_match_phase_zero(dataset_name, selected_dataset,
         old_params.pop("coefficient_precision", None)
         old_params = {key: value for key, value in old_params.items() if key not in FLUID_NAMES}
         if "path" in old_params:
-            old_params["pipe_path"] = old_params.pop("path")
+            sections = old_params.pop("path")["sections"]
+            old_params |= {
+                f"section_{name}": [section[field] for section in sections]
+                for name, field in SECTION_FIELDS.items()
+            }
         assert old_params | NEW_PARAMS.get(old_path, {}) == new["params"]
         assert fluid_names(old["fluid"]) == new["fluid"]
 

@@ -96,7 +96,9 @@ def _esp_vlp_values(row, well_property, esp_property, reservoir_property):
     well_parameters = tables.productionwell_params_from_gemini(
         well_property, esp_property=esp_property
     )
-    well_parameters["pipe_path"] = _historical_production_path(well_property, esp_property)
+    well_parameters |= geometry.section_values(
+        _historical_production_path(well_property, esp_property)
+    )
     well = configured(ProductionWell, well_parameters)
     well.fluid = reservoir.fluid
     density = reservoir.fluid.properties(

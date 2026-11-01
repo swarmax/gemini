@@ -49,3 +49,15 @@ def test_settings_decorator_and_default_fluid():
     assert current() == ("field", gm.WATER)
     assert gm.runtime.get_display_units() == "si"
     assert gm.runtime.get_default_fluid() == gm.BRINE
+
+
+def test_processes_is_a_whole_number_of_at_least_one():
+    """One serial process is the setting of a run; anything else that is not a count is refused."""
+    assert gm.runtime.get_processes() == 1
+    with gm.runtime.settings(processes=3):
+        assert gm.runtime.get_processes() == 3 and gm.runtime.state()["processes"] == 3
+    assert gm.runtime.get_processes() == 1
+    for bad in (0, -1, 2.5, True, "2"):
+        with raises(ValidationError, "invalid_value", match="processes"):
+            with gm.runtime.settings(processes=bad):
+                pass

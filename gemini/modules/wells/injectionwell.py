@@ -51,7 +51,7 @@ class InjectionWell(_Well):
         # Outlets
         wellhead = inlets.wellhead_in
         stream = self._traversal_stream(wellhead)
-        result = self.traverse(stream, 0, self.pipe_path.total_length, "down")
+        result = self.traverse(stream, 0, self.total_length, "down")
         slope, offset = self.correction_factors
 
         bottom = stream.with_(

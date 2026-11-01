@@ -9,6 +9,7 @@ from gemini import units
 from gemini.errors import ValidationError
 from gemini.study._utils.best import Best
 from gemini.study._utils.choices import STRUCTURE, from_choices, split
+from gemini.study._utils.parallel import mapped
 from gemini.study._utils.resize import resized
 from gemini.study._utils.roles import concrete, expanded, quantities
 from gemini.study._utils.target import is_case_name, parameter_value
@@ -148,6 +149,26 @@ def _search(evaluated, keys, bounds, evaluations, start):
     )
 
 
+def _counted(shared, count):
+    """Return the history of the search on ``count`` doublets, ``None`` for the plant as it is."""
+    plant, case, plan, names, name, sign, constraints, keys, bounds, evaluations = shared
+    design = plant if count is None else resized(plant, count)
+    chosen = {} if count is None else {STRUCTURE: units.Quantity(count, "-")}
+    history = []
+
+    def evaluated(point):
+        values = dict(zip(keys, map(float, point)))
+        metrics, reason, violation = run_judged(design, case, plan, expanded(design, values), names)
+        if reason is None:
+            reason, violation = _read(metrics, name, constraints)
+        shown = chosen | quantities(design, case, values)
+        history.append(_entry(shown, metrics, name, reason, violation))
+        return _ranked(sign, history[-1].value, reason, violation)
+
+    _search(evaluated, keys, bounds, evaluations, _start(design, keys, bounds))
+    return history
+
+
 def minimize(
     plant,
     case,
@@ -168,7 +189,9 @@ def minimize(
     bounds is among the trials and the best is never worse than it. It needs no gradient and its
     population gives the exact number of simulations. A number of doublets is
     a discrete variable: the search runs once for each count, from the lowest to the highest, on
-    a new plant of that size (``size.doublets``), and the best trial of all counts wins. The
+    a new plant of that size (``size.doublets``), and the best trial of all counts wins; with
+    ``gm.runtime.settings(processes=n)`` the searches of the counts run in ``n`` worker processes
+    and give the same result. The
     plant and the case themselves are not changed.
 
     A trial is feasible when its run has no failed step and every constraint of the case passes,
@@ -240,23 +263,8 @@ def minimize(
     names = {name, *(checked_metric(limit["metric"]) for limit in constraints)}
     variables = from_choices(case) if variables is None else variables
     counts, keys, bounds, fixed = split(plant, case, variables)
-    history = []
-    for count in counts:
-        design = plant if count is None else resized(plant, count)
-        chosen = {} if count is None else {STRUCTURE: units.Quantity(count, "-")}
-
-        def evaluated(point, design=design, chosen=chosen):
-            values = dict(zip(keys, map(float, point)))
-            metrics, reason, violation = run_judged(
-                design, case, plan, expanded(design, values), names
-            )
-            if reason is None:
-                reason, violation = _read(metrics, name, constraints)
-            shown = chosen | quantities(design, case, values)
-            history.append(_entry(shown, metrics, name, reason, violation))
-            return _ranked(sign, history[-1].value, reason, violation)
-
-        _search(evaluated, keys, bounds, evaluations, _start(design, keys, bounds))
+    shared = (plant, case, plan, names, name, sign, constraints, keys, bounds, evaluations)
+    history = [entry for found in mapped(_counted, shared, counts) for entry in found]
     best, feasible = _best(history, sign, plant)
     return {
         "best": best,

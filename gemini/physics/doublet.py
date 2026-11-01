@@ -60,11 +60,13 @@ def _column(values, density):
 
 def _flow_paths(values, viscosity, skins):
     """Return the values that follow from the permeability, thickness and well diameter."""
-    path = geometry.vertical_path(
-        values["depth"], values["well_diameter"], hydraulics.COMMERCIAL_STEEL_ROUGHNESS
-    ).model_dump()
     radius = values["well_diameter"] / 2
-    derived = {f"{well}.pipe_path": path for well in WELLS}
+    path = geometry.section_values(
+        geometry.vertical_path(
+            values["depth"], values["well_diameter"], hydraulics.COMMERCIAL_STEEL_ROUGHNESS
+        )
+    )
+    derived = {f"{well}.{name}": value for well in WELLS for name, value in path.items()}
     for name in RESERVOIRS:
         derived[f"{name}.permeability"] = values["permeability"]
         derived[f"{name}.aquifer_thickness"] = values["thickness"]
