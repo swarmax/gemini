@@ -20,6 +20,9 @@ from tests.fixtures import ROOT
 
 pytestmark = pytest.mark.e2e
 EXAMPLES = sorted((ROOT / "examples").glob("*.py"))
+SLOW_EXAMPLES = ("hackathon.py",)
+"""Slow because a search over six candidate plants is what it shows: minutes, above the session
+budget of the development profile, so it runs with ``-m e2e`` alone and in the release profile."""
 EXPECTED = ROOT / "tests/e2e/expected"
 TIMEOUT_S = 900
 """Time budget per example: a hang guard, as the hackathon flow runs for minutes."""
@@ -81,7 +84,14 @@ def differences(printed, expected):
     return found
 
 
-@pytest.mark.parametrize("path", EXAMPLES, ids=[str(path.relative_to(ROOT)) for path in EXAMPLES])
+@pytest.mark.parametrize(
+    "path",
+    [
+        pytest.param(path, marks=[pytest.mark.slow] if path.name in SLOW_EXAMPLES else [])
+        for path in EXAMPLES
+    ],
+    ids=[str(path.relative_to(ROOT)) for path in EXAMPLES],
+)
 def test_example(path, tmp_path):
     """An example runs from an empty folder within its budget and prints the expected numbers."""
     completed = run_example(path, tmp_path, TIMEOUT_S)

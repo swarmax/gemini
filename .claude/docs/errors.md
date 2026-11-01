@@ -80,9 +80,9 @@ code is never renamed without raising the minor number of `gm.__version__`.
 | `invalid_value` | `ValidationError` | A value has the wrong type or shape |
 | `out_of_bounds` | `ValidationError` | A value is outside its declared bounds |
 | `missing_value` | `ValidationError` | A required value is absent |
-| `missing_assumption` | `ValidationError` | An economics function needs an assumption nobody gave; the path names it |
-| `no_value` | `ValidationError` | The inputs cannot give this value, such as a plant without a declared cost |
-| `conflicting_value` | `ValidationError` | Two sources give one value: a site path of a `gm.Problem` sets a parameter the plant states too; the path names it |
+| `missing_assumption` | `ValidationError` | A cost, a price or an emission factor is needed and the case does not give it; the path names it in the case (`assumptions.finance.capex.<kind>`) |
+| `no_value` | `ValidationError` | The inputs cannot give this value, such as a plant without equipment that has a cost |
+| `conflicting_value` | `ValidationError` | Two sources give one value: a `Constraint` of the case gives two bounds that exclude each other (`equals` with a `min` or `max`); the path names it |
 | `duplicate_name` | `ValidationError` | A second class takes the registry name of another class |
 | `invalid_unit` | `ValidationError` | A unit is unknown or does not fit the quantity |
 | `unknown_name` | `ValidationError` | A module type, path, parameter, category, correlation or field does not exist |

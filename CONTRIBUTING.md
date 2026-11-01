@@ -47,6 +47,15 @@ developers. They should be of value.
 - Code reviews are not about distrust. They are about sharing knowledge about the code base,
   sharing knowledge about writing code and increasing quality by collaboration.
 
+### Units and defaults
+
+- A value with a unit is a `gm.units.Quantity` or `{"value", "unit"}`; never accept or write unit
+  text such as `"150 m3/h"`.
+- Nothing a user must decide has a default: a field is required or absent, and a call that needs it
+  raises `missing_value` naming its path. Both rules are in
+  [AGENTS.md](AGENTS.md#start-here) and [conventions.md](.claude/docs/conventions.md#units), and
+  `tests/unit/test_code_quality.py` checks what it can.
+
 ### Documentation
 
 - Every function has a docstring that summarises what it does and explains its arguments and

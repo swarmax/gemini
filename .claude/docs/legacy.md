@@ -38,9 +38,8 @@ folder with exactly one data CSV besides trajectory files, and its data columns 
 Any other node set is rejected rather than guessed. Type, property, port, tag and old-node path
 tables, the deliberately unbound tags with their reasons (`IGNORED_TAGS`) and the property
 converters live in `plants/_utils/legacy/tables.py`; `plants/_utils/legacy/design.py` interprets a
-parsed project with them. New engine/modules/examples contain no old naming or conversion logic. The recipe
-`examples/recipes/legacy_project.py` is the only example that reads old files, through
-`gm.Plant.from_legacy` alone; `tests/e2e/test_legacy_bridge.py` covers the rest of the bridge.
+parsed project with them. New engine/modules/examples contain no old naming or conversion logic. No example reads old files; `tests/e2e/test_legacy_bridge.py` covers the bridge through
+`gm.Plant.from_legacy`.
 
 Converted control columns use their owning leaf path. The shared doublet therefore uses
 `doublet.reservoir.production_rate`, `doublet.esp.frequency`, and

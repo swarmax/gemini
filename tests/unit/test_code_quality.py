@@ -775,6 +775,59 @@ def test_the_case_has_no_default_but_absent():
     assert found == []
 
 
+def _open_objects(node, path="case"):
+    """Return the paths of the objects of a JSON Schema that accept unknown keys."""
+    if isinstance(node, list):
+        return [x for n, item in enumerate(node) for x in _open_objects(item, f"{path}[{n}]")]
+    if not isinstance(node, dict):
+        return []
+    found = [path] if "properties" in node and node.get("additionalProperties") is not False else []
+    return found + [x for key, item in node.items() for x in _open_objects(item, f"{path}.{key}")]
+
+
+def test_the_case_schema_is_closed_at_every_level():
+    """``additionalProperties`` is false in every object of the case schema."""
+    assert _open_objects(gm.Case.schema()) == []
+
+
+SHAPE_NAMES = {"problem", "problems", "_problems", "root_problems", "PROBLEM_SCHEMA"}
+"""The names of the public return shape ``{path, code, message, suggestions}``, the one use.
+
+The shape is in ``api.md`` and ``docs/schemas/problem.schema.json``: an error or a failed run row,
+not an input. It keeps its name.
+"""
+OLD_INPUT_WORDS = re.compile(
+    r"\bProblem\b|gm\.Problem|problem\.json|problem file|(?:sample|hackathon) problem|problem's"
+)
+"""What named the input that ``gm.Case`` replaced, in prose."""
+
+
+def _identifiers(tree):
+    """Return every name a module defines or uses: variables, attributes, arguments, definitions."""
+    names = set()
+    for node in ast.walk(tree):
+        names |= {getattr(node, key, None) for key in ("id", "attr", "name", "arg")}
+    return {name for name in names if isinstance(name, str)}
+
+
+def test_no_problem_name_is_left_in_the_package():
+    """The input is a case: no name or docstring of ``gemini/`` calls it a problem.
+
+    The return shape ``problem`` is the one use of the word, and ``gemini/types/shapes.py`` names
+    it in prose.
+    """
+    found = []
+    for path in PACKAGE_FILES:
+        text = (ROOT / path).read_text()
+        if "roblem" not in text:
+            continue
+        names = _identifiers(ast.parse(text)) - SHAPE_NAMES
+        found += [f"{path}: {name}" for name in names if "problem" in name.lower()]
+        if path != "gemini/types/shapes.py":
+            found += [f"{path}: {m.group()}" for m in OLD_INPUT_WORDS.finditer(text)]
+    assert found == []
+
+
 def test_modules_never_import_plants():
     """A plant is built from modules and a run from plants, never the other way round."""
     assert [

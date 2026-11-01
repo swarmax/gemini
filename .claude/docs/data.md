@@ -1,8 +1,8 @@
 # Data
 
 Readers are `from_<format>` and writers `to_<format>`. A reader is a classmethod of the class it
-returns (`gm.Problem.from_json(path)`, `gm.Plant.from_json(path)`, `gm.Results.from_npz(path)`,
-`Dataset.from_frame(...)`); a writer is a method of the object (`problem.to_json(path)`,
+returns (`gm.Case.from_json(path)`, `gm.Plant.from_json(path)`, `gm.Results.from_npz(path)`,
+`Dataset.from_frame(...)`); a writer is a method of the object (`case.to_json(path)`,
 `results.to_npz(path)`, `plant.to_dict()`). Only a reader that returns no gemini class, a demand
 frame, is a plain function in its folder: `gm.data.from_csv` and `gm.data.from_values`. No name
 starts with `read_`, `write_`, `load_`, `save_`, `parse_` or `dump_`.
@@ -76,11 +76,11 @@ convert in-memory raw values to SI. Profiles combined into a dataset must share 
 ## Demand profiles
 
 `gm.data` ships no profile: a demand is the caller's. The code is `gemini/case/_utils/demand.py`,
-which `gm.data` exports, because a `gm.Problem` holds a demand and `run` imports no `data`.
+which `gm.data` exports, because a `gm.Case` holds a demand and `run` imports no `data`.
 `from_csv(path, columns, unit, time_column=None)` reads a file, and `columns` maps its columns to the quantities of gemini, so a
 file adapts to gemini and gemini takes no name or unit from it. `from_values(values, unit, start,
 step, quantity)` takes numbers. A quantity is `heating_demand` or `cooling_demand`. Both return a
-DataFrame in the run-input format, the `demand` of a `gm.Problem`: a UTC `DatetimeIndex` called `time`
+DataFrame in the run-input format, the form of a case's `demand.frame`: a UTC `DatetimeIndex` called `time`
 at any constant step and of any length, one column per quantity in W, and `frame.attrs` with `units`
 and `quantities`. Both validate through one check: a monotonic index with no gaps or repeats, a
 constant step, no negative or missing value, a known quantity. `profile_schema()` is the JSON Schema
@@ -95,41 +95,86 @@ flow in m3/s (their bindings declare `"unit": "m3/s"`), and the unbound status c
 (`esp_status`, `hex_status`, `filterA_status`, `filterB_status`) and
 `production_wellhead_pressure` keep their old names.
 
+## The case
+
+`gm.Case` is the strict, typed entry boundary of every run: fixed sections in a `case.json`, with
+CSV files next to it. Every class is a frozen pydantic model that refuses unknown keys
+(`additionalProperties: false` at every level of `gm.Case.schema()`); every value is stored in SI;
+nothing has a default, so an absent value is `None` and the call that needs it raises
+`missing_value` (`missing_assumption` below `assumptions`) naming its path. Only `time` is required.
+`Case.from_json(path)` reads the file and the CSVs named in it; `case.to_json(path)` writes both
+back, so that `Case.from_json(path) == case`; `Case.from_dict(data, folder)` and `case.to_dict()`
+are the plain forms.
+
+**The unit format.** A value with a unit is `{"value": 150, "unit": "m3/h"}` in the file and a
+`gm.units.Quantity` in Python, with a unit of the `gm.units.Unit` enum ([units](conventions.md#units)).
+Text such as `"150 m3/h"` raises `invalid_value`; a unit of another dimension raises `invalid_unit`
+listing the units of the field. A dimensionless value (a share, a rate, a count, the GWP) is a
+plain number. The case stores SI and `to_json` writes the SI unit (`degC` becomes kelvin, money is
+`currency/...`; the currency is the label `finance.currency`, and nothing converts between
+currencies). A number that a call needs but a user stated in a unit is read back with `.to(unit)`.
+
+Sections of `case.json`, in order:
+
+| Section | Holds |
+| --- | --- |
+| `time` | `start`, `end` (excluded) and `step`: the steps every profile lies on; `case.time.index` is the UTC `DatetimeIndex` |
+| `environment` | `ground` (`surface_temperature`, `gradient`), `reservoir` (`reference_depth`, `thickness`, `permeability`, `pressure`, optional `temperature`), `fluid` (`density`, `viscosity`, `gas_liquid_ratio`, `gas` as mole fractions of `CH4`, `CO2`, `N2`, `H2S`), `air` (`temperature`, a number or a profile). `temperature_at(depth)` and `pressure_at(depth)` apply the two rules of `gemini/physics/ground.py`, and raise `missing_value` for what they need |
+| `demand` | `file`, `time_column` (the first column when absent), and `heating`, `cooling`: each `{column, unit, supply_temperature, return_temperature}`. The CSV is read into `case.demand.frame`, in W on `time.index`, columns `heating_demand` and `cooling_demand` |
+| `choices` | what a study may vary: `doublets` and `depth`, each `{min, max}` |
+| `constraints` | a list of `{on, quantity, min, max, equals, over, when}`: a limit on a **role** and a **quantity** of it, from the closed table `gm.case.roles()` (`doublet`: `production_flow`, `brine_cooling`, `pump_efficiency`, `volume_imbalance`, ...; `heat_pump`, `boiler`, `chp`, `chiller`, `heat_exchanger`, `heating_supply`, `cooling_supply`). It applies to every unit of its role on its own. `over` is `each`, `sum`, `mean`, `max`, `min` or `duration`; `when` is `always` or `running`; these two are the only defaults of the case |
+| `assumptions` | `finance` (`currency`, `discount_rate`, `lifetime`, `price_year`, `capex.<kind>`, `opex.fixed.<kind>` as `%/yr`, `opex.electricity`, `gas`, `chemical`, `waste_disposal`, `co2`, `revenue.heat`, `revenue.cold`, `allocation.heat_cost_share`) and `emissions` (`CO2.electricity`, `CH4.gwp`) |
+
+The kinds of `capex` and `opex.fixed` are the 19 of `gm.case.Capex` (the list is in
+[economics.md](economics.md#costs)); a plant needs a factor and a share for each kind it contains.
+`inputs/examples/hackathon_2027/case.json` is the complete example, with the sources of the cited
+values in [economics.md](economics.md#the-values-of-the-assumptions).
+
+**CSV profiles.** The demand is one CSV (`demand.file`) with a time column and a column for each
+service, on the steps of `time`: the same start, step and number of rows, else `invalid_value`
+naming the first row that differs. Any other value that varies in time (the air temperature, an
+opex price, a revenue, the CO2 intensity of electricity) is a number or a profile
+`{"file": "air.csv", "column": "temperature", "unit": "degC"}`: the first column of the file holds
+the timestamps, which must be the steps of `time`, and a missing value in the column raises
+`missing_value`. In Python a profile is a `Quantity` with an array value. `to_json` writes
+`demand.csv` in W under the services' column names and one file for each profile, named from the
+file and the path (`case_environment_air_temperature.csv`) with the unit in SI, and names it in the
+JSON. A price along the demand is integrated step by step.
+
 ## Where data lives
 
 There is one data folder, and no data file inside `gemini/`: a plant is a class.
 
 `inputs/` is at the repository root, next to `gemini/`, and is not installed. It holds everything
-that code reads: `examples/` (sample problems), `plants/` (example values: a `size`, `params`,
+that code reads: `examples/` (sample cases), `plants/` (example values: a `size`, `params`,
 `fluids`, `boundary`, `bindings`, `param_history` and `inputs`; the template plants have none),
 `doublet_heat/` (measured data) and `legacy_project/`. A function that needs it raises `RunError`
 with code `inputs_missing` when it is absent, as in an installed wheel, and the message names the
 file. Nothing fails at import time, and `gm.plants.get` works without it.
 
-`inputs/examples/<problem>/` holds one folder per sample problem, a whole problem in the shapes of
-gemini. Each has:
+`inputs/examples/<sample>/` holds one folder per sample case, a whole case in the shapes of gemini.
+Each has:
 
-- `problem.json`: a `gm.Problem` (`gm.Problem.from_json`). It names the demand CSV and states its
-  `columns` and `unit`, then `site` (parameter paths with `*` and their values), `constraints` (the
-  fields of `gm.Constraint`) and `assumptions` (`prices`, `co2_price`, rates; see
-  `gm.Assumptions`). The format is the docstring of `gm.Problem`. A second problem on the same
-  plant is another `problem_*.json`.
-- the demand CSV, read by `problem.json` through `gm.data.from_csv`;
-- `plant.json`: a plant dict (`gm.Plant.from_json`), the design without the site;
-- `README.md`: the source of the files and what the problem asks.
+- `case.json`: a `gm.Case` (`gm.Case.from_json`), see [the case](#the-case). It names the demand CSV;
+- the demand CSV, read through `case.json` (`demand.file`);
+- the plant dicts (`gm.Plant.from_json`): `plant.json` for `shallow_district/`, and one file for
+  each candidate in `plants/` for `hackathon_2027/`; a design without the world;
+- `README.md`: the source of the files and what the case asks.
 
-`hackathon_2027/` also keeps its organiser files, `plant_with_treatment.json` and `templates/`, and
-`shallow_district/` is the other sample. A whole run is:
+`hackathon_2027/` also keeps its organiser files (the requirements PDF and the two daily demand
+CSVs). A whole run is:
 
 ```python
-problem = gm.Problem.from_json("inputs/examples/hackathon_2027/problem.json")
-plant = gm.Plant.from_json("inputs/examples/hackathon_2027/plant.json")
-results = gm.simulate(plant, problem)
+import gemini as gm
+
+case = gm.Case.from_json("inputs/examples/shallow_district/case.json")
+plant = gm.Plant.from_json("inputs/examples/shallow_district/plant.json")
+results = gm.simulate(plant, case)
 ```
 
 **Only `examples/` and `tests/` read this folder** (tests through
-`tests/fixtures/sample_problems.py`): nothing under `gemini/` names it, or a problem, and
-`tests/unit/test_code_quality.py` checks that. A problem is a test of the code, never the source of a
+`tests/fixtures/sample_cases.py`): nothing under `gemini/` names it or a sample, and
+`tests/unit/test_code_quality.py` checks that. A sample is a test of the code, never the source of a
 default, a name or a structure.
 
 `docs/schemas/` is generated documentation, not data. `tests/fixtures/` holds goldens and

@@ -8,7 +8,7 @@ regression evidence, and list lasting decisions in [refactor-notes.md](refactor-
 
 ## General package
 
-gemini is a general geothermal heating and cooling package: a sample problem is only a test, never
+gemini is a general geothermal heating and cooling package: a sample case is only a test, never
 the basis of an implementation, a default, a name or a structure, and nothing in `gemini/` knows one.
 gemini's shapes are the best general form and inputs adapt to them, in the sample folder or a short
 loader in `examples/`, never the other way round.
@@ -76,11 +76,47 @@ private and no caller imports from them. There is no `core`, `base`, `registry`,
 
 **Read/write naming.** Every reader is `from_<format>` and every writer `to_<format>`: `from_csv`,
 `from_json`, `from_dict`, `from_values`, `from_bytes`, ... and `to_csv`, `to_json`, `to_dict`,
-`to_bytes`, .... A reader is a classmethod on the class it returns (`gm.Problem.from_json(path)`); a
-writer is a method of the object (`problem.to_json(path)`). Only a reader that returns no gemini
+`to_bytes`, .... A reader is a classmethod on the class it returns (`gm.Case.from_json(path)`); a
+writer is a method of the object (`case.to_json(path)`). Only a reader that returns no gemini
 class, such as a demand frame, is a plain function in its folder (`gm.data.from_csv`). No `read_*`,
 `write_*`, `load_*`, `save_*`, `parse_*` or `dump_*` name exists, public or private;
 `tests/unit/test_code_quality.py` rejects those prefixes.
+
+## Units
+
+**One unit format.** A value with a unit is a `gm.units.Quantity(value, unit)` whose unit is a member
+of the `gm.units.Unit` enum (generated from the unit table, so `Unit.M3_PER_H == "m3/h"`), or its
+dict `{"value": 150, "unit": "m3/h"}`. Text such as `"150 m3/h"` is never accepted: it raises
+`invalid_value` showing the dict form, and a unit of another dimension raises `invalid_unit`
+listing the units of the field. No code parses unit text (`units.parse` is gone;
+`tests/unit/test_unit_boundary.py` finds any string of the package that is a number followed by a
+unit). A dimensionless value (an efficiency, a share, a count) is a number. Inside the code a
+value is SI.
+
+Known limit: the boundary refuses bare numbers with a dimension in the case, the plant dict
+(`params`, `inputs`), the bounds of `gm.study` and `Value`s; but `set_params`, `gm.call`,
+`gm.Stream` and `gm.Fluid` still take a bare number as SI, because the engine and the plants pass
+derived SI floats through them. Do not write a bare number with a dimension in new user-facing
+input.
+
+## No defaults
+
+Nothing that a user must decide has a default in gemini: not a price, a temperature, a limit, a
+cost factor, an efficiency, a depth. A field is required or absent (`None`), and a call that needs
+an absent value raises `ValidationError` (`missing_value`, or `missing_assumption` below
+`assumptions` of the case) naming its path in the case or the plant. The only defaults in `gm.case`
+are `over="each"` and `when="always"` of `Constraint`, the signature the case gives;
+`test_the_case_has_no_default_but_absent` in `tests/unit/test_code_quality.py` allows exactly these
+two. A default that is a physical constant or a cited model constant (the Carnot fraction of a
+heat pump, with its source) is a parameter of its module, not a user decision.
+
+## Signatures
+
+Every function that runs, judges or studies a design takes `(plant, case)` first, and `results`
+after them when it reads a run: `gm.schedule(plant, case)`, `gm.simulate(plant, case=None,
+plan=None, ...)`, `gm.evaluate.<name>(plant, case, results, ...)` (`capex(plant, case)` has no
+results), `gm.study.<name>(plant, case, ...)`. The plant dict holds only the plant; everything that
+does not describe the plant is in the case ([data.md](data.md#the-case)).
 
 ## Public API freeze
 
@@ -155,13 +191,13 @@ Use dotted module paths consistently. Binding groups are `controls`, `boundaries
 skips only its measured twin; in simulation it skips the step. Never disguise a thermal-only
 audit as full first-law closure or tune against a holdout merely to meet a threshold.
 
-Examples live in `examples/`: `quickstart.py`, numbered `basics/`, then `recipes/` and `cases/`
-([README](../../examples/README.md)). An example is a script for a new reader: a module docstring
+Examples live in `examples/`, five flat scripts: `quickstart.py`, `hackathon.py`, `costs.py`,
+`uncertainty.py` and `plant.py` ([README](../../examples/README.md)). An example is a script for a new reader: a module docstring
 that says what it shows, the names it uses and how to run it, then constants, small functions and
 `main()` under the `__main__` guard. It runs alone from any folder, with paths from `__file__`;
 it uses the public API (`gemini`, and `gemini.types` for the declarations of a new module); values
 are quantities, prints are labelled in MW, kW, °C, bar and m³/h, and an assumption that is not
-source data is printed as one. A case stays within about 150 lines: plant building beyond that
+source data is printed as one. An example stays within about 150 lines: plant building beyond that
 belongs in gemini, as a registered plant. `GEMINI_EXAMPLE_DATASET` is the one way to change the
 dataset, the fast month by default. `tests/unit/test_code_quality.py` checks what can be checked.
 Generated output goes under ignored `runs/`.
@@ -324,10 +360,13 @@ reason it is needed:
   no running call records, then once for the record (`Module._trial`). A drawn inlet takes its value from what `forward` returns,
   so `ModuleResult.inlets` shows what was drawn. Both are needed because the value on a connection
   can travel against the energy ([ports](modules.md#ports)).
-- Two optional method protocols: a module that defines `capex(assumptions)` returning a `Cost`
-  declares its own cost for `gemini.types.cost.total_cost(plant, assumptions)`, which looks the method up by name; a
-  module that overrides `health(result, measured)` gets a diagnostic, which the engine calls
-  after each replayed twin (the base method returns `None`, meaning not assessed).
+- Two optional method protocols: a module that is equipment (the mixin `Equipment` of
+  `gemini/modules/_utils/cost.py`) sets `equipment_kind`, one of the kinds of `gm.case.Capex`, and
+  defines `capex(finance)`, an amount in the currency of the case from its own design values and the
+  factor of its kind; `fixed_opex(finance)` is the share of the kind times that capex
+  ([economics.md](economics.md#costs)). A module that overrides `health(result, measured)` gets a
+  diagnostic, which the engine calls after each replayed twin (the base method returns `None`,
+  meaning not assessed).
 
 - Operator overloading on `gemini.ops.Operators`: a `Constant` (`physics/constants.py`)
   and a traced `gemini.compiler.graph.Proxy` route `+`, `*`, `<`, ... through `gemini.ops.dispatch`, so

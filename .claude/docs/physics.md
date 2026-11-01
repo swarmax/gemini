@@ -216,6 +216,13 @@ Pipe heat loss and standard heat-exchanger effectiveness relations.
 
 Ground and aquifer heat transport: doublet breakthrough, conduction shapes, Ramey profiles.
 
+- `reservoir_temperature(surface_temperature, gradient, depth, reference_depth,
+  reference_temperature=None)`: the reservoir temperature [K] at a depth, anchored at a measured
+  temperature when one is given, else the geotherm from the surface. One of the two rules of
+  `case.environment.temperature_at(depth)`.
+- `reservoir_pressure(reference_pressure, density, depth, reference_depth)`: the absolute pressure
+  [Pa] at a depth from the pressure at a reference depth and a hydrostatic column of the brine; the
+  other rule, `case.environment.pressure_at(depth)`.
 - `aquifer_volumetric_heat_capacity(porosity, fluid_heat_capacity, rock_heat_capacity)`: bulk
   volumetric heat capacity [J/m3/K] of a saturated aquifer.
 - `doublet_breakthrough_volume(well_spacing, thickness, aquifer_heat_capacity,
@@ -537,6 +544,13 @@ source takes when the cheapest loads first, `marginal_cost(price, efficiency, co
 emission_factor)`, `methane_emission_factor()`, `heat_pump_cop(heating, carnot_fraction, minimum_lift,
 sink_outlet, source_outlet)`, `temperature_after(start, end, share)`, `circuit_flow(heat,
 specific_heat, temperature_difference)` and `flow_share(first, second)`.
+
+### `costs.py`
+
+- `scaled(factor, size)`: a cost that scales linearly with a size, `C = f s`: a capex factor of
+  `case.assumptions.finance.capex` times the size of the equipment, or a fixed-opex share [1/yr]
+  times the capex. It is the one place a module multiplies a factor by a size (the formula test
+  forbids a product in a module).
 
 ### `energy.py`
 
@@ -1162,6 +1176,12 @@ modules score alike.
 - `to_si`, `convert`, `value_in_si`, `si_unit`, `names`, `fits` and the unit sets of
   `Profile` and `Stream` all read `_UNITS`; `define_quantity` records the SI unit of each named
   quantity.
+- `gm.units.Unit` is a `StrEnum` generated from `_UNITS` (`Unit.M3_PER_H == "m3/h"`), and
+  `gm.units.Quantity(value, unit)` is the one shape of a value with a dimension. No function parses
+  unit text. The currency is a label: every `EUR` unit has the SI unit `currency`, and nothing
+  converts between currencies. The table has the money, annual and emission units the case uses
+  (`EUR/MWh`, `EUR/W`, `EUR/(W/K)`, `EUR/m`, `EUR/m3`, `EUR/kg`, `EUR/t`, `%/yr`, `1/yr`, `yr`,
+  `J/yr`, `g/kWh`, `kg/J`).
 
 ## Functions without `@ops.physics`
 

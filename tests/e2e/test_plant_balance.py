@@ -5,7 +5,7 @@ import pytest
 import gemini as gm
 from tests.fixtures.balance import assert_plant_closes
 from tests.fixtures.heating_cooling import two_days_case
-from tests.fixtures.sample_problems import template_plant
+from tests.fixtures.sample_cases import template_plant
 
 pytestmark = pytest.mark.e2e
 PLANTS = (

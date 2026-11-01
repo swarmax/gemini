@@ -23,7 +23,7 @@ class BoilerChpPlant(Plant):
     ``gm.plants.example`` carries the well, reservoir and ESP data of the upstream example.
 
     Not schedulable: its doublet is a ``NodalDoublet``, solved for its wellhead pressure, and a run
-    sets its setpoints, as ``examples/cases/boiler_chp.py`` shows.
+    sets its setpoints.
     """
 
     def __init__(self):

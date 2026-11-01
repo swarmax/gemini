@@ -11,7 +11,7 @@ class ChemicalGrid(Module):
 
     ``chemical_out`` is offered without flow at normal conditions and the dosing module returns what
     it takes, so the dosed amount is read from the port. The product price is
-    ``prices["chemical"]`` of ``gm.Assumptions``.
+    ``assumptions.finance.opex.chemical`` of the case.
     """
 
     def __init__(self):

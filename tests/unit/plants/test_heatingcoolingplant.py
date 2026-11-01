@@ -1,7 +1,7 @@
 """The class of the HeatingCoolingPlant: its example validates and rebuilds."""
 
 import gemini as gm
-from tests.fixtures.sample_problems import template_plant
+from tests.fixtures.sample_cases import template_plant
 
 
 def test_the_example_is_complete_and_rebuilds():

@@ -5,7 +5,7 @@ import json
 import pytest
 
 import gemini as gm
-from tests.fixtures.sample_problems import filled_plant
+from tests.fixtures.sample_cases import filled_plant
 
 
 def test_from_dict_builds_a_plant_of_any_class():

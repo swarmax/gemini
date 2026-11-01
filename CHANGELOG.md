@@ -7,6 +7,23 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+- `gm.Case` and the folder `gm.case` replace `gm.Problem`, `gm.Constraint` and `gm.Assumptions`:
+  fixed sections in a `case.json`, SI storage, no default for anything a user must decide. Every
+  call takes `(plant, case)`, plus `results` when it reads a run. The plant dict holds only the
+  plant.
+- One unit format: a `Quantity` or `{"value", "unit"}`; unit text is refused and `gm.units.parse`
+  is removed.
+- `gm.optim` is `gm.study`; `gm.types.Cost` is removed, equipment declares `capex(finance)` and
+  `fixed_opex(finance)` for its kind; `examples/` holds five flat scripts.
+
+### Added
+- `gm.evaluate.capacities`, `report` and `compare`; `gm.study.size` and `sensitivity`;
+  `gm.plants.capabilities`; costs on every equipment kind; the hackathon example from case to
+  compared designs.
+
+The full list, with the removed names, is the change log of [api.md](.claude/docs/api.md).
+
 ## [0.2.0] - 2026-10-31
 
 The API for the hackathon: see the change log of [api.md](.claude/docs/api.md). Checkpoints written

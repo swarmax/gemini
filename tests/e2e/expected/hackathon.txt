@@ -41,7 +41,7 @@ HeatingHeatPumpCoolingPlant: failed steps 0, failed constraints []
   lcts                      58.18 EUR/MWh
 HeatingPlant: failed steps 0, failed constraints ['cooling_supply.temperature']
   heat_delivered           111.67 GWh
-  cold_delivered       the plant has no module at its edge that shows it GWh
+  cold_delivered       the plant has no module at its edge that shows it
   boiler_heat               66.82 GWh
   co2                       20.16 kt
   capex                     10.15 MEUR

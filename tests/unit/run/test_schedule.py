@@ -24,7 +24,7 @@ from gemini.runtime import settings
 from gemini.units import Quantity
 from tests.fixtures.errors import raises
 from tests.fixtures.parity import BACKENDS
-from tests.fixtures.sample_problems import template_dict
+from tests.fixtures.sample_cases import template_dict
 
 DESIGN = {
     "depth": {"value": 2500, "unit": "m"},

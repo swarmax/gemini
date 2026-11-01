@@ -44,7 +44,7 @@ def print_report(name, report):
     print(f"{name}: failed steps {report['failed_steps']}, failed constraints {failed}")
     for key, unit in SHOWN.items():
         value = report[key].to(unit)
-        print(f"  {key:<20} {value.reason or format(value.value, '10.2f')} {unit}")
+        print(f"  {key:<20} {value.reason or f'{value.value:10.2f} {unit}'}")
 
 
 def main():

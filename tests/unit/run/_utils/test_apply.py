@@ -6,7 +6,7 @@ import gemini as gm
 from gemini.run._utils.apply import apply_case
 from gemini.units import Quantity
 from tests.fixtures.errors import raises
-from tests.fixtures.sample_problems import sample_case, template_dict
+from tests.fixtures.sample_cases import sample_case, template_dict
 
 
 def sample_plant():

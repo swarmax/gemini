@@ -15,7 +15,7 @@ class ElectricityGrid(Module):
     positive and exported when negative, each up to its connection limit (``None`` means unlimited;
     ``_physics.net_exchange``). Consumption above the import limit is ``unserved_consumption`` (load
     to shed) and surplus generation above the export limit ``curtailed_generation``. Prices and
-    emission factors live in ``gm.Assumptions``. Assumptions: no reactive power, losses or
+    emission factors live in the case. Assumptions: no reactive power, losses or
     demand charges.
     """
 

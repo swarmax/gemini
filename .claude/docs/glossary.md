@@ -25,6 +25,9 @@ into the vocabulary in the commit that first uses it, only if it is a full word 
 | share of an ideal cycle | `carnot_fraction`, `lorenz_fraction` | `carnot_efficiency`, `fraction_of_carnot` |
 | flow at the best-efficiency point | `best_efficiency_flow`, `best_efficiency_ratio` | `bep` |
 | boolean | `is_<state>`: `is_capped`, `is_in_operating_window` | a bare `capped` |
+| required supply temperature of a service | `minimum_supply_temperature` (`HeatingGrid`), `maximum_supply_temperature` (`CoolingGrid`); set from `demand.<service>.supply_temperature` of the case | `required_`, `target_` |
+| return temperature of a service | `return_temperature`; set from `demand.<service>.return_temperature` of the case | |
+| a value the case sets, not the plant dict | declared `Parameter(..., case="<path>")` | |
 | temperature at a port | `<port>_T`: `fluid_out_T`, `hot_out_T`, `production_out_T` | |
 | temperature elsewhere | `<place>_temperature`: `ground_temperature`, `approach_temperature` | `_T` |
 | number of transfer units | `transfer_units` | `ntu` |
@@ -127,3 +130,16 @@ thickness threshold time top transfer tubing two type undisturbed units unmet un
 value valve velocity vented viscosity volume volumetric warm waste water well wellbore wellhead wet
 window
 ```
+
+## Case and cost terms
+
+Not names of module declarations, so not in the list above; the one meaning of each word elsewhere:
+
+| Term | Meaning |
+| --- | --- |
+| case | `gm.Case`: everything a plant is asked to do and the world around it, in the sections `time`, `environment`, `demand`, `choices`, `constraints`, `assumptions` |
+| role | a kind of unit found in a plant by class and wiring (`doublet`, `heat_pump`, `boiler`, `chp`, `chiller`, `heat_exchanger`, `heating_supply`, `cooling_supply`); `gm.case.roles()` |
+| quantity of a role | what a constraint limits on every unit of the role (`production_flow`, `brine_cooling`, `cop`, ...) |
+| equipment kind | the key of `capex` and `opex.fixed` in the case (`drilling`, `heat_pump`, `boiler`, ...); a module that is equipment declares `equipment_kind` |
+| capex factor | the unit cost of a kind in the case, times the size of the equipment |
+| problem | only the shape `{path, code, message, suggestions}` of an error or a failed row; never an input |

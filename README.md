@@ -5,26 +5,32 @@ simulation, historical replay, and externally scheduled live updates.
 
 ## Quickstart
 
-The short form, on a sample problem of the repository:
+The short form, on a sample case of the repository:
 
 ```python
 import gemini as gm
 
-problem = gm.Problem.from_json("inputs/examples/hackathon_2027/problem.json")
-plant = gm.Plant.from_json("inputs/examples/hackathon_2027/plant.json")
-results = gm.simulate(plant, problem)
-print(gm.evaluate.totals(plant, problem, results), gm.evaluate.constraints(plant, problem, results))
+case = gm.Case.from_json("inputs/examples/shallow_district/case.json")
+plant = gm.Plant.from_json("inputs/examples/shallow_district/plant.json")
+results = gm.simulate(plant, case)
+report = gm.evaluate.report(plant, case, results)
+print(report["heat_delivered"].to("MWh").value, report["lcts"].to("EUR/MWh").value)
 ```
 
-A `gm.Problem` holds the demand, the site, the constraints and the assumptions of a run; for
-measured inputs, `gm.simulate(plant, plan=frame)` runs a DataFrame or `gm.Dataset` of the plant's
-inputs.
+A `gm.Case` holds what a plant is asked to do and the world around it: the time, the environment,
+the demand, the choices of a study, the constraints and the assumptions (prices, cost factors,
+emission factors) of a run, in a `case.json` with its CSV files. The plant dict holds only the
+plant. Every value with a unit is a `{"value": 150, "unit": "m3/h"}` or a `gm.units.Quantity`, text
+such as `"150 m3/h"` is refused, and nothing a user must decide has a default: a value that is
+missing raises `missing_value` naming its path. For measured inputs, `gm.simulate(plant, plan=frame)`
+runs a DataFrame or `gm.Dataset` of the plant's inputs.
 
 `gm.simulate`, `gm.replay`, `gm.live` and `gm.resume` cover a run in one call; `gm.Engine` is the
 level for complex tasks, such as a run held in memory or a callback that reads the engine.
 
-[examples/README.md](examples/README.md) lists every example in reading order, starting with
-`python examples/quickstart.py`. The longer tour, from the repository root with Python 3.11, 3.12,
+[examples/README.md](examples/README.md) lists the five examples, starting with
+`python examples/quickstart.py`; `python examples/hackathon.py` sizes, searches, simulates, checks,
+reports and compares six candidate plants on a case. The longer tour, from the repository root with Python 3.11, 3.12,
 3.13 or 3.14:
 
 ```python
@@ -79,42 +85,37 @@ source checkout and not installed, and outside one it raises `inputs_missing`:
 
 ```text
 inputs/             # repository only
-  examples/         # sample problems: problem.json, demand CSV, plant.json; examples and tests only
+  examples/         # sample cases: case.json, demand CSV, plant dicts; examples and tests only
   plants/           # example values of plants
   doublet_heat/     # measured data
   legacy_project/   # an old project folder
 ```
 
 A plant can be designed from its depth. A `Doublet` derives its reservoir, wells and pump from a few
-design values. The site (geotherm, permeability, thickness) belongs to the problem, so one design
-runs on several sites. `gm.schedule` plans each step from the demand with no bindings to write, and
-`gm.evaluate.constraints` judges the run:
+design values; the ground, the reservoir and the brine belong to the case, so one design runs on
+several cases. `gm.schedule` plans each step from the demand of the case with no bindings to write,
+`gm.evaluate.constraints` judges the run against the `constraints` of the case, and `gm.study`
+sizes a design and searches the choices of the case:
 
 ```python
-plant.add("Doublet", name="d0", params={"depth": {"value": 2500, "unit": "m"}, "well_diameter": {"value": 0.244, "unit": "m"}})
-problem = gm.Problem(
-    demand,
-    site={"d0.gradient": {"value": 30, "unit": "K/km"}, "d0.surface_temperature": {"value": 12, "unit": "degC"},
-          "d0.permeability": {"value": 200, "unit": "mD"}, "d0.thickness": {"value": 100, "unit": "m"}},
-    constraints=[
-        gm.Constraint("d0.reservoir.liquid_flow", min={"value": 50, "unit": "m3/h"}, max={"value": 300, "unit": "m3/h"}, when="running"),
-        gm.Constraint("d0.brine_cooling", max={"value": 40, "unit": "K"}),
-    ],
-)
-results = gm.simulate(plant, problem)
-checks = gm.evaluate.constraints(plant, problem, results)
+case = gm.Case.from_json("inputs/examples/shallow_district/case.json")
+plant = gm.Plant.from_json("inputs/examples/shallow_district/plant.json")
+sized = gm.study.size(plant, case)
+results = gm.simulate(sized, case)
+checks = gm.evaluate.constraints(sized, case, results)
+print([check["name"] for check in checks if check["passed"] is False])
 ```
 
-`examples/cases/challenge_year.py` and `examples/cases/hackathon.py` run that path on the sample
-problem of `inputs/examples/hackathon_2027/`, and `examples/cases/shallow_district.py` on a different
-one, an hourly demand on one shallow doublet, each with its own constraints. A stored design keeps its setpoints:
+`examples/hackathon.py` runs that path on the sample case of `inputs/examples/hackathon_2027/`, and
+`examples/quickstart.py` on `inputs/examples/shallow_district/`, an hourly demand on one shallow
+doublet, each with its own constraints. A stored design keeps its setpoints:
 `plant.set_inputs({"peak_boiler.temperature_setpoint": {"value": 100, "unit": "degC"}})` is part of `plant.to_dict()`, and
 a template plant takes its size, `gm.plants.HeatingCoolingPlant(doublets=2)`.
 
 Everything in the energy flow is a module and everything that crosses between modules goes through
 a port. A plant starts at its edge modules: `ElectricityGrid`, `GasGrid`, `HeatingGrid`,
 `CoolingGrid`, `WasteGrid`, `ChemicalGrid`, `Atmosphere` and `Formation`. Totals are read from them
-(`gm.evaluate.totals(plant, problem, results)`) and `gm.evaluate.plant_balance(plant, problem,
+(`gm.evaluate.totals(plant, case, results)`) and `gm.evaluate.plant_balance(plant, case,
 results)` closes mass and energy on them.
 
 The application, not the package, reads CSV, databases, or APIs. `Dataset` accepts pandas, dicts,

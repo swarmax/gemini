@@ -223,7 +223,7 @@ ported into the refactored structure; only missing behaviour was added.
   friction magnitude (5.197 bar) agree; the gap is twice the friction (10.39 bar) less 0.0085
   bar of gravity from the 0.01 degree inclination rounding of `build_path`. The upstream value
   is the bug; the injectivity it fitted to a measured ~44 bar absorbs it.
-- `examples/cases/parallel_exchangers.py` recalibrates that injectivity with the corrected traversal and the existing
+- The injectivity is recalibrated with the corrected traversal and the existing
   `InjectionReservoir.injectivity_from_measurements`: the 44.47 bar, 125.1 m3/h wellhead point
   traversed down the injector gives a bottom pressure of 224.0034 bar, so `II = Q / (p_bh -
   p_res)` = 125.1 / 44.0034 = **2.8430 m3/h/bar** against upstream's 2.3. With 2.3 the plant

@@ -10,7 +10,7 @@ from gemini.case.roletable import units_of
 from gemini.study._utils import trial
 from gemini.types.shapes import measure
 from tests.fixtures.result_tables import make_results
-from tests.fixtures.sample_problems import SHALLOW_DISTRICT
+from tests.fixtures.sample_cases import SHALLOW_DISTRICT
 
 SAMPLE = SHALLOW_DISTRICT
 COUNT_COST = {1: 5.0, 2: 3.0, 3: 4.0}

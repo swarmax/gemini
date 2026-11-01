@@ -99,6 +99,33 @@ Shared conventions, stated once here and not repeated per module:
 | Plants | `BoilerChpPlant` | `return_in` -> `supply_out` | no | nodal doublet, exchanger, boiler, CHP |
 | Plants | `DistrictEnergyPlant` | `hot_in`, `cold_in`, `air_in` -> `hot_out`, `cold_out` | child | heating network, cooling network, ATES |
 
+## Cost kinds and the Equipment mixin
+
+A module that is equipment subclasses the mixin `Equipment` (`gemini/modules/_utils/cost.py`), sets
+`equipment_kind` to one of the 19 kinds of `gm.case.Capex` and defines `capex(finance)`; its
+`fixed_opex(finance)` is the share of the kind times that capex. The factor is read from
+`case.assumptions.finance`; one the case lacks raises `missing_assumption` naming its path. These
+modules are equipment, with the size the factor multiplies ([economics.md](economics.md#costs)):
+
+| Kind | Module |
+| --- | --- |
+| `drilling` | `ProductionWell`, `InjectionWell` (together twice the depth of a `Doublet`) |
+| `production_pump` | `Doublet` (shaft power at `nominal_flow`; its `ESP` is paid here) |
+| `circulation_pump` | `CirculationPump`, `CentrifugalPump` |
+| `heat_pump`, `compression_chiller` | `HeatPump`: `equipment_kind` is a property of `mode` |
+| `boiler`, `electric_boiler`, `chp` | `Boiler`, `ElectricBoiler`, `CHP` |
+| `absorption_chiller`, `adsorption_chiller` | `AbsorptionUnit`, `AdsorptionChiller` |
+| `heat_exchanger`, `cooler`, `pipe`, `thermal_storage` | `HeatExchanger`, `Cooler`, `Pipe`, `ThermalStorage` |
+| `degasser`, `flare`, `gas_makeup` | `Degasser`, `Flare`, `GasMakeup` |
+
+No module has a kind and so no capex: `InjectionPump` (the kind `injection_pump` exists in the case,
+but the pump has no design flow or rating to size it), `IceStorage`, `ESP` and `LineShaftPump` (an
+ESP is paid inside the `Doublet`), `AquiferStorage`, `BoreholeField`, `DownholeHeatExchanger`,
+`ORC`, `FlashTurbine`, `Separator`, `GasCompressor`, `PressurizationTank`, `Filter`, `Desander`,
+`Blowdown`, `InhibitorDosing`. The grids, `Atmosphere`, `Formation`, `Splitter`, `Mixer`, `Valve`
+and `PIDController` are not equipment. A plant that contains a module without a kind is cheaper in
+the model than in life.
+
 ## Pumps
 
 ### ESP
@@ -1549,7 +1576,7 @@ Electricity exchange of a plant with the public grid.
 - **Outputs**: `net_import`, `net_export`, `unserved_consumption`, `curtailed_generation`,
   `is_import_limited`, `is_export_limited`.
 - **Model**: import `max(0, consumption - generation)` and export `max(0, generation -
-  consumption)`, each capped by its limit. Prices are in `gm.Assumptions`.
+  consumption)`, each capped by its limit. Prices are in `assumptions.finance.opex` of the case.
 - **Physics**: `modules/grids/_physics.net_exchange`
 - **Energy audit**: open boundary.
 
@@ -1586,8 +1613,10 @@ Space or process heat demand on a hydronic circuit; the return temperature follo
 delivered heat at the imposed flow.
 
 - **Ports**: `supply_in` -> `return_out`.
-- **Parameters**: `minimum_return_temperature` (required): the lowest temperature the emitters
-  can cool the water to.
+- **Parameters**: `minimum_return_temperature` (`Temperature | None`): the lowest temperature the
+  emitters can cool the water to. `return_temperature` and `minimum_supply_temperature` are set by
+  a run from `demand.heating.return_temperature` and `demand.heating.supply_temperature` of the
+  case and refused in a plant dict; `evaluate.constraints` checks the supply against the minimum.
 - **Boundaries**: `heat_demand` (`Power`, >= 0).
 - **Outputs**: `unmet_demand`, `surplus`, `is_unmet`.
 - **Model**: `Q = min(heat_demand, m_dot cp max(0, T_supply - T_min))`, `T_return = T_supply -
@@ -1614,8 +1643,10 @@ Building or process cooling demand on a chilled-water circuit, with a sensible a
 and a dew-point test.
 
 - **Ports**: `supply_in` -> `return_out`.
-- **Parameters** (required): `maximum_return_temperature`, `dew_point_margin` (>= 0, the coil
-  surface approach; coil specific, so no default).
+- **Parameters**: `maximum_return_temperature` (`Temperature | None`), `dew_point_margin` (>= 0,
+  the coil surface approach; coil specific, so no default). `return_temperature` and
+  `maximum_supply_temperature` are set by a run from `demand.cooling` of the case and refused in a
+  plant dict.
 - **Boundaries**: `sensible_cooling_demand`, `latent_cooling_demand` (`Power`, >= 0),
   `indoor_temperature`, `indoor_relative_humidity` (`Fraction`, > 0).
 - **Outputs**: `unmet_sensible`, `unmet_latent`, `surplus`, `dew_point`, `is_unmet`.
@@ -1660,6 +1691,8 @@ The air around a plant.
 
 The rock around a doublet's wells; `Doublet` creates it.
 
+- **Parameters**: `geothermal_gradient`, `surface_temperature` (`... | None`): set by a run from
+  `environment.ground` of the case and refused in a plant dict.
 - **Ports**: `heat_in` (power) -> none.
 - **Energy audit**: open boundary. `Doublet.well`, `riser` and `injector` connect `loss_out` here.
 
@@ -1722,9 +1755,12 @@ plant.d0.fluid = gm.Fluid(density={"value": 1030, "unit": "kg/m3"}, viscosity={"
 | and `nominal_flow`, `pump_efficiency`, `nominal_wellhead_pressure` | `esp.setting_depth`, `esp_depth` and `segment` of `well` and `riser` (`hydraulics.pump_setting_depth`), and a one-stage ESP of constant head (`hydraulics.design_pump_head`, `pumps.constant_head_curves`) |
 
 A run that starts without them raises `missing_value` naming the path. A `depth` without `gradient` and `surface_temperature` derives nothing yet: the doublet waits for
-them, so a plant holds the design and the `site` of a `gm.Problem` (`"d*.gradient": {"value": 30, "unit": "K/km"}`)
-gives the rest, applied on a copy of the plant at the start of a run. A site value for a parameter
-the plant states too raises `conflicting_value`.
+them, so a plant holds the design and the `gm.Case` gives the rest: `environment.ground.gradient`
+and `surface_temperature`, the `thickness` and `permeability` of `environment.reservoir`, and the
+brine of `environment.fluid`, set on a copy of the plant at the start of a run, with the
+temperature and pressure at the doublet's own depth from the two rules of `gemini/physics/ground.py`
+([engine.md](engine.md#how-the-case-reaches-the-modules)). A plant dict that states one of these
+is refused (`invalid_value`, naming the case path).
 
 `drainage_radius` defaults to `ground.DOUBLET_WELL_SPACING`, 1000 m. Every derived value can be
 overridden in the same call, by a child name such as `reservoir.pressure` or `well.pipe_path`, and
@@ -2047,13 +2083,12 @@ the trial value or both residuals. On the upstream doublet-A configuration (2400
 
 `NodalDoublet` (`plants/nodaldoublet.py`, `gm.plants.get("NodalDoublet")`) states both as
 [constraints](plants.md#constraints): the production rate for its `wellhead_pressure` boundary, and
-the injection pump's setpoint, at its suction pressure when the column of brine is enough. `ParallelExchangerPlant` (case `examples/cases/parallel_exchangers.py`) uses it with three
+the injection pump's setpoint, at its suction pressure when the column of brine is enough. `ParallelExchangerPlant` uses it with three
 parallel exchangers (upstream `parallel_hex_plant`: 125.10 m3/h at 10 bar, the measured 125 m3/h the
 upstream index was fitted to; injection 54.86 bar where upstream computes 44.47 bar, because
 upstream adds the injector's 5.20 bar friction instead of subtracting it, see
 [refactor-notes.md](refactor-notes.md#upstream-development-port)); the case therefore also
-recalibrates the injectivity to 2.8430 m3/h/bar, which restores 44.47 bar. `BoilerChpPlant` (case
-`examples/cases/boiler_chp.py`, upstream `doublet_plant`) adds a boiler and a CHP on the secondary
+recalibrates the injectivity to 2.8430 m3/h/bar, which restores 44.47 bar. `BoilerChpPlant` (upstream `doublet_plant`) adds a boiler and a CHP on the secondary
 side and reports `emissions`; its 3100 m injector needs no pump, so the injection pump draws zero
 electricity. Both open the doublet, because the surface equipment sits between its limbs, and
 `gm.plants.example(name)` gives each with its upstream data.
@@ -2097,7 +2132,7 @@ reservoir.production_rate = rate
 
 ### The plants of the cases
 
-`gm.plants.example(name)` gives each plant of `examples/cases/` with its design values; controls and
+`gm.plants.example(name)` gives each plant with a file in `inputs/plants/` with its design values; controls and
 boundaries stay inputs of the run.
 
 - `DistrictEnergyPlant` (`plants/districtenergyplant.py`): a `DistrictNetwork` of two heating
@@ -2127,9 +2162,8 @@ below; a design is its plant dict.
   with fewer units. An agent removes a unit by editing `to_dict(structure=True)`.
 - **Doublets and depth.** `size={"doublets": n}`, 1 to 3, and a plant-level `depth`
   ([plants.md](plants.md#registered-plants)).
-- **Run check.** The sample problems of `inputs/examples/` hold plant dicts of these classes, and
-  each runs its demand with no failed step (`examples/cases/challenge_year.py`,
-  `examples/cases/shallow_district.py`). `tests/integration/test_heating_cooling.py` (slow tier) runs
+- **Run check.** The sample cases of `inputs/examples/` hold plant dicts of these classes, and
+  each runs its demand with no failed step (`examples/hackathon.py`, `examples/quickstart.py`). `tests/integration/test_heating_cooling.py` (slow tier) runs
   two days of every plant and of one with a unit removed from its dict. `adsorption_chiller` keeps
   its 90 degC limit: behind the absorption chiller its drive water has already cooled, and a circuit
   that stands still has no driving temperature.

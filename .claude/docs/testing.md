@@ -50,6 +50,8 @@ module that imports a changed module, directly or transitively:
 
 It prints what it chose and why, then runs `pytest -n auto -m "not slow" --dataset=fast
 --profile=development` on the selection. Tests marked `slow` belong to the release profile.
+`examples/hackathon.py` is such a test: its search takes minutes, so run it with
+`pytest tests/e2e -m e2e --dataset=fast` (no development profile: it is over the session budget).
 The development budget is **300 s** wall time: a session-end guard in `tests/conftest.py` fails a
 development-profile run over 300 s and prints the 10 slowest test phases. An individual fast-tier
 test call may take at most one second (below).
@@ -204,7 +206,7 @@ The suite must remain safe under `pytest -n auto`:
 ## Structure and quality tests
 
 `tests/unit/test_code_quality.py` also enforces the [data layout](data.md#where-data-lives): no file
-under `gemini/` names a sample problem or `inputs/examples/`, no data file in `gemini/`, only the
+under `gemini/` names a sample case or `inputs/examples/`, no data file in `gemini/`, only the
 allowed keys and a registered plant in `inputs/plants/`, no `datasets/` folder, and no path to the
 data folders outside `gemini/_utils/paths.py`. It enforces the structure of the package:
 
@@ -214,6 +216,12 @@ data folders outside `gemini/_utils/paths.py`. It enforces the structure of the 
 - `modules` never imports `plants`;
 - no folder named `core`, `base`, `testing`, `backends`, `checks`, `economics` or `profiles`
   exists in `gemini/`;
+- the case rules: `gemini/case/` imports none of `run`, `engine`, `evaluate`, `study`, `compiler`,
+  `data` and `analysis`; no field of `gm.case` has a default but absent (`over` and `when` of
+  `Constraint` are the two exceptions); the case schema has `additionalProperties: false` at every
+  level; no string of the package is a number followed by a unit (`tests/unit/test_unit_boundary.py`,
+  [units](conventions.md#units)); and no name or docstring of `gemini/` calls the input a
+  `Problem` (the shape `problem` of an error, which keeps its name, is the one use of the word);
 - a snapshot of `gm.__all__` and of the `__all__` of each folder, so a public name changes only on
   purpose;
 - no function or method starts with `read_`, `write_`, `load_`, `save_`, `parse_` or `dump_`
@@ -261,10 +269,10 @@ The image lives on the machine that built it. Publishing it needs a registry nam
 `ghcr.io/<organisation>/gemini-sandbox:<version>`, a `docker login` with a token that may write
 packages, and `docker buildx build --platform linux/amd64,linux/arm64` for both architectures.
 
-## What a problem needs
+## What a case needs
 
-`tests/e2e/test_problem_needs.py` has one test per need of a heating and cooling problem, in general
-terms, so a sample problem is never the only proof that gemini can do it:
+`tests/e2e/test_case_needs.py` has one test per need of a heating and cooling case, in general
+terms, so a sample case is never the only proof that gemini can do it:
 
 - heating and cooling demand from a CSV file, under the file's names and unit;
 - a plant on one to three doublets;
@@ -275,11 +283,14 @@ terms, so a sample problem is never the only proof that gemini can do it:
 - a levelised cost of heat and cold together (LCTS).
 
 `inputs/examples/hackathon_2027/` and `inputs/examples/shallow_district/` run through these same
-general functions in `examples/cases/`. Tests read a sample problem only through
-`tests/fixtures/sample_problems.py`: it holds the folders (`HACKATHON_2027`, `SHALLOW_DISTRICT`) and
-builds the problem and the plants of a sample (`sample_problem()`, `shallow_problem()`,
-`template_plant(name)`, `treatment_plant()`, `filled_plant(name)`) with `gm.Problem.from_json` and
+general functions in `examples/`. Tests read a sample case only through
+`tests/fixtures/sample_cases.py`: it holds the folders (`HACKATHON_2027`, `SHALLOW_DISTRICT`) and
+builds the case and the plants of a sample (`sample_case()`, `shallow_case()`,
+`template_plant(name)`, `treatment_plant()`, `filled_plant(name)`) with `gm.Case.from_json` and
 `gm.Plant.from_dict`, so no test builds a path into `inputs/examples/` by hand.
+`tests/fixtures/heating_cooling.py` builds small cases in code (`days_case`, `two_days_case`).
+A study that runs a plant a hundred times is an e2e test (`tests/e2e/test_study.py`); the unit tests
+of `gm.study` replace the trial run with a fake, because a real trial takes about 0.7 s.
 
 ## Old formats, examples and e2e coverage
 
@@ -296,7 +307,7 @@ exempt from the one-second budget; `TIMEOUT_S` is the time budget of one example
 dataset and a 900 s hang guard on the slow one. Each example runs as a subprocess from an empty
 `tmp_path`, without `PYTHONPATH`, which proves it is standalone and keeps its output out of the
 repository; `GEMINI_EXAMPLE_DATASET` points it at the selected dataset. On the fast dataset what it
-prints is compared with `tests/e2e/expected/<folder>/<name>.txt`: the text exactly, the numbers
+prints is compared with `tests/e2e/expected/<name>.txt`: the text exactly, the numbers
 within 1e-6 relative, 1e-6 absolute or one unit of the last printed digit. Regenerate those files
 with `python tests/fixtures/capture_example_outputs.py` and review the diff: a changed number is a
 changed result, as a changed golden is.

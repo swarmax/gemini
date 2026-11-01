@@ -10,7 +10,8 @@ assembles a shape by hand. Each shape has a JSON Schema, written to ``docs/schem
   that ``value`` builds.
 - **Problem** ``{path, code, message, suggestions}``: every error, validation result and failed
   run row; a run row adds ``time``. ``code`` is the stable key for machines. ``problem`` is defined
-  in ``gemini.errors``, a leaf package, because ``GeminiError.to_dict`` returns one.
+  in ``gemini.errors``, a leaf package, because ``GeminiError.to_dict`` returns one. This is the
+  public return shape and keeps its name; the input of a run is a ``gm.Case``, never a problem.
 - **Check** ``{name, passed, value, limit}``, where ``value`` and ``limit`` are values. A failed
   check is an answer, not an error.
 """

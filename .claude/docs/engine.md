@@ -3,8 +3,7 @@
 ## Folders and imports
 
 The run lives in `engine/` (`Engine`, `Clock`, `executor.py`, `eager.py`, `rows.py`, `evaluation.py`,
-`loader.py`, `runner.py`, `chunks.py`, `checkpoint.py`, ...) and `run/` (`Problem`, `Constraint`,
-`Assumptions`, `schedule`, `simulate`, `replay`, `live`, `resume`, `call`, `Results`, `Dataset`, and
+`loader.py`, `runner.py`, `chunks.py`, `checkpoint.py`, ...) and `run/` (`schedule`, `simulate`, `replay`, `live`, `resume`, `call`, `Results`, `Dataset`, and
 `run/_utils/` with `demand.py`, `roles.py`, `limits.py`, `sources.py`).
 
 **Dependency rules.** The run folders are `modules`, `plants`, `physics`, `ops`, `runtime`,
@@ -42,15 +41,16 @@ memory, a manual checkpoint.
 ```python
 import gemini as gm
 
-problem = gm.Problem.from_json("inputs/examples/hackathon_2027/problem.json")
-plant = gm.Plant.from_json("inputs/examples/hackathon_2027/plant.json")
-results = gm.simulate(plant, problem)
+case = gm.Case.from_json("inputs/examples/shallow_district/case.json")
+plant = gm.Plant.from_json("inputs/examples/shallow_district/plant.json")
+results = gm.simulate(plant, case)
 print(results.summary(units={"power": "MW", "temperature": "degC"}))
 ```
 
-`gm.simulate(plant, problem=None, plan=None, ...)` applies the site of the problem to a copy of the
-plant, schedules the demand unless a `plan` is given and runs the plan. A building block has no
-demand: `problem` may be `None` only with a `plan`, else `ValidationError` (code `missing_value`).
+`gm.simulate(plant, case=None, plan=None, ...)` sets the values of the case on a copy of the plant
+([the case reaches the modules by class](#how-the-case-reaches-the-modules)), schedules the demand
+unless a `plan` is given and runs the plan. A building block has no demand: `case` may be `None`
+only with a `plan`, else `ValidationError` (code `missing_value`).
 
 No object is kept between calls of the functions, except the traced graphs of the compiled
 executor, which the plant holds (`gemini.compiler.graph.graph_cache`): calling a function hundreds
@@ -79,28 +79,55 @@ starts the run and writes it; every later call continues from it and updates it,
 error policy of a call are the caller's, and a call that fails or is cancelled leaves the file as
 it was, so its rows are processed again by the next call.
 
+## How the case reaches the modules
+
+A plant dict holds only the plant: its design values, never the ground, the reservoir, the fluid,
+the air, the return and supply temperatures or the prices. `gm.simulate` and `gm.schedule` call
+`apply_case(plant, case)` (`gemini/run/_utils/apply.py`) on a **copy** of the plant, which sets
+what the case holds **by module class**, one private function for each kind, never by a path
+written in the case:
+
+- every `Formation` (and the one inside each `Doublet`): `environment.ground.gradient` and
+  `surface_temperature`;
+- every `Doublet`: the reservoir and the injection reservoir, at the doublet's own depth, take the
+  temperature and pressure of `case.environment.temperature_at(depth)` and `pressure_at(depth)`
+  (the two rules of `gemini/physics/ground.py`), the permeability and the thickness of
+  `environment.reservoir`, and the brine of `environment.fluid` as the module's fluid; a
+  production or injection reservoir outside a doublet takes the permeability, the thickness, the
+  fluid and the pressure at `reference_depth`;
+- every `Atmosphere`: `environment.air.temperature` (a profile reaches it through the plan column
+  `<atmosphere>.temperature` that `gm.schedule` writes; a user `plan` without it carries no air
+  profile);
+- every `HeatingGrid` and `CoolingGrid`: `return_temperature` and the required supply
+  temperature (`minimum_supply_temperature` for heat, `maximum_supply_temperature` for cold) from
+  `demand.heating` and `demand.cooling`.
+
+A parameter that the case sets is declared with `Parameter(..., case="environment.ground.gradient")`;
+a plant dict that states it is refused (`invalid_value`, naming the case path), and `to_dict` never
+writes it. A value the plant needs and the case lacks raises `missing_value` naming its path in
+the case. The plant of the user never changes. Known limits: `fluids` stays in the plant dict for a
+module whose fluid differs from its class default, because a measured or replayed plant (the
+`DoubletHeatPlant` example, a calibration) has no case and carries its own brine; with a case, the
+fluid of a `Doublet` comes from `environment.fluid`. The leaf reservoir parameters `pressure`,
+`permeability` and `aquifer_thickness` are not case-flagged for the same reason, but a `Doublet` in
+a run gets them from the case. The pressure of the water returned by a consumer stays a design
+parameter of the plant, because the case has no field for it.
+
 ## Schedule
 
 ```python
-problem = gm.Problem(
-    demand,
-    site={"d*.gradient": {"value": 30, "unit": "K/km"}, "d*.surface_temperature": {"value": 12, "unit": "degC"}},
-    constraints=[
-        gm.Constraint("d*.reservoir.liquid_flow", min={"value": 50, "unit": "m3/h"}, max={"value": 300, "unit": "m3/h"},
-                      over="each", when="running"),
-        gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}),
-        gm.Constraint("d*.reservoir.liquid_flow", max={"value": 330, "unit": "d"}, over="duration", when="running"),
-    ],
-    assumptions=gm.Assumptions(prices={"electricity": {"value": 100, "unit": "EUR/MWh"}, "gas": {"value": 40, "unit": "EUR/MWh"}}),
-)
-plan = gm.schedule(plant, problem)
-results = gm.simulate(plant, problem, plan)
+import gemini as gm
+
+case = gm.Case.from_json("inputs/examples/hackathon_2027/case.json")
+plant = gm.Plant.from_json("inputs/examples/hackathon_2027/plants/HeatingPlant.json")
+plan = gm.schedule(plant, case)
+results = gm.simulate(plant, case, plan)
 ```
 
-`gm.schedule(plant, problem)` (`gemini/run/schedule.py`, formulas in `physics/dispatch.py`) decides
+`gm.schedule(plant, case)` (`gemini/run/schedule.py`, formulas in `physics/dispatch.py`) decides
 the controls of each step of the demand, at any constant step (hourly, daily, ...) and any length,
-from an energy balance on the plant's design values, with no simulation inside. The site of the
-problem is applied on a copy (`Problem.apply_site`); `plant` never changes. It reads the `Doublet`
+from an energy balance on the plant's design values, with no simulation inside. The case is applied on
+a copy; `plant` never changes. It reads the `Doublet`
 children, the grids and the units by **role, from the wiring** (`gemini/run/_utils/roles.py`, on
 `plant.feeds`): a unit whose useful outlet feeds the `HeatingGrid` is a heating unit and one that
 feeds the `CoolingGrid` a cooling unit, directly or through mixers, splitters and other units. A
@@ -109,10 +136,10 @@ going to its cooler. At most one unit per role and kind, or `invalid_design`.
 
 **Cost dispatch.** Every heat and cold source gets a marginal cost at each step
 (`gemini/run/_utils/sources.py`, `physics/dispatch.marginal_cost`): `price / efficiency +
-co2_price * emission`, with the prices of `problem.assumptions` and the efficiency of the source at
+co2 price * emission`, with the prices of `case.assumptions.finance.opex` and the CO2 price `opex.co2` and the efficiency of the source at
 its design values: the COP of a heat pump or compression chiller, the efficiency of a boiler, the
 pump electricity of a doublet, the `thermal_cop` of a heat-driven chiller on the cheapest heat. A
-price a source needs and the assumptions lack raises `ValidationError` (code `missing_value`). A
+price a source needs and the case lacks raises `ValidationError` (code `missing_assumption`). A
 price may be a profile, so the order of the sources can change from step to step. Sources load from
 the cheapest to the dearest up to their capacity (`dispatch.loaded_by_cost`), ties in plant order.
 Unmet demand is no error: the run reports `unmet_demand`. The drive heat of a heat-driven unit, its
@@ -123,15 +150,13 @@ the units after it. The heat pump, the boilers and the last cooling unit take th
 seasonal commands (`storage.mode`, `source_valve.split_fraction`, `load_valve.split_fraction`)
 stay inputs of a run.
 
-**Constraints.** The schedule reads the constraints of the problem by their general form
-(`gemini/run/_utils/limits.py`): a path with `*` matches one name, and `over`, `when` and the
-bounds choose the form. Per doublet:
+**Constraints.** The schedule reads the constraints of the case by **role and quantity**
+(`gemini/run/_utils/limits.py`), each applying to every unit of its role on its own. Per `doublet`:
 
-- a flow range: path `<doublet>.reservoir.liquid_flow`, `over="each"`, `when="running"`, `min` and
-  `max`;
-- a maximum brine cooling: path `<doublet>.brine_cooling`, `over="each"`, `max`;
-- an operating duration: path `<doublet>.reservoir.liquid_flow`, `over="duration"`,
-  `when="running"`, `max` or `equals` a duration (`{"value": 330, "unit": "d"}`, `{"value": 7920, "unit": "h"}`).
+- a flow range: quantity `production_flow`, `over="each"`, `when="running"`, `min` and `max`;
+- a maximum brine cooling: quantity `brine_cooling`, `over="each"`, `max`;
+- an operating duration: quantity `production_flow`, `over="duration"`, `when="running"`,
+  `max` or `equals` a duration (`{"value": 330, "unit": "d"}`, `{"value": 7920, "unit": "h"}`).
 
 The flow range and the brine cooling have no default: a doublet without one raises
 `ValidationError` code `missing_value`. Each doublet, in plant order, runs at the flow that gives
@@ -145,7 +170,7 @@ doublets that are off stops. Every other step a doublet with a duration runs, at
 when no heat is left for it. Every other constraint, and a duration with only `min`, is left to
 the check of a run: `plan.attrs["check_only"]` lists them (`to_dict()` of each; a constraint enforced in part keeps only
 the bounds left, so a duration of `min` and `max` lists its `min`), and
-`gm.evaluate.constraints(plant, problem, results)` judges all of them, the enforced ones too.
+`gm.evaluate.constraints(plant, case, results)` judges all of them, the enforced ones too.
 
 A heat-driven chiller on a bypass (a `Splitter` whose branches reach the users and the generator) has
 the drive water pass the users: the plan sets the split from the balance, the heat the users take
@@ -354,8 +379,8 @@ the columns.
 
 The ports of a leaf are columns too, by `Stream.quantities()`: `<port>.<quantity>` for a fluid
 (`results.get("hp", "hot_out.enthalpy_flow")`) and the port's name for a `Power`
-(`results.get("grid", "power_out")`); the quantities are listed in [types.md](types.md). A limit
-of a `gm.Constraint` may name one, and `gm.evaluate.totals`, `gm.evaluate.constraints` and the
+(`results.get("grid", "power_out")`); the quantities are listed in [types.md](types.md). `gm.evaluate.totals`,
+`gm.evaluate.constraints` (a role quantity such as `doublet.wellhead_pressure` reads one) and the
 energy report read them.
 
 `Results[path]` returns the series of one module path; `Results[path].field` is a pandas Series

@@ -2,7 +2,7 @@
 
 import gemini as gm
 from gemini.case.roletable import units_of
-from tests.fixtures.sample_problems import filled_plant, sample_case
+from tests.fixtures.sample_cases import filled_plant, sample_case
 
 
 def _plans_doublets(name):

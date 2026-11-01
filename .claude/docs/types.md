@@ -19,7 +19,6 @@ through a function-level import of `gemini.runtime` (see
 | `Values` | Read-only recorded outputs with unit conversion |
 | `Health` | Diagnostic comparison of a prediction with measurements |
 | `Profile` | UTC time series in a declared SI unit |
-| `Cost` | Investment and operating cost with currency, price year and source |
 | `value`, `series`, `statistics`, `problem`, `check` | The return shapes, one helper each (`shapes.py`) |
 | `OutputUnits` | The `units` argument of a public return, used on the way out (`shapes.py`) |
 | `Binding`, `ModuleBindings`, `DatedParams` | Data columns of a module and dated parameters |
@@ -252,9 +251,8 @@ Simulate profiles by combining them into a dataset keyed by dotted control or bo
 `gm.simulate(plant, plan=gm.Dataset.from_profiles(profiles), clock=clock)`. Profiles combined into a
 dataset must share one index; resample explicitly.
 
-`Cost` stores investment, annual fixed cost and variable currency/J of useful output, together
-with currency, price year and a source citation. A module declares its own cost by defining
-`capex(assumptions)` returning a `Cost`; `gemini.types.cost.total_cost(plant, assumptions)` sums each
-module's own contribution once, returns `None` when no module declares a cost and rejects mixed
-currencies or years. Composite `capex` must therefore describe only its own additional cost, not
-repeat child costs. `scaled_cost(assumptions, factor, size)` is a factor times a design size.
+Costs are not a type: equipment declares `capex(finance)` and `fixed_opex(finance)` in amounts of
+the case's currency, from the factors of `case.assumptions.finance`, and `gm.evaluate.capex` sums
+them ([economics.md](economics.md#costs)). `gemini.physics.costs.scaled(factor, size)` is a factor
+times a design size. A result of `gm.evaluate` is a `Value` (`gemini/types/shapes.py`), a
+`gm.units.Quantity` in SI that also holds `reason` and `parts`.

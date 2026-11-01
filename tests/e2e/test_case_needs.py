@@ -1,7 +1,7 @@
-"""What a heating and cooling problem needs of gemini: one test per need, each in general terms.
+"""What a heating and cooling case needs of gemini: one test per need, each in general terms.
 
 The list is in ``.claude/docs/testing.md``. The demand is a file written here, the plant dict the
-design of a sample problem, sized as each test needs.
+design of a sample case, sized as each test needs.
 """
 
 from copy import deepcopy
@@ -13,9 +13,9 @@ import gemini as gm
 from gemini.case._utils.kinds import EQUIPMENT_KINDS
 from gemini.run._utils.apply import apply_case
 from gemini.units import Quantity
-from tests.fixtures.sample_problems import sample_case, template_dict
+from tests.fixtures.sample_cases import sample_case, template_dict
 
-pytestmark = pytest.mark.xdist_group("problem_needs")
+pytestmark = pytest.mark.xdist_group("case_needs")
 
 HOURS = 12
 HEAT_MW = 12.0

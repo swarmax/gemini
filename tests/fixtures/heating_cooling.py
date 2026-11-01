@@ -5,7 +5,7 @@ The days are round numbers every plant covers.
 
 import pandas as pd
 
-from tests.fixtures.sample_problems import sample_case, template_plant
+from tests.fixtures.sample_cases import sample_case, template_plant
 
 HEAT = 12e6
 """Heating demand of the days [W]."""

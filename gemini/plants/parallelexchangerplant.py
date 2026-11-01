@@ -25,8 +25,7 @@ class ParallelExchangerPlant(Plant):
     splitter cascades, and remixed after the exchangers. ``gm.plants.example`` carries the well,
     reservoir, ESP and exchanger data of the upstream example.
 
-    Not schedulable: its doublet is a ``NodalDoublet``, and a run sets its splits and setpoints, as
-    ``examples/cases/parallel_exchangers.py`` shows.
+    Not schedulable: its doublet is a ``NodalDoublet``, and a run sets its splits and setpoints.
     """
 
     def __init__(self):

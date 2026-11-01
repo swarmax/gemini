@@ -18,8 +18,7 @@ class DistrictEnergyPlant(Plant):
     well. The return of the cooling network leaves on ``cold_out``; the caller feeds it back to
     ``cold_in`` at the next step.
 
-    Not schedulable: its networks and its aquifer store take their inputs from the run, as
-    ``examples/cases/district_heating_cooling.py`` shows.
+    Not schedulable: its networks and its aquifer store take their inputs from the run.
     """
 
     def __init__(self):

@@ -9,7 +9,7 @@ import gemini as gm
 from gemini._utils import paths, registry
 from gemini.plants._utils import catalogue
 from tests.fixtures.errors import raises
-from tests.fixtures.sample_problems import treatment_plant
+from tests.fixtures.sample_cases import treatment_plant
 
 TEMPLATE_PLANTS = (
     "HeatingPlant",

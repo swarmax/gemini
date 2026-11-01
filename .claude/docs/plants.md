@@ -4,7 +4,7 @@ A leaf module computes and a plant connects: no class does both ([modules.md](mo
 composite is a `Plant`. A plant declares its children, ports and connections and never writes
 `forward`: `Plant.forward` is written once. `describe()`, `gm.simulate`, `gm.replay` and `gm.live`
 work on any plant, on every backend, and a plant has no run method of its own: run it with
-`results = gm.simulate(plant, problem)`. How it is computed is in
+`results = gm.simulate(plant, case)`. How it is computed is in
 [native-engine.md](native-engine.md#14-the-plant-class-and-the-plant-dict).
 
 `Plant` is in `gemini/plants/plant.py`, with the plant classes, one file each; `gemini.modules`
@@ -205,6 +205,28 @@ through `plant.input_value`. A column of the run wins over it. A value assigned 
 `plant.to_json(path)` and `gm.Plant.from_json(path)` write and read it as JSON. A plant dict of an older
 format raises `ValidationError` with code `old_format`.
 
+## What the plant dict holds
+
+The plant dict holds only the plant: the class and size, the design values (`params`), the setpoints
+(`inputs`), the bindings and the dated values. It holds nothing that describes the world or the
+request, which is in the `gm.Case`: not the ground (gradient, surface temperature), the reservoir
+(permeability, thickness, pressure), the brine of a `Doublet`, the air, the return and supply
+temperatures of the consumers, the prices, the limits or the demand. A parameter that the case
+sets is declared with `Parameter(..., case="<path in the case>")` (`Doublet.gradient`,
+`surface_temperature`, `permeability`, `thickness`; `Formation.geothermal_gradient`,
+`surface_temperature`; `HeatingGrid` and `CoolingGrid` `return_temperature` and the required supply
+temperature): a plant dict that states one is refused with `invalid_value` naming the case path, and
+`to_dict` never writes it. A value with a unit in `params` or `inputs` is a `{"value", "unit"}` and
+`to_dict` writes it so; a bare number with a dimension is refused. Known limits:
+
+- `fluids` remains in the plant dict, for a module whose fluid differs from its class default. A
+  plant with no case (a measured or replayed plant such as `DoubletHeatPlant`) carries its own
+  brine there; with a case, a `Doublet` takes its fluid from `environment.fluid`.
+- The pressure of the water a consumer returns stays a design parameter of the plant: the case
+  has no field for it.
+- `set_params`, `gm.call`, `gm.Stream` and `gm.Fluid` still take a bare number as SI, because
+  the plants pass derived SI values through them.
+
 ## Loops
 
 A connection that closes a cycle is a tear stream. `Plant.forward` iterates the cycle until the tear
@@ -299,10 +321,10 @@ n}`, 1 to 3 (`minimum_doublets`, `maximum_doublets` of the class, `invalid_desig
 doublets `d0` to `d{n-1}` in parallel through `production_mixers` and `injection_splitters`. A
 plant-level `depth` goes to every doublet, which derives its reservoir from it; a value stated on one
 doublet wins, now and later. A run that starts without a geotherm raises `missing_value` naming the path. A `Doublet` with a `depth` and no geotherm waits for it instead of
-raising: a plant holds the design and the `site` of a `gm.Problem` the geotherm and the rest of the
-site, so `gm.simulate(plant, problem)` applies them to a copy.
+raising: a plant holds the design, and the `gm.Case` the geotherm and the rest of the environment,
+so `gm.simulate(plant, case)` applies them to a copy ([engine.md](engine.md#how-the-case-reaches-the-modules)).
 
-**Schedulable or a building block.** `gm.schedule(plant, problem)` plans a plant that has `Doublet` children and a
+**Schedulable or a building block.** `gm.schedule(plant, case)` plans a plant that has `Doublet` children and a
 grid, and its setpoints as `inputs`:
 
 | A plant with values plus `gm.schedule` | Status |

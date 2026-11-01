@@ -35,7 +35,6 @@ _ANGLE_MARGIN = 1e-12
 
 
 @ops.physics
-@ops.physics
 def reservoir_temperature(
     surface_temperature: float,
     gradient: float,
