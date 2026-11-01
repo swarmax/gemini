@@ -375,8 +375,8 @@ error.
 | `gm.evaluate.compare(reports, by)` | real: a `Comparison`, see [the contract](#the-geomind-contract) |
 | `gm.study.size(plant, case)` | real: a new plant with first sizes; the note is `plant.sizing` `{sized, unchanged}` |
 | `gm.study.minimize(plant, case, objective, variables=None, constraints=None, evaluations=100, *, plan=None)` | real: `{best, feasible, fixed, history, evaluations}`, `best` a `Value` whose `parts["parameters"]` are `{name: Quantity}` and whose `["plant"]` is the best plant; the variables are those of `case.choices` (`size.doublets`, `depth`) unless given; a name is a plant `path.parameter`, `case.<path>`, `size.doublets` or `<role>.<parameter>` (every unit of a role of `gm.case.roles()`) |
-| `gm.study.sample(plant, case, distributions, metrics, count, seed=0, *, plan=None)` | real: `{samples, summary}`, `summary` per metric `{mean, p5, p50, p95}`, each a `Value`; a key of `distributions` is a plant `path.parameter` or `case.<path>` |
-| `gm.study.sensitivity(plant, case, parameters, metrics, *, plan=None)` | real: a list sorted by effect with `to_frame()`; `parameters` is `{name: {"low", "high"}}` |
+| `gm.study.sample(plant, case, metrics, count, seed, *, plan=None)` | real: `Sample`, a dict `{samples, summary}`, `summary` per metric `{mean, p5, p50, p95}`, each a `Value`; draws only the `uncertainty` the case declares (`missing_value` if none), never a plant parameter; `seed` has no default; `to_dict()` / `Sample.from_dict` are JSON |
+| `gm.study.sensitivity(plant, case, metrics, *, plan=None)` | real: a `Tornado`, a list sorted by effect with `to_frame()`, `to_dict()` and `Tornado.from_dict`; each value the case declares an `uncertainty` for, at its `min` and `max` (`value ± std` for a `normal` without bounds) |
 
 `case` of `gm.study.minimize` and `sample` plans the demand for each trial with `gm.schedule` on the
 design of that trial, so a variable that changes the design changes the plan. A `plan` (run input, a
@@ -418,7 +418,7 @@ of the flow, with its signature and its return shape. `python examples/hackathon
 | Read a value | `report[key].to(unit)`, with `unit` a text of the table (`"GWh"`, `"MEUR"`, `"MEUR/yr"`, `"EUR/MWh"`, `"kt"`) | `Value`: `.value` a number or `None`, `.unit`, `.reason` (why `value` is `None`), `.parts`, `.si` |
 | Compare | `gm.evaluate.compare(reports, by=["lcts", "co2"])` | `Comparison`, below |
 | Table | `comparison.to_frame()` | a DataFrame, one row per report, columns `<metric> [<unit>]` in display units (MWh, MW, MEUR, MEUR/yr, EUR/MWh, kt; `to_frame(units={"lcts": "EUR/MWh"})` chooses another), `rank_<metric>`, `pareto` and `feasible` |
-| Sensitivity | `gm.study.sensitivity(plant, case, parameters, metrics)`, `parameters = {"case.assumptions.finance.opex.electricity": {"low": Quantity, "high": Quantity}}`, `metrics = ["lcts"]` | a list of `{parameter, metric, low, high, at_low, at_high, effect}`; `.to_frame(units=None)` a DataFrame of columns `parameter, metric, low, high, at_low, at_high, effect, unit`, the metric in its display unit or the one in `units` |
+| Sensitivity | `gm.study.sensitivity(plant, case, ["lcts"])`: the case declares `uncertainty` next to its numbers | a list of `{parameter, metric, low, high, at_low, at_high, effect}`; `.to_frame(units=None)` a DataFrame of columns `parameter, metric, low, high, at_low, at_high, effect, unit`, the metric in its display unit or the one in `units` |
 | Save | `report.to_dict(units=None)`, `comparison.to_dict()`, `Comparison.from_dict(data)` | plain JSON (`json.dumps` works); the report in display units (MWh, MW, MEUR, EUR/MWh, kt, m3/h, degC) or `{metric: unit}`; `str(report)` is that JSON; values inside stay SI |
 
 `Report` is a `dict` subclass with these keys, each a `Value` in SI unless said: `heat_delivered`,

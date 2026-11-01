@@ -22,13 +22,6 @@ EVALUATIONS = 20
 SHARE = (0.1, 1.0)
 """A capacity is searched from a tenth of the peak it serves to the whole peak, an assumption."""
 Q = gm.units.Quantity
-PARAMETERS = {
-    "case.assumptions.finance.opex.electricity": {
-        "low": Q(70, "EUR/MWh"),
-        "high": Q(160, "EUR/MWh"),
-    },
-    "case.environment.reservoir.permeability": {"low": Q(150, "mD"), "high": Q(250, "mD")},
-}
 
 
 def variable(path, parameter, lower, upper):
@@ -97,7 +90,7 @@ def main():
     feasible = {name: found[name] for name in frame.index[frame["feasible"]]}
     best, _ = min(feasible.values(), key=lambda item: item[1]["lcts"].si)
     print(
-        gm.study.sensitivity(best, case, PARAMETERS, ["lcts"])
+        gm.study.sensitivity(best, case, ["lcts"])
         .to_frame()
         .to_string(float_format="{:.4g}".format)
     )
