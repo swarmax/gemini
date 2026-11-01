@@ -23,13 +23,8 @@ from tests.fixtures.errors import raises
         ("m_to_ft", "ft_to_m"),
         ("kgm3_to_lbmft3", "lbmft3_to_kgm3"),
         ("pas_to_cp", "cp_to_pas"),
-        ("nm_to_dyne_cm", "dyne_cm_to_nm"),
         ("index_to_si", "index_from_si"),
-        ("inch_to_m", "m_to_inch"),
-        ("m_to_mm", "mm_to_m"),
         ("m3s_to_m3day", "m3day_to_m3s"),
-        ("kgm3_to_mgl", "mgl_to_kgm3"),
-        ("pa_to_gpa", "gpa_to_pa"),
         ("rad_to_deg", "deg_to_rad"),
     ],
 )
@@ -254,3 +249,10 @@ def test_a_cost_per_volume_converts_to_currency_per_m3():
     """EUR/m3 is the unit of a storage factor and is SI already."""
     assert units.Quantity(40, "EUR/m3").si == 40
     assert units.fits("EUR/m3", "money_per_volume")
+
+
+@pytest.mark.parametrize("target", ["m3/s", "degC"])
+def test_an_array_refuses_a_unit_of_another_dimension(target):
+    """An array converts only between units of one dimension, as a scalar does."""
+    with raises(ValidationError, "invalid_unit", match="units.convert"):
+        units.Quantity(np.array([1.0, 2.0]), "bar").to(target)

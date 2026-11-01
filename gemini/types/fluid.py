@@ -41,8 +41,7 @@ class Fluid(BaseModel):
     matching the cited manufacturer table. Constant STP does not infer brine density or viscosity
     from salt concentration; supply measured values. ``density``, ``viscosity``, ``specific_heat``
     and ``thermal_conductivity`` describe the liquid of a brine or water fluid and the gas of a gas
-    fluid; a mixture density is a computed property, never an input. Numbers are SI; unit strings
-    such as ``"0.4 mPa*s"`` are accepted.
+    fluid; a mixture density is a computed property, never an input. Numbers are SI.
 
     Free gas is given as ``gas_liquid_ratio`` (normal m3 of free gas per m3 of produced liquid, at
     0 degC and 1.01325 bar a) with ``gas_composition`` (mole fractions summing to one, the species
@@ -83,7 +82,7 @@ class Fluid(BaseModel):
         try:
             super().__init__(**data)
         except PydanticError as error:
-            raise ValidationError(f"Fluid: {error}", code="invalid_value") from error
+            raise ValidationError(f"Fluid: {error}", code=_code_of(error)) from error
 
     def __hash__(self):
         """Hash every field; a composition by its items, because a dictionary has no hash."""
@@ -249,6 +248,15 @@ _OVERRIDES = (
     ("specific_heat", "cp_l"),
     ("thermal_conductivity", "k_l"),
 )
+
+
+def _code_of(error):
+    """Return the code of the gemini error a pydantic error wraps, else ``invalid_value``."""
+    for problem in error.errors():
+        wrapped = problem.get("ctx", {}).get("error")
+        if isinstance(wrapped, ValidationError):
+            return wrapped.code
+    return "invalid_value"
 
 
 def _check_composition(composition):

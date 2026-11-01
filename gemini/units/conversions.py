@@ -9,8 +9,7 @@ quantity (the types package calls it once per quantity), so ``names(quantity)`` 
 ``fits(unit, quantity)`` need no upward import.
 
 Each conversion factor is declared once, as a named module constant below, and both the table
-and the converters read that constant. A converter whose body equals that of another quantity's
-converter (``kgh_to_kgs`` and ``m3h_to_m3s``) is an alias of it.
+and the converters read that constant.
 
 Validity: every converter is valid for any finite number; the argument is returned scaled (and
 offset for temperatures), with no range check. Source: NIST Special Publication 811 (2008) for
@@ -74,10 +73,6 @@ def pa_to_bar(x: float) -> float:
     return x / PA_PER_BAR
 
 
-m3s_per_bar_to_si = pa_to_bar
-"""Convert the historical runtime's [m3/s/bar] index to [m3/s/Pa]: ``x / 1e5``."""
-
-
 def c_to_k(x: float) -> float:
     """Convert [degC] to [K]: ``x + 273.15``."""
     return x + ZERO_CELSIUS
@@ -91,10 +86,6 @@ def k_to_c(x: float) -> float:
 def m3h_to_m3s(x: float) -> float:
     """Convert [m3/h] to [m3/s]: ``x / 3600``."""
     return x / SECONDS_PER_HOUR
-
-
-kgh_to_kgs = m3h_to_m3s
-"""Convert [kg/h] to [kg/s]: ``x / 3600``."""
 
 
 def m3s_to_m3h(x: float) -> float:
@@ -167,17 +158,9 @@ def pas_to_cp(x: float) -> float:
     return x / MILLI
 
 
-nm_to_dyne_cm = pas_to_cp
-"""Convert [N/m] to [dyne/cm]: ``x / 1e-3``."""
-
-
 def cp_to_pas(x: float) -> float:
     """Convert [cP] to [Pa s]: ``x * 1e-3``."""
     return x * MILLI
-
-
-dyne_cm_to_nm = cp_to_pas
-"""Convert [dyne/cm] to [N/m]: ``x * 1e-3``."""
 
 
 def inch_to_m(x: float) -> float:
@@ -185,27 +168,9 @@ def inch_to_m(x: float) -> float:
     return x * M_PER_INCH
 
 
-def m_to_inch(x: float) -> float:
-    """Convert [m] to [inch]: ``x / 0.0254``."""
-    return x / M_PER_INCH
-
-
 def m_to_mm(x: float) -> float:
     """Convert [m] to [mm]: ``x * 1000``."""
     return x * KILO
-
-
-kgm3_to_mgl = m_to_mm
-"""Convert [kg/m3] to [mg/l]: ``x * 1000``."""
-
-
-def mm_to_m(x: float) -> float:
-    """Convert [mm] to [m]: ``x / 1000``."""
-    return x / KILO
-
-
-mgl_to_kgm3 = mm_to_m
-"""Convert [mg/l] to [kg/m3]: ``x / 1000``."""
 
 
 def m3s_to_m3day(x: float) -> float:
@@ -241,11 +206,6 @@ def bar_to_psi(x: float) -> float:
 def pa_to_gpa(x: float) -> float:
     """Convert [Pa] to [GPa]: ``x / 1e9``."""
     return x / GIGA
-
-
-def gpa_to_pa(x: float) -> float:
-    """Convert [GPa] to [Pa]: ``x * 1e9``."""
-    return x * GIGA
 
 
 def rad_to_deg(x: float) -> float:
@@ -559,8 +519,21 @@ def array_to_si(values, unit, quantity=None):
 
 def array_convert(values, from_unit, to_unit, quantity=None):
     """Convert an array-like between units of one dimension, element for element as ``convert``."""
+    target = _same_dimension(from_unit, to_unit)
     si = array_to_si(values, from_unit, quantity)
-    return (si - _offset(to_unit, quantity)) / _entry(to_unit, "units.convert")[1]
+    return (si - _offset(to_unit, quantity)) / target[1]
+
+
+def _same_dimension(from_unit, to_unit):
+    """Return the table entry of ``to_unit``; a unit of another dimension raises."""
+    source, target = _entry(from_unit, "units.convert"), _entry(to_unit, "units.convert")
+    if source[0] != target[0]:
+        raise ValidationError(
+            f"units.convert: unit = {to_unit!r}; expected a unit of {source[0]!r} "
+            f"to convert from {from_unit!r}",
+            code="invalid_unit",
+        )
+    return target
 
 
 def _allowed(expected_unit, quantity):
@@ -621,13 +594,7 @@ def convert(value, from_unit, to_unit, quantity=None):
     """
     if from_unit == to_unit and from_unit not in _UNITS:
         return value
-    source, target = _entry(from_unit, "units.convert"), _entry(to_unit, "units.convert")
-    if source[0] != target[0]:
-        raise ValidationError(
-            f"units.convert: unit = {to_unit!r}; expected a unit of {source[0]!r} "
-            f"to convert from {from_unit!r}",
-            code="invalid_unit",
-        )
+    target = _same_dimension(from_unit, to_unit)
     si = to_si(value, from_unit, quantity)
     return (si - _offset(to_unit, quantity)) / target[1]
 

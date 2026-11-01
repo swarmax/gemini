@@ -476,7 +476,7 @@ def beggs_brill_dp(
         gas_velocity,
         liquid_velocity,
         units.kgm3_to_lbmft3(rho_l),
-        units.nm_to_dyne_cm(sigma),
+        sigma / units.MILLI,
         diameter_ft,
         inclination,
     )

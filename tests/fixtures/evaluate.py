@@ -222,7 +222,7 @@ def _corrosion(is_fitted, parameters, inputs):
         diameter=parameters["diameter"],
         roughness=parameters["roughness"],
         co2_fraction=inputs["co2_fraction"],
-        bicarb_concentration=units.mgl_to_kgm3(inputs["bicarb_concentration"]),
+        bicarb_concentration=inputs["bicarb_concentration"] / units.KILO,
         ionic_strength=inputs["ionic_strength"],
     )
     return dict(corrosion_rate=rate)

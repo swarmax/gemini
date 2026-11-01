@@ -186,6 +186,8 @@ def measure(number, unit, reason=None, **parts):
 
     ``parts`` adds the values and texts of the result after the value's own keys.
     """
+    if isinstance(number, np.generic):
+        number = number.item()
     return Value(number, unit, (reason or NO_VALUE) if number is None else None, parts)
 
 

@@ -1,6 +1,6 @@
 """Environment report for bug reports."""
 
-from gemini._utils import collect_env
+from gemini._utils import collect_env, version
 
 
 def test_environment_lists_python_package_and_dependencies():
@@ -22,3 +22,8 @@ def test_main_prints_one_line_per_item(capsys):
     lines = capsys.readouterr().out.splitlines()
     assert lines[0].startswith("python: ")
     assert len(lines) == len(collect_env.environment())
+
+
+def test_the_gemini_row_is_the_source_version():
+    """The report names the version of the source, not that of an installed copy."""
+    assert dict(collect_env.environment())["gemini"] == version.package_version()

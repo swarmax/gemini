@@ -68,9 +68,7 @@ correlation boundaries; historical factors retained.
 - `pas_to_cp(x)`: convert [Pa s] to [cP]: `x / 1e-3`.
 - `cp_to_pas(x)`: convert [cP] to [Pa s]: `x * 1e-3`.
 - `inch_to_m(x)`: convert [inch] to [m]: `x * 0.0254`.
-- `m_to_inch(x)`: convert [m] to [inch]: `x / 0.0254`.
 - `m_to_mm(x)`: convert [m] to [mm]: `x * 1000`.
-- `mm_to_m(x)`: convert [mm] to [m]: `x / 1000`.
 - `m3s_to_m3day(x)`: convert [m3/s] to [m3/day]: `x * 86400`.
 - `m3day_to_m3s(x)`: convert [m3/day] to [m3/s]: `x / 86400`.
 - `index_to_si(x)`: convert [m3/h/bar] to [m3/s/Pa]: `x / 3600 / 1e5`.
@@ -78,16 +76,12 @@ correlation boundaries; historical factors retained.
 - `c_to_f(x)`: convert [degC] to [degF]: `x * 1.8 + 32`.
 - `bar_to_psi(x)`: convert [bar] to [psi]: `x * 14.503774`.
 - `pa_to_gpa(x)`: convert [Pa] to [GPa]: `x / 1e9`.
-- `gpa_to_pa(x)`: convert [GPa] to [Pa]: `x * 1e9`.
 - `rad_to_deg(x)`: convert [rad] to [deg]: `x * 180 / pi`.
 - `deg_to_rad(x)`: convert [deg] to [rad]: `x * pi / 180`.
 - `m2_to_mm2(x)`: convert [m2] to [mm2]: `x * 1e6`.
 - `ms_to_mm_year(x)`: convert penetration speed [m/s] to [mm/year]: `x * 1000 * 31557600`.
 - `mol_l_bar_to_mol_m3_pa(x)`: convert Henry solubility constant [mol/l/bar] to [mol/m3/Pa]:
   `x * 0.01`.
-- `kgh_to_kgs(x)`: alias of `m3h_to_m3s`; converts [kg/h] to [kg/s]: `x / 3600`.
-- `nm_to_dyne_cm(x)`: alias of `pas_to_cp`; converts [N/m] to [dyne/cm]: `x / 1e-3`.
-- `dyne_cm_to_nm(x)`: alias of `cp_to_pas`; converts [dyne/cm] to [N/m]: `x * 1e-3`.
 
 ### `fluid.py`
 
@@ -1167,8 +1161,8 @@ modules score alike.
 - Each conversion factor is declared once as a named module constant (`PA_PER_BAR`,
   `M_PER_FOOT`, `SECONDS_PER_HOUR`, `PA_PER_FOOT_HEAD`, `W_PER_BHP`, ...). The table `_UNITS` and
   the `*_to_*` converters both read that constant.
-- A converter whose body equals that of another quantity's converter is an alias of it:
-  `kgh_to_kgs = m3h_to_m3s`, `nm_to_dyne_cm = pas_to_cp`, `dyne_cm_to_nm = cp_to_pas`.
+- A conversion that has the factor of another is not a second converter: the caller divides or
+  multiplies by the exported constant (`units.SECONDS_PER_HOUR`, `units.KILO`, `units.MILLI`).
 - A converter is valid for any finite number and does no range check. NIST SP 811 (2008) gives
   the exact definitions (bar, inch, foot, psi, hour, degree Celsius); the millidarcy, barrel per
   day, foot of head, brake horsepower, lbm/ft3 and psi factors are retained numbers of the

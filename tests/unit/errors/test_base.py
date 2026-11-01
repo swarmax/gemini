@@ -166,3 +166,9 @@ def test_on_error_has_two_values_everywhere():
     """Any other value is wrong input."""
     with pytest.raises(errors.ValidationError, match="on_error = 'ignore'"):
         base.check_on_error("ignore")
+
+
+def test_a_problem_without_a_path_has_no_prefix_in_the_message():
+    """A message does not start with ``None:``."""
+    problem = {"path": None, "code": "invalid_value", "message": "x", "suggestions": []}
+    assert errors.ValidationError.of([problem]).args == ("x",)

@@ -58,7 +58,7 @@ def _historical_ipr_parameters(reservoir_property, well_property):
     NOTE(refactor): historical IPR interpreted the labelled m3/h/bar value as m3/s/bar.
     """
     parameters = tables.production_reservoir_params_from_gemini(reservoir_property, well_property)
-    parameters["productivity_index"] = units.m3s_per_bar_to_si(
+    parameters["productivity_index"] = units.pa_to_bar(
         well_property["productionwell_productivity_index"]
     )
     return parameters

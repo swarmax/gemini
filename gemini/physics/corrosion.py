@@ -202,7 +202,7 @@ def co2_corrosion_rate(
         water_viscosity=units.pas_to_cp(water_viscosity),
         diameter=diameter,
         roughness=roughness,
-        bicarb_concentration=units.kgm3_to_mgl(bicarb_concentration),
+        bicarb_concentration=bicarb_concentration * units.KILO,
         ionic_strength=ionic_strength,
     )
     rate = _RATES[model](conditions, coefficients)

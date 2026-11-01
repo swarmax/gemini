@@ -182,3 +182,10 @@ def test_a_unit_that_does_not_fit_raises_with_suggestions():
     with raises(gm.errors.ValidationError, "invalid_unit") as caught:
         shapes.OutputUnits({"power": "MWW"})
     assert "MW" in caught.value.suggestions
+
+
+def test_measure_holds_a_python_float_for_a_numpy_scalar():
+    """A public return holds no NumPy type."""
+    measured = shapes.measure(np.float64(2.5), "W")
+    assert type(measured.value) is float
+    assert measured.value == 2.5

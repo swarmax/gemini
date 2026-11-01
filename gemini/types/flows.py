@@ -15,9 +15,9 @@ from gemini.types.quantities import MassFlow, Pressure, Temperature
 
 _ARGUMENTS = ("m_dot", "flow", "T", "p", "fluid")
 STREAM_FIELDS = ("m_dot", "T", "p")
+"""The numeric fields of a stream, in order; every other list of them is derived from this."""
 FIELD_QUANTITIES = {"m_dot": "mass_flow", "T": "temperature", "p": "pressure"}
 """The port quantity of ``Results`` that shows each field of a stream."""
-"""The numeric fields of a stream, in order; every other list of them is derived from this."""
 
 _FIELDS = (*STREAM_FIELDS, "fluid")
 

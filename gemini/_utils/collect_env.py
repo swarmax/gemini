@@ -6,7 +6,8 @@ import sys
 from importlib import metadata
 from pathlib import Path
 
-DISTRIBUTION = "gemini-geothermal-suite-open"
+from gemini._utils.version import package_version
+
 DEPENDENCIES = ("numpy", "pandas", "scipy", "pydantic", "pytest")
 
 
@@ -39,7 +40,7 @@ def environment():
     rows = [
         ("python", sys.version.split()[0]),
         ("platform", platform.platform()),
-        ("gemini", version(DISTRIBUTION)),
+        ("gemini", package_version()),
         ("gemini path", str(package)),
         ("git commit", git_commit(package)),
     ]

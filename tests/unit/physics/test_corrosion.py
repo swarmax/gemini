@@ -43,7 +43,7 @@ def test_corrosion_golden(name):
         diameter=p["diameter"],
         roughness=p["roughness"],
         co2_fraction=u["co2_fraction"],
-        bicarb_concentration=units.mgl_to_kgm3(u["bicarb_concentration"]),
+        bicarb_concentration=u["bicarb_concentration"] / units.KILO,
         ionic_strength=u["ionic_strength"],
     )
     assert actual == pytest.approx(case["expected"]["corrosion_rate"], rel=1e-9, abs=0)

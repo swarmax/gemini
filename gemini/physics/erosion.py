@@ -58,7 +58,7 @@ def _particle_flow(flow_rate_m3h, rho_fluid, diameter):
     NOTE(refactor): particle mass flow equals the total fluid mass flow; there is no solids
     fraction.
     """
-    particle_mass_flow = units.kgh_to_kgs(flow_rate_m3h * rho_fluid)
+    particle_mass_flow = flow_rate_m3h * rho_fluid / units.SECONDS_PER_HOUR
     area = geometry.circle_area(diameter)
     velocity = geometry.mean_velocity(particle_mass_flow, rho_fluid, diameter)
     return particle_mass_flow, velocity, area

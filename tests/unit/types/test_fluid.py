@@ -136,3 +136,9 @@ def test_a_brine_with_a_composition_mixes_with_its_gas_at_the_stream_pressure():
     assert Stream(m_dot=1.0, p=200e5, T=360.0, fluid=brine).volumetric_flow() == pytest.approx(
         1 / deep
     )
+
+
+def test_a_property_in_a_unit_of_another_dimension_reports_invalid_unit():
+    """The code of the unit error is kept, not turned into ``invalid_value``."""
+    with raises(ValidationError, "invalid_unit", match="Fluid.density"):
+        Fluid(density={"value": 1, "unit": "m3/h"})

@@ -115,7 +115,10 @@ class ValidationError(GeminiError, ValueError):
     def of(cls, problems):
         """Return the one error of a non-empty list of problems, carried in ``problems``."""
         first = problems[0]
-        message = "; ".join(f"{item['path']}: {item['message']}" for item in problems)
+        message = "; ".join(
+            f"{item['path']}: {item['message']}" if item["path"] else item["message"]
+            for item in problems
+        )
         return cls(
             message,
             path=first["path"],
