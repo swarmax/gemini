@@ -52,7 +52,10 @@ def test_eager_and_compiled_runs_give_the_same_numbers_and_errors(make):
 def _streams(rows=3):
     return {
         "fluid_in": gm.Stream(
-            m_dot=np.full(rows, 1.0), T=np.full(rows, 300.0), p=np.full(rows, 1e5), fluid=gm.WATER
+            m_dot=gm.units.Quantity(np.full(rows, 1.0), "kg/s"),
+            T=gm.units.Quantity(np.full(rows, 300.0), "K"),
+            p=gm.units.Quantity(np.full(rows, 1e5), "Pa"),
+            fluid=gm.WATER,
         )
     }
 

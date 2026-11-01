@@ -13,7 +13,11 @@ from gemini.physics import energy
 from gemini.types import Power, Stream
 from tests.fixtures.designs import with_values
 
-STREAM = gm.Stream(m_dot=2.0, T=300.0, p=2e5)
+STREAM = gm.Stream(
+    m_dot=gm.units.Quantity(2.0, "kg/s"),
+    T=gm.units.Quantity(300.0, "K"),
+    p=gm.units.Quantity(2e5, "Pa"),
+)
 
 
 class Consumer(Module):
@@ -103,7 +107,13 @@ class Source(Module):
         self.fluid_out = Outlet(Stream, offered=True)
 
     def _offer(self, inlets):
-        return {"fluid_out": gm.Stream(m_dot=1.0, T=self.temperature, p=1e5)}
+        return {
+            "fluid_out": gm.Stream(
+                m_dot=gm.units.Quantity(1.0, "kg/s"),
+                T=gm.units.Quantity(self.temperature, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            )
+        }
 
     def forward(self, inlets):
         """Give the same stream again."""
@@ -161,7 +171,13 @@ class Offer(Module):
         self.fluid_out = Outlet(Stream, offered=True, drawn=True)
 
     def _offer(self, inlets):
-        return {"fluid_out": gm.Stream(m_dot=8.0, T=320.0, p=1e5)}
+        return {
+            "fluid_out": gm.Stream(
+                m_dot=gm.units.Quantity(8.0, "kg/s"),
+                T=gm.units.Quantity(320.0, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            )
+        }
 
     def forward(self, inlets):
         """Nothing to give but the offer."""
@@ -173,14 +189,14 @@ class Offer(Module):
 
 def consumer(rating):
     """Return a consumer of ``rating`` W per kg/s."""
-    return Consumer().set_params("", {"rating": rating})
+    return Consumer().set_params("", {"rating": gm.units.Quantity(rating, "W")})
 
 
 def wired():
     """Return a plant of two consumers on one bus, fed through the plant port ``feed``."""
     plant = gm.Plant("Wired")
-    plant.add(Consumer, "first", {"rating": 10.0})
-    plant.add(Consumer, "second", {"rating": 30.0})
+    plant.add(Consumer, "first", {"rating": gm.units.Quantity(10.0, "W")})
+    plant.add(Consumer, "second", {"rating": gm.units.Quantity(30.0, "W")})
     plant.add(Bus, "bus")
     plant.connect("feed", "first.fluid_in")
     plant.connect("first.fluid_out", "second.fluid_in")
@@ -216,7 +232,11 @@ def test_a_many_port_holds_what_its_takers_drew():
 def test_the_same_plant_is_one_graph_on_every_backend():
     """A power port is traced like a stream; a graph gives the numbers of a direct call."""
     plant = wired()
-    stream = gm.Stream(m_dot=np.array([1.0, 2.0]), T=300.0, p=2e5)
+    stream = gm.Stream(
+        m_dot=gm.units.Quantity(np.array([1.0, 2.0]), "kg/s"),
+        T=gm.units.Quantity(300.0, "K"),
+        p=gm.units.Quantity(2e5, "Pa"),
+    )
     outcome = run(plant, {"feed": stream}, {})
     assert outcome.breaks == []
     assert outcome.graph.result.children["bus"].outputs.net is not None
@@ -225,8 +245,8 @@ def test_the_same_plant_is_one_graph_on_every_backend():
 def test_a_plant_port_shared_by_two_consumers_gives_their_sum():
     """Inside a plant the ends of one plant port add up with an explicit function."""
     plant = gm.Plant("Shared")
-    plant.add(Consumer, "first", {"rating": 10.0})
-    plant.add(Consumer, "second", {"rating": 30.0})
+    plant.add(Consumer, "first", {"rating": gm.units.Quantity(10.0, "W")})
+    plant.add(Consumer, "second", {"rating": gm.units.Quantity(30.0, "W")})
     plant.connect("feed", "first.fluid_in")
     plant.connect("first.fluid_out", "second.fluid_in")
     plant.connect("second.fluid_out", "product")

@@ -23,7 +23,7 @@ class ChemicalGrid(Module):
 
     def _offer(self, inlets):
         """Offer the product at normal conditions, with the module's fluid."""
-        offered = Stream(
+        offered = Stream._si(
             m_dot=0.0, T=gas.NORMAL_TEMPERATURE, p=gas.NORMAL_PRESSURE, fluid=self.fluid
         )
         return {"chemical_out": offered}

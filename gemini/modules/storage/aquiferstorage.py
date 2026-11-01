@@ -208,7 +208,7 @@ class AquiferStorage(Module):
                 "production_out; expected both on a loop through the well pair",
                 code="invalid_design",
             )
-        offered = Stream(
+        offered = Stream._si(
             m_dot=self.groundwater_flow,
             T=self.production_temperature(),
             p=self.groundwater_pressure,

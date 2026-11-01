@@ -4,13 +4,14 @@ import pytest
 
 import gemini as gm
 from gemini.errors import ValidationError
+from tests.fixtures import si
 from tests.fixtures.designs import design_values
 from tests.fixtures.errors import raises
 from tests.fixtures.esp_design import ESP_DESIGN
 from tests.fixtures.heating_cooling import days_case
 
 BRINE = gm.Fluid(
-    density=1030,
+    density=gm.units.Quantity(1030, "kg/m3"),
     viscosity={"value": 0.4, "unit": "mPa*s"},
     gas_liquid_ratio=0.8,
     gas_composition={"CH4": 0.8, "CO2": 0.2},
@@ -69,7 +70,7 @@ def designed(count):
         values |= {f"d{index}.{name}": value for name, value in WELL_DESIGN.items()}
     for pipe in ("heating_return_pipe", "heating_supply_pipe"):
         values |= {f"{pipe}.{name}": value for name, value in PIPE.items()}
-    plant.set_params("", design_values(plant) | values)
+    si.set_params(plant, "", design_values(plant) | values)
     return plant.set_inputs(INPUTS)
 
 

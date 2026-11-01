@@ -6,6 +6,7 @@ or the plant already holds.
 """
 
 from gemini.physics import combustion, gas
+from tests.fixtures import si
 from tests.fixtures.esp_design import ESP_DESIGN
 
 WELL = {
@@ -78,5 +79,5 @@ def design_values(module):
 
 def with_values(module, **values):
     """Return ``module`` with the design values it lacks set, then ``values`` (SI, by path)."""
-    module.set_params("", design_values(module) | values)
+    module.set_params("", si.params(module, design_values(module) | values))
     return module

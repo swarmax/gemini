@@ -26,9 +26,11 @@ class Plant(PortResolver, Module):
     connected or named as a plant port; a plant port exists only when named. ``name`` is the name
     given, by default the name of the class.
 
-    A plant may override ``set_params`` to derive its children's values from design values. What
-    such a call states explicitly is remembered and wins over what is derived, derived values are
-    never stored, and the fluid of a plant passes to its children.
+    A plant may override ``_set_si_params``, the private method that stores SI values and that
+    ``set_params`` calls after converting quantities, to derive its children's values from design
+    values; it never overrides ``set_params``. What such a call states explicitly is remembered
+    and wins over what is derived, derived values are never stored, and the fluid of a plant
+    passes to its children.
     """
 
     abstract = True
@@ -95,29 +97,51 @@ class Plant(PortResolver, Module):
         """Set the fluid of this plant alone and derive again."""
         super()._set_own_fluid(value)
         if self._derives_params():
-            self.set_params("", {})
+            self._set_si_params("", {})
 
     def _derives_params(self):
-        """Return whether this class overrides ``set_params`` to derive its children's values."""
-        return type(self).set_params is not Plant.set_params
+        """Return whether this class overrides ``_set_si_params`` to derive children's values."""
+        return type(self)._set_si_params is not Plant._set_si_params
 
     def set_params(self, path, params, valid_from=None):
-        """Store parameters as ``Module.set_params`` does and remember what the root was given."""
+        """Store parameters as ``Module.set_params`` does and remember them as the user wrote them.
+
+        A value stays in the unit it was given in, so ``to_dict`` writes it back as stated.
+        """
+        super().set_params(path, params, valid_from)
+        self._remember(path, params, valid_from)
+        return self
+
+    def _set_si_params(self, path, params, valid_from=None):
+        """Store SI parameters as ``Module._set_si_params`` does and remember what was given."""
+        self._remember(path, params, valid_from)
+        return super()._set_si_params(path, params, valid_from)
+
+    def _remember(self, path, params, valid_from):
+        """Record the values of an undated call that are not derived, as the root was given."""
         if valid_from is None:
             names = {join_path(path, key): value for key, value in params.items()}
             kept = {key: value for key, value in names.items() if key not in self._derived_params}
             self._stated[""] = self._stated.get("", {}) | kept
-        return super().set_params(path, params, valid_from)
 
     def set_inputs(self, values):
         """Set inputs of the plant by path and return it; ``to_dict`` stores them.
 
-        ``values`` maps a path to a number in SI or a quantity, never a unit string: the
-        dotted path of a control or boundary (``"heat_pump.temperature_setpoint"``), or
-        ``port.field`` of a plant inlet (``"heating_return.T"``, the fields ``m_dot``, ``T``, ``p``
-        and ``fluid``). One value that does not fit raises and changes nothing. A run overrides an
-        input with a column of its name, and a value assigned on a module is not stored.
+        ``values`` maps a path to a ``Quantity`` or its ``{"value", "unit"}`` dict for a value
+        with a dimension, a plain number only for one without, never a unit string: the dotted
+        path of a control or boundary (``"heat_pump.temperature_setpoint"``), or ``port.field`` of
+        a plant inlet (``"heating_return.T"``, the fields ``m_dot``, ``T``, ``p`` and ``fluid``).
+        A bare number for a value with a dimension raises ``invalid_value``. One value that does
+        not fit raises and changes nothing. A run overrides an input with a column of its name,
+        and a value assigned on a module is not stored.
         """
+        for path, value in values.items():
+            inputs.refuse_bare(self, path, value)
+            inputs.refuse_fluid(self, path, value)
+        return self._set_si_inputs(values)
+
+    def _set_si_inputs(self, values):
+        """Set inputs of SI numbers or quantities as ``set_inputs`` does, without the unit rule."""
         checked = inputs.checked(self, values)
         declared = self.inputs()
         self._set_inputs({path: item for path, item in checked.items() if path in declared})
@@ -144,7 +168,7 @@ class Plant(PortResolver, Module):
     def _keep_derived(self, derived, params):
         """Return the ``derived`` child values that no explicit value replaces, and record them.
 
-        A deriving ``set_params`` calls this with its derived values and the ``params`` of the
+        A deriving ``_set_si_params`` calls this with its derived values and the ``params`` of the
         call. A dotted name in ``params`` is an explicit child value, now and in later calls, and
         so is a child value assigned on the child. The names kept are the ones ``to_dict`` leaves
         out.
@@ -182,9 +206,9 @@ class Plant(PortResolver, Module):
     def add(self, type, name=None, params=None):
         """Add a module of registry name or class ``type`` and return it.
 
-        ``params`` is one dict of design values, the dict ``set_params`` takes: numbers in SI
-        or quantities, dotted names for a composite. ``name`` defaults to the snake case type,
-        numbered when taken; a dotted name adds into a group such as ``filters.hot``.
+        ``params`` is one dict of design values, the dict ``set_params`` takes: quantities for a
+        value with a dimension, dotted names for a composite. ``name`` defaults to the snake case
+        type, numbered when taken; a dotted name adds into a group such as ``filters.hot``.
         """
         module, type_name = make_module(type)
         key = self._free_name(name, type_name)

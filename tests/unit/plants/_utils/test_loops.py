@@ -18,7 +18,11 @@ from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 from tests.fixtures.parity import BACKENDS
 
-STREAM = Stream(m_dot=1.0, T=300.0, p=1e5)
+STREAM = Stream(
+    m_dot=gm.units.Quantity(1.0, "kg/s"),
+    T=gm.units.Quantity(300.0, "K"),
+    p=gm.units.Quantity(1e5, "Pa"),
+)
 
 
 class Relaxer(Module):
@@ -92,7 +96,14 @@ class Circuit(Plant):
         self.connect("pump.loss_out", "loss_out")
         self.connect("relaxer.fluid_out", "pump.fluid_in")
         self.connect("pump.fluid_out", "relaxer.fluid_in")
-        self.pump.set_params("", {"flow": 2.0, "pressure_rise": 1e4, "loop_pressure": 2e5})
+        self.pump.set_params(
+            "",
+            {
+                "flow": gm.units.Quantity(2.0, "kg/s"),
+                "pressure_rise": gm.units.Quantity(1e4, "Pa"),
+                "loop_pressure": gm.units.Quantity(2e5, "Pa"),
+            },
+        )
 
 
 def circuit(**rule):
@@ -191,15 +202,47 @@ def test_a_loop_runs_the_same_on_every_backend():
 
 def test_a_tear_stream_without_flow_has_no_temperature_to_converge():
     """A limit may hold the iterate away from the image: at no flow that carries no energy."""
-    tear = loops.Tear(gm.Stream(m_dot=0.0, T=350.0, p=1e5, fluid=gm.WATER), None, 360.0)
-    image = gm.Stream(m_dot=0.0, T=373.15, p=2e5, fluid=gm.WATER)
+    tear = loops.Tear(
+        gm.Stream(
+            m_dot=gm.units.Quantity(0.0, "kg/s"),
+            T=gm.units.Quantity(350.0, "K"),
+            p=gm.units.Quantity(1e5, "Pa"),
+            fluid=gm.WATER,
+        ),
+        None,
+        360.0,
+    )
+    image = gm.Stream(
+        m_dot=gm.units.Quantity(0.0, "kg/s"),
+        T=gm.units.Quantity(373.15, "K"),
+        p=gm.units.Quantity(2e5, "Pa"),
+        fluid=gm.WATER,
+    )
     assert tear.advance(image, 1e-9, True)
 
 
 def test_a_tear_stream_with_flow_still_converges_on_every_field():
     """Only a stream that stands still gives up its temperature."""
-    tear = loops.Tear(gm.Stream(m_dot=1.0, T=350.0, p=1e5, fluid=gm.WATER), None, 360.0)
-    assert not tear.advance(gm.Stream(m_dot=1.0, T=373.15, p=1e5, fluid=gm.WATER), 1e-9, True)
+    tear = loops.Tear(
+        gm.Stream(
+            m_dot=gm.units.Quantity(1.0, "kg/s"),
+            T=gm.units.Quantity(350.0, "K"),
+            p=gm.units.Quantity(1e5, "Pa"),
+            fluid=gm.WATER,
+        ),
+        None,
+        360.0,
+    )
+    assert not tear.advance(
+        gm.Stream(
+            m_dot=gm.units.Quantity(1.0, "kg/s"),
+            T=gm.units.Quantity(373.15, "K"),
+            p=gm.units.Quantity(1e5, "Pa"),
+            fluid=gm.WATER,
+        ),
+        1e-9,
+        True,
+    )
 
 
 class Curved(Relaxer):

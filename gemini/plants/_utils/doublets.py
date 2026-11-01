@@ -48,13 +48,13 @@ class DoubletsPlant(Plant):
             description="True vertical depth of the reservoir midpoint, given to every doublet",
         )
 
-    def set_params(self, path, params, valid_from=None):
+    def _set_si_params(self, path, params, valid_from=None):
         """Pass ``depth`` to every doublet, unless the same call states one's own."""
         if path:
-            return super().set_params(path, params, valid_from)
+            return super()._set_si_params(path, params, valid_from)
         depth = self._own_values(params, valid_from)["depth"]
         derived = {} if depth is None else {f"d{i}.depth": depth for i in self._indices()}
-        return super().set_params("", self._keep_derived(derived, params) | params, valid_from)
+        return super()._set_si_params("", self._keep_derived(derived, params) | params, valid_from)
 
     def _indices(self):
         return range(self._size["doublets"])

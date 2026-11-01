@@ -13,13 +13,21 @@ from tests.fixtures.reading import reading
 
 GRID_GAS = with_values(GasGrid())._offered()["gas_out"]
 COPRODUCED = gm.Fluid(kind="gas", gas_composition={"CH4": 0.8, "CO2": 0.2})
-WATER = Stream(m_dot=10, T=300, p=1e6)
+WATER = Stream(
+    m_dot=gm.units.Quantity(10, "kg/s"),
+    T=gm.units.Quantity(300, "K"),
+    p=gm.units.Quantity(1e6, "Pa"),
+)
 
 
 def test_capacity_balance_and_no_cooling():
     """Capacity caps heat, energy input accounts for efficiency, and the boiler never cools."""
-    c = Boiler().set_params("", {"capacity": 100000, "efficiency": 0.8})
-    s = Stream(m_dot=10, T=300, p=1e6)
+    c = Boiler().set_params("", {"capacity": gm.units.Quantity(100000, "W"), "efficiency": 0.8})
+    s = Stream(
+        m_dot=gm.units.Quantity(10, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e6, "Pa"),
+    )
     result = c(temperature_setpoint=360, fluid_in=s, fuel_in=GRID_GAS)
     out, streams = reading(result), result.outlets
     assert out.is_capped and out.duty == pytest.approx(100000) and out.fuel == 125000
@@ -34,17 +42,32 @@ def test_capacity_balance_and_no_cooling():
 def test_traced_call_matches_one_call_per_row():
     """Capped, uncapped, no-heating-needed and stopped rows trace and equal one call per row."""
     cases = [(10, 360), (1, 310), (10, 290), (0, 360), (2, 305)]
-    gas = Boiler().set_params("", {"capacity": 100000, "efficiency": 0.8})
+    gas = Boiler().set_params("", {"capacity": gm.units.Quantity(100000, "W"), "efficiency": 0.8})
     rows = [
         dict(
-            fluid_in=Stream(m_dot=m, T=300, p=1e6), fuel_in=GRID_GAS, temperature_setpoint=setpoint
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e6, "Pa"),
+            ),
+            fuel_in=GRID_GAS,
+            temperature_setpoint=setpoint,
         )
         for m, setpoint in cases
     ]
     assert_module_matches(gas, rows)
-    electric = ElectricBoiler().set_params("", {"capacity": 100000, "efficiency": 0.8})
+    electric = ElectricBoiler().set_params(
+        "", {"capacity": gm.units.Quantity(100000, "W"), "efficiency": 0.8}
+    )
     rows = [
-        dict(fluid_in=Stream(m_dot=m, T=300, p=1e6), temperature_setpoint=setpoint)
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e6, "Pa"),
+            ),
+            temperature_setpoint=setpoint,
+        )
         for m, setpoint in cases
     ]
     assert_module_matches(electric, rows)
@@ -53,12 +76,17 @@ def test_traced_call_matches_one_call_per_row():
 def gas_stream(flow, marked=True):
     """Return co-produced gas of ``flow`` [kg/s], on a stream with or without a grid connection."""
     fluid = COPRODUCED.with_grid(gas.GRID_COMPOSITION) if marked else COPRODUCED
-    return Stream(m_dot=flow, T=330, p=2e5, fluid=fluid)
+    return Stream(
+        m_dot=gm.units.Quantity(flow, "kg/s"),
+        T=gm.units.Quantity(330, "K"),
+        p=gm.units.Quantity(2e5, "Pa"),
+        fluid=fluid,
+    )
 
 
 def test_co_produced_gas_is_burned_first_and_the_grid_covers_the_rest():
     """A boiler needs duty over efficiency; it burns what comes and buys the difference."""
-    boiler = Boiler().set_params("", {"capacity": 1e6, "efficiency": 0.8})
+    boiler = Boiler().set_params("", {"capacity": gm.units.Quantity(1e6, "W"), "efficiency": 0.8})
     heating_value = COPRODUCED.heating_value()
     available = 0.01 * heating_value
     offered = gas_stream(0.01)
@@ -77,7 +105,7 @@ def test_co_produced_gas_is_burned_first_and_the_grid_covers_the_rest():
 
 def test_enough_co_produced_gas_buys_nothing_and_takes_what_it_burns():
     """With gas to spare nothing is bought and ``fuel_in`` shows what it burned."""
-    boiler = Boiler().set_params("", {"capacity": 1e6, "efficiency": 0.8})
+    boiler = Boiler().set_params("", {"capacity": gm.units.Quantity(1e6, "W"), "efficiency": 0.8})
     offered = gas_stream(1.0)
     result = boiler(fluid_in=WATER, fuel_in=offered, temperature_setpoint=320)
     out = reading(result, offered)
@@ -87,7 +115,7 @@ def test_enough_co_produced_gas_buys_nothing_and_takes_what_it_burns():
 
 def test_no_co_produced_gas_buys_everything():
     """On a grid alone all fuel is bought and all its CO2 comes from the grid composition."""
-    boiler = Boiler().set_params("", {"capacity": 1e6, "efficiency": 0.8})
+    boiler = Boiler().set_params("", {"capacity": gm.units.Quantity(1e6, "W"), "efficiency": 0.8})
     result = boiler(fluid_in=WATER, fuel_in=GRID_GAS, temperature_setpoint=320)
     out = reading(result, GRID_GAS)
     assert out.fuel_coproduced == 0 and out.fuel_purchased == pytest.approx(out.fuel)
@@ -98,7 +126,7 @@ def test_no_co_produced_gas_buys_everything():
 
 def test_without_a_grid_mark_the_gas_limits_the_duty():
     """A burner on an unmarked stream may not buy: the energy of the stream caps it."""
-    boiler = Boiler().set_params("", {"capacity": 1e6, "efficiency": 0.8})
+    boiler = Boiler().set_params("", {"capacity": gm.units.Quantity(1e6, "W"), "efficiency": 0.8})
     offered = gas_stream(0.002, False)
     result = boiler(fluid_in=WATER, fuel_in=offered, temperature_setpoint=360)
     out = reading(result, offered)

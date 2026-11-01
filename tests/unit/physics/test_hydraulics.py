@@ -12,6 +12,7 @@ from gemini.errors import PhysicsError, ValidationError
 from gemini.physics import diagnostics, geometry, hydraulics
 from gemini.types.flows import Stream
 from gemini.types.fluid import BRINE, Fluid
+from gemini.units import Quantity
 from tests.fixtures.equivalence import assert_function_matches, assert_same_error
 from tests.fixtures.errors import raises
 from tests.unit.test_golden import assert_values
@@ -138,8 +139,12 @@ def test_beggs_brill_rejects_zero_holdup_and_missing_liquid():
 def test_two_phase_reverse_flow_reverses_friction():
     """Negative two-phase flow formerly took the logarithm of a negative Reynolds number."""
     path = _path(0.18, 0.18)
-    forward = Stream(m_dot=40, T=350, p=20e5, fluid=GAS)
-    reverse = Stream(m_dot=-40, T=350, p=20e5, fluid=GAS)
+    forward = Stream(
+        m_dot=Quantity(40, "kg/s"), T=Quantity(350, "K"), p=Quantity(20e5, "Pa"), fluid=GAS
+    )
+    reverse = Stream(
+        m_dot=Quantity(-40, "kg/s"), T=Quantity(350, "K"), p=Quantity(20e5, "Pa"), fluid=GAS
+    )
     ahead = hydraulics.pipe_path_profile(path, forward, GAS, "down", 0, 300)
     back = hydraulics.pipe_path_profile(path, reverse, GAS, "down", 0, 300)
     assert back.friction_pressure_drop == pytest.approx(-ahead.friction_pressure_drop)
@@ -149,7 +154,7 @@ def test_two_phase_reverse_flow_reverses_friction():
 def test_zero_flow_unknown_correlation_and_direction():
     """Preserve DPDT zero-flow behavior and reject unknown correlations and directions."""
     path = _path(0.18)
-    stream = Stream(m_dot=0, p=1e6, T=350)
+    stream = Stream(m_dot=Quantity(0, "kg/s"), p=Quantity(1e6, "Pa"), T=Quantity(350, "K"))
     result = hydraulics.pipe_path_profile(path, stream, BRINE, "up", 10, 290)
     assert result.p_out == stream.p and result.T_out == stream.T
     assert result.friction_pressure_drop == result.gravity_pressure_drop == 0
@@ -163,7 +168,7 @@ def test_zero_flow_unknown_correlation_and_direction():
 def test_corrosion_profile_pairs_sections_in_traversal_order():
     """A capitalised direction formerly paired downward results with reversed sections."""
     path = _path(0.1, 0.3)
-    stream = Stream(m_dot=40, T=350, p=50e5)
+    stream = Stream(m_dot=Quantity(40, "kg/s"), T=Quantity(350, "K"), p=Quantity(50e5, "Pa"))
     chemistry = {"co2_fraction": 0.05}
     lower = hydraulics.corrosion_profile(path, stream, BRINE, "down", 0, 350, chemistry, "DLD")
     upper = hydraulics.corrosion_profile(path, stream, BRINE, "Down", 0, 350, chemistry, "DLD")
@@ -173,7 +178,11 @@ def test_corrosion_profile_pairs_sections_in_traversal_order():
 
 def test_erosion_check_compares_each_section():
     """Narrow sections run faster and raise the API alarm first."""
-    result = hydraulics.erosion_check(_path(0.02, 0.3), Stream(m_dot=40, T=350, p=50e5), BRINE)
+    result = hydraulics.erosion_check(
+        _path(0.02, 0.3),
+        Stream(m_dot=Quantity(40, "kg/s"), T=Quantity(350, "K"), p=Quantity(50e5, "Pa")),
+        BRINE,
+    )
     assert result["velocity"][0] > result["limit"] > result["velocity"][1]
     assert result["alarm"] is True
     assert [s["exceeds_api_limit"] for s in result["sections"]] == [True, False]
@@ -271,7 +280,7 @@ def _profile(path, fluid, direction):
 
     @ops.physics
     def profile(m_dot, p, T):
-        stream = Stream(m_dot=m_dot, p=p, T=T, fluid=fluid)
+        stream = Stream._si(m_dot=m_dot, p=p, T=T, fluid=fluid)
         result = hydraulics.pipe_path_profile(path, stream, fluid, direction, 10, 290)
         return dict(
             p_out=result.p_out,
@@ -304,7 +313,9 @@ def test_two_phase_zero_flow_in_a_steep_downhill_section_returns_zero_drops():
             )
         ]
     )
-    stream = Stream(m_dot=0, p=1e6, T=350, fluid=GAS)
+    stream = Stream(
+        m_dot=Quantity(0, "kg/s"), p=Quantity(1e6, "Pa"), T=Quantity(350, "K"), fluid=GAS
+    )
     result = hydraulics.pipe_path_profile(path, stream, GAS, "down", 10, 290)
     assert (result.p_out, result.T_out) == (1e6, 350)
     assert result.friction_pressure_drop == result.gravity_pressure_drop == 0
@@ -330,7 +341,9 @@ def test_erosion_check_matches_on_arrays():
     @ops.physics
     def check(m_dot, p, T):
         result = hydraulics.erosion_check(
-            _path(0.02, 0.3), Stream(m_dot=m_dot, p=p, T=T, fluid=BRINE), BRINE
+            _path(0.02, 0.3),
+            Stream._si(m_dot=m_dot, p=p, T=T, fluid=BRINE),
+            BRINE,
         )
         return dict(
             limit=result["limit"],
@@ -351,7 +364,7 @@ def test_corrosion_profile_matches_on_arrays():
 
     @ops.physics
     def profile(m_dot, p, T):
-        stream = Stream(m_dot=m_dot, p=p, T=T, fluid=BRINE)
+        stream = Stream._si(m_dot=m_dot, p=p, T=T, fluid=BRINE)
         rates = hydraulics.corrosion_profile(
             _path(0.1, 0.3), stream, BRINE, "down", 0, 350, {"co2_fraction": 0.05}, "DLD"
         )
@@ -514,6 +527,8 @@ def test_the_gas_superficial_velocity_is_the_gas_mass_flow_over_its_density_and_
             )
         ]
     )
-    stream = Stream(m_dot=10.0, T=350.0, p=2e6, fluid=fluid)
+    stream = Stream(
+        m_dot=Quantity(10.0, "kg/s"), T=Quantity(350.0, "K"), p=Quantity(2e6, "Pa"), fluid=fluid
+    )
     hydraulics.pipe_path_profile(path, stream, fluid, "up", 0.0, 300.0)
     assert seen["us_g"] == pytest.approx(0.01 / 1.976 / (math.pi * 0.2**2 / 4), rel=1e-9)

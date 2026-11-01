@@ -86,6 +86,15 @@ def test_a_combination_is_traced_the_same_on_every_backend():
     plant.connect("tank.fluid_out", "fluid_out")
     plant.lift = Output.difference("tank.fluid_out.p", "tank.fluid_in.p")
     plant.tank.pressure_setpoint = 2e5
-    rows = [{"fluid_in": gm.Stream(m_dot=1.0, T=300.0, p=value)} for value in (1e5, 3e5)]
+    rows = [
+        {
+            "fluid_in": gm.Stream(
+                m_dot=gm.units.Quantity(1.0, "kg/s"),
+                T=gm.units.Quantity(300.0, "K"),
+                p=gm.units.Quantity(value, "Pa"),
+            )
+        }
+        for value in (1e5, 3e5)
+    ]
     assert_module_matches(plant, rows)
     assert plant(**rows[0]).outputs.lift == 1e5

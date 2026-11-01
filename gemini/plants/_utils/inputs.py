@@ -2,7 +2,6 @@
 
 from pydantic import ValidationError as PydanticError
 
-from gemini import units
 from gemini._utils.strings import close_matches, did_you_mean, join_names, split_path
 from gemini.errors import ValidationError
 from gemini.modules._utils import design
@@ -50,12 +49,15 @@ def _unknown(plant, path):
 
 
 def _checked_fluid(path, value):
-    """Return a fluid field as given, or raise when it is no ``Fluid``."""
+    """Return a fluid field as a ``Fluid``, or raise when it is none.
+
+    A mapping holds SI numbers or quantities: the SI dump of a ``Fluid`` is what a plant dict
+    stores, so the unit rule is that of ``refuse_fluid``, which ``set_inputs`` applies first.
+    """
     try:
-        Fluid.model_validate(value)
+        return Fluid._of(value)
     except PydanticError as error:
         raise ValidationError(f"inputs: {path}: {error}", path=path) from error
-    return value
 
 
 def declaration(plant, path):
@@ -128,11 +130,8 @@ def refuse_bare(plant, path, value):
         design.refuse_bare(found, value, path)
 
 
-def in_quantity_form(found, value):
-    """Return ``value`` as ``{"value", "unit"}`` when the declaration ``found`` has a unit."""
-    if isinstance(value, units.Quantity):
-        return value.to_dict()
-    unit = None if found is None else found.unit
-    if unit in (None, "-") or value is None or isinstance(value, (dict, str, bool)):
-        return value
-    return {"value": value, "unit": unit}
+def refuse_fluid(plant, path, value):
+    """Raise for a plant inlet fluid given as a mapping with a bare number with a dimension."""
+    found = _port_field(plant, path)
+    if found is not None and found[1] == FLUID:
+        Fluid._given(value)

@@ -27,13 +27,24 @@ RATE = 2.0 * 3841
 EFFECTIVENESS = 1 - math.exp(-UA / RATE)
 CONDUCTANCE = EFFECTIVENESS * RATE
 FREEZING = 273.15
-COLD = Stream(m_dot=2.0, T=268.15, p=3e5, fluid=GLYCOL_30)
+COLD = Stream(
+    m_dot=gm.units.Quantity(2.0, "kg/s"),
+    T=gm.units.Quantity(268.15, "K"),
+    p=gm.units.Quantity(3e5, "Pa"),
+    fluid=GLYCOL_30,
+)
 WARM = COLD.with_(T=285.15)
 
 
 def _store():
     """Return a 1 t store with a 2 kW/K coil."""
-    return with_values(IceStorage()).set_params("", {"water_mass": MASS, "thermal_conductance": UA})
+    return with_values(IceStorage()).set_params(
+        "",
+        {
+            "water_mass": gm.units.Quantity(MASS, "kg"),
+            "thermal_conductance": gm.units.Quantity(UA, "W/K"),
+        },
+    )
 
 
 def test_plain_call_charges_an_empty_store():
@@ -194,7 +205,7 @@ def test_ice_storage_advance_matches_per_row(monkeypatch, dt):
     def advance(fraction, temperature, m_dot, glycol_T, pressure):
         monkeypatch.setattr(IceStorage, "ice_fraction", fraction, raising=False)
         monkeypatch.setattr(IceStorage, "temperature", temperature, raising=False)
-        glycol = Stream(m_dot=m_dot, T=glycol_T, p=pressure, fluid=GLYCOL_30)
+        glycol = Stream._si(m_dot=m_dot, T=glycol_T, p=pressure, fluid=GLYCOL_30)
         states = store._advance_states(SimpleNamespace(fluid_in=glycol._numpy()), None, dt)
         return states["ice_fraction"], states["temperature"]
 

@@ -170,12 +170,3 @@ def quantities(plant, case, values):
     return {
         name: units.Quantity(number, unit_of(plant, case, name)) for name, number in values.items()
     }
-
-
-def parameter_value(plant, name, number):
-    """Return the SI ``number`` of a parameter as ``set_params`` takes it.
-
-    A ``Quantity``, or a plain number for a parameter without a dimension.
-    """
-    unit = _declaration(plant, name).unit or "-"
-    return number if unit == "-" else units.Quantity(number, unit)

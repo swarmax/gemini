@@ -10,7 +10,11 @@ from gemini.types import Power, Stream
 from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 
-STREAM = Stream(m_dot=10, T=330, p=1e6)
+STREAM = Stream(
+    m_dot=gm.units.Quantity(10, "kg/s"),
+    T=gm.units.Quantity(330, "K"),
+    p=gm.units.Quantity(1e6, "Pa"),
+)
 
 
 def define_module():
@@ -97,7 +101,7 @@ def test_assigned_fluid_survives_parameter_changes_and_is_saved():
 
 def test_a_reservoir_fluid_applies_as_soon_as_it_is_set(fresh_plant):
     """E-modules-004: the fluid of a reservoir holds its density, read when the fluid is set."""
-    fresh_plant.doublet.reservoir.fluid = gm.Fluid(density=1100)
+    fresh_plant.doublet.reservoir.fluid = gm.Fluid(density=gm.units.Quantity(1100, "kg/m3"))
     assert fresh_plant.doublet.reservoir.fluid.density == 1100
 
 
@@ -227,13 +231,13 @@ def test_injection_reservoir_without_injectivity_fails_in_forward():
     reservoir = gm.modules.InjectionReservoir().set_params(
         "",
         {
-            "pressure": 2e7,
-            "temperature": 350,
-            "permeability": 1e-13,
-            "aquifer_thickness": 100,
-            "drainage_radius": 0,
-            "top_depth": 2000,
-            "wellbore_radius": 0.1,
+            "pressure": gm.units.Quantity(2e7, "Pa"),
+            "temperature": gm.units.Quantity(350, "K"),
+            "permeability": gm.units.Quantity(1e-13, "m2"),
+            "aquifer_thickness": gm.units.Quantity(100, "m"),
+            "drainage_radius": gm.units.Quantity(0, "m"),
+            "top_depth": gm.units.Quantity(2000, "m"),
+            "wellbore_radius": gm.units.Quantity(0.1, "m"),
             "skin": 0.0,
         },
     )
@@ -247,5 +251,7 @@ def test_injection_reservoir_without_injectivity_fails_in_forward():
 def test_reservoir_health_without_design_index_is_not_assessed():
     """E-modules-011: a missing productivity index means not assessed, not a crash."""
     reservoir = with_values(ProductionReservoir())
-    reservoir.set_params("", {"pressure": 2e7, "temperature": 350})
+    reservoir.set_params(
+        "", {"pressure": gm.units.Quantity(2e7, "Pa"), "temperature": gm.units.Quantity(350, "K")}
+    )
     assert reservoir.health(None, {"flow": 0.04, "bottomhole_pressure": 1.9e7}) is None

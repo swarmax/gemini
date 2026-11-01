@@ -71,7 +71,9 @@ class Valve(Module):
 def tank(unit="kg/s"):
     """Return a configured tank bound to ``rate`` and inlet columns."""
     module = Tank()
-    module.set_params("", {"pressure": 2e5, "temperature": 320.0})
+    module.set_params(
+        "", {"pressure": gm.units.Quantity(2e5, "Pa"), "temperature": gm.units.Quantity(320.0, "K")}
+    )
     stream = {
         "m_dot": Binding(column="flow", unit="kg/s"),
         "p": Binding(column="p", unit="Pa"),

@@ -384,15 +384,23 @@ class Module:
 
     @fluid.setter
     def fluid(self, value):
-        """Set and validate the module fluid; ``state_dict`` saves it."""
+        """Set and validate the module fluid; ``state_dict`` saves it.
+
+        Assignment is an author-level tool, so a mapping holds SI numbers, as ``state_dict`` saves.
+        """
         self._set_own_fluid(value)
 
     def _set_own_fluid(self, value):
         """Set the fluid of this module alone."""
-        object.__setattr__(self, "_fluid", Fluid.model_validate(value))
+        object.__setattr__(self, "_fluid", Fluid._of(value))
 
     def __setattr__(self, name, value):
-        """Register declarations and children, or assign declared values."""
+        """Register declarations and children, or assign declared values.
+
+        Assigning a declared value, ``esp.frequency = 50``, is an author-level tool and stays SI:
+        a number is in the SI unit of the declaration. Users set values with ``set_params``,
+        ``set_inputs`` or a control of a call, which take quantities.
+        """
         if name.startswith("_"):
             object.__setattr__(self, name, value)
             return
@@ -758,7 +766,7 @@ class Module:
     def _set_parameter(self, name, value):
         """Set one own parameter as an explicit override; a deriving module derives from it."""
         if self._derives_params():
-            self.set_params("", {name: value})
+            self._set_si_params("", {name: value})
             return
         self._parameters[name].set(value)
 
@@ -775,7 +783,11 @@ class Module:
         return description.parameter_schema(self)
 
     def validate_params(self, params, on_error="raise"):
-        """Check ``params`` without changing the module: ``[]``, or every problem."""
+        """Check ``params`` without changing the module: ``[]``, or every problem.
+
+        The values are those ``set_params`` takes, so a bare number for a value with a dimension
+        is an ``invalid_value`` problem.
+        """
         return description.validate_params(self, params, on_error)
 
     def _params_at(self, at):
@@ -1324,7 +1336,7 @@ class Module:
             values = {
                 name: module.get(name).validate(value) for name, value in entry["params"].items()
             }
-            pending.append((module, values, Fluid.model_validate(entry["fluid"])))
+            pending.append((module, values, Fluid._of(entry["fluid"])))
         for module, values, fluid in pending:
             for name, value in values.items():
                 module._parameters[name].set(value, explicit=False)
@@ -1335,12 +1347,25 @@ class Module:
         """Store validated parameters of the module at ``path`` as a dated snapshot.
 
         The snapshot is the values in force at ``valid_from`` merged with ``params``; without a
-        date the undated base entry and the current values change. Names may be dotted and
-        values numbers in SI or quantities. Returns the module.
+        date the undated base entry and the current values change. Names may be dotted. A value
+        with a dimension is a ``gm.units.Quantity`` or its ``{"value", "unit"}`` dict, converted
+        to SI after its unit is checked against the declared quantity; a bare number for it
+        raises ``ValidationError`` (``invalid_value``) naming the path, the quantity and the
+        accepted units, zero included. A parameter without a dimension takes a plain number.
+        Returns the module.
 
-        Every route that sets parameters comes here. A plant that derives its children's values
-        overrides this method (see ``modules.md``); a value for it, at any depth, reaches that
-        override.
+        This is the public door. It converts and hands over to ``_set_si_params``, the one
+        private method that stores SI values: the engine, ``study``, ``size`` and the case
+        call that one.
+        """
+        return self._set_si_params(path, design.in_si(self, path, params), valid_from)
+
+    def _set_si_params(self, path, params, valid_from=None):
+        """Store the SI values ``params`` of the module at ``path``; ``set_params`` calls this.
+
+        Every route that sets parameters comes here. A plant class that derives its children's
+        values overrides this method, not ``set_params`` (see ``modules.md``); a value for it, at
+        any depth, reaches that override.
         """
         return design.set_params(self, path, params, valid_from)
 

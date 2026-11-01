@@ -53,7 +53,7 @@ def test_profiles_drive_scenario():
     target = Profile.constant(320, unit="K", clock=clock)
     inlet = dict(m_dot=1, T=300, p=1e5)
     boiler = ElectricBoiler()
-    boiler.set_params("", {"capacity": 1e6, "efficiency": 0.9})
+    boiler.set_params("", {"capacity": gm.units.Quantity(1e6, "W"), "efficiency": 0.9})
     boiler.bindings = {
         "": ModuleBindings(
             controls={"temperature_setpoint": Binding(column="temperature_setpoint", unit="K")},

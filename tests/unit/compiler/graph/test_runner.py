@@ -16,7 +16,12 @@ from .conftest import Chain, Gain, Opaque, Stubborn, Switcher, Tank, Vectored
 def _rows(gain, inlet, frequency):
     return [
         gain(
-            fluid_in=gm.Stream(m_dot=1.0, T=inlet.T[row], p=inlet.p[row], fluid=inlet.fluid),
+            fluid_in=gm.Stream(
+                m_dot=gm.units.Quantity(1.0, "kg/s"),
+                T=gm.units.Quantity(inlet.T[row], "K"),
+                p=gm.units.Quantity(inlet.p[row], "Pa"),
+                fluid=inlet.fluid,
+            ),
             gain=frequency[row],
         )
         for row in range(3)
@@ -98,7 +103,12 @@ def _line_rows(line, inlet, boosts, draws):
     rows = []
     for row in range(3):
         line.second.draw = draws[row]
-        stream = gm.Stream(m_dot=1.0, T=inlet.T[row], p=inlet.p[row], fluid=inlet.fluid)
+        stream = gm.Stream(
+            m_dot=gm.units.Quantity(1.0, "kg/s"),
+            T=gm.units.Quantity(inlet.T[row], "K"),
+            p=gm.units.Quantity(inlet.p[row], "Pa"),
+            fluid=inlet.fluid,
+        )
         rows.append(line(fluid_in=stream, boost=boosts[row]))
     return rows
 
@@ -138,7 +148,10 @@ def _chain_rows(chain, inlet, drives):
     rows = []
     for row in range(3):
         stream = gm.Stream(
-            m_dot=inlet.m_dot[row], T=inlet.T[row], p=inlet.p[row], fluid=inlet.fluid
+            m_dot=gm.units.Quantity(inlet.m_dot[row], "kg/s"),
+            T=gm.units.Quantity(inlet.T[row], "K"),
+            p=gm.units.Quantity(inlet.p[row], "Pa"),
+            fluid=inlet.fluid,
         )
         rows.append(chain(fluid_in=stream, drive=drives[row]))
     return rows
@@ -148,9 +161,9 @@ def _chain_rows(chain, inlet, drives):
 def chain_inlet():
     """Return a three-row water inlet for the chains."""
     return gm.Stream(
-        m_dot=np.array([1.0, 2.0, 3.0]),
-        T=np.array([300.0, 310.0, 320.0]),
-        p=np.array([1e5, 2e5, 3e5]),
+        m_dot=gm.units.Quantity(np.array([1.0, 2.0, 3.0]), "kg/s"),
+        T=gm.units.Quantity(np.array([300.0, 310.0, 320.0]), "K"),
+        p=gm.units.Quantity(np.array([1e5, 2e5, 3e5]), "Pa"),
         fluid=gm.WATER,
     )
 
@@ -224,7 +237,14 @@ def test_list_outputs_are_stacked_per_row(chain_inlet):
     result = run(middle, {"fluid_in": chain_inlet})
     assert result.breaks == [] and result.outputs["profile"].shape == (3, 2)
     assert result.outputs["profile"].tolist() == [[1e5, 1e5 + 1], [2e5, 2e5 + 1], [3e5, 3e5 + 1]]
-    row = middle(fluid_in=gm.Stream(m_dot=1.0, T=300.0, p=2e5, fluid=gm.WATER))
+    row = middle(
+        fluid_in=gm.Stream(
+            m_dot=gm.units.Quantity(1.0, "kg/s"),
+            T=gm.units.Quantity(300.0, "K"),
+            p=gm.units.Quantity(2e5, "Pa"),
+            fluid=gm.WATER,
+        )
+    )
     assert row.outputs.profile == [2e5, 2e5 + 1]
 
 

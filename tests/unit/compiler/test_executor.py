@@ -28,7 +28,10 @@ def test_an_executor_prepares_a_graph_and_evaluates_it_over_the_rows():
     executor = gm.compiler.compile(module)
     streams = {
         "fluid_in": gm.Stream(
-            m_dot=np.full(3, 1.0), T=np.full(3, 300.0), p=np.full(3, 1e5), fluid=gm.WATER
+            m_dot=gm.units.Quantity(np.full(3, 1.0), "kg/s"),
+            T=gm.units.Quantity(np.full(3, 300.0), "K"),
+            p=gm.units.Quantity(np.full(3, 1e5), "Pa"),
+            fluid=gm.WATER,
         )
     }
     prepared = executor.prepare(module, streams, {"level": np.array([1.0, 2.0, 3.0])}, False)
@@ -41,7 +44,10 @@ def test_copies_with_other_numeric_values_trace_once_and_give_the_numbers_of_a_f
     """A copy reuses the graph of the first and is evaluated with its own parameter values."""
     streams = {
         "fluid_in": gm.Stream(
-            m_dot=np.full(3, 1.0), T=np.full(3, 300.0), p=np.full(3, 1e5), fluid=gm.WATER
+            m_dot=gm.units.Quantity(np.full(3, 1.0), "kg/s"),
+            T=gm.units.Quantity(np.full(3, 300.0), "K"),
+            p=gm.units.Quantity(np.full(3, 1e5), "Pa"),
+            fluid=gm.WATER,
         )
     }
     inputs = {"level": np.array([1.0, 2.0, 3.0])}

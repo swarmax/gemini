@@ -103,11 +103,11 @@ def _fluids(root, stated, baselines):
     result = {}
     for path, module in root.named_modules():
         current = module._fluid
-        kept = keep_stated(stated.get(path), current, Fluid.model_validate)
+        kept = keep_stated(stated.get(path), current, Fluid._of)
         if kept is not None:
             result[path] = kept
         elif path in stated or current != baselines.get(path, default):
-            result[path] = current.model_dump(mode="json")
+            result[path] = current._to_dict()
     return result
 
 
@@ -128,8 +128,12 @@ def _bindings(root, stated):
     return result
 
 
-def _dated_params(entries):
-    return [DatedParams.model_validate(item) for item in entries]
+def _dated_params(module, entries):
+    """Return the snapshots of a stored history in SI; a bare number with a dimension is refused."""
+    snapshots = [DatedParams.model_validate(item) for item in entries]
+    for snapshot in snapshots:
+        snapshot.params = design.in_si(module, "", snapshot.params)
+    return snapshots
 
 
 def _own_history(path, module, derived):
@@ -143,7 +147,14 @@ def _own_history(path, module, derived):
     for entry in entries:
         entry["params"] = {key: value for key, value in entry["params"].items() if key not in names}
     same = all(entry["params"] == entries[0]["params"] for entry in entries)
-    return None if names and same else entries
+    if names and same:
+        return None
+    for entry in entries:
+        entry["params"] = {
+            key: design.quantity_form(design.parameter(module, key), value)
+            for key, value in entry["params"].items()
+        }
+    return entries
 
 
 def _history(root, stated):
@@ -153,7 +164,7 @@ def _history(root, stated):
         current = module._param_history
         if len(current) == 1 and current[0].valid_from is None:
             continue
-        kept = keep_stated(stated.get(path), current, _dated_params)
+        kept = keep_stated(stated.get(path), current, partial(_dated_params, module))
         written = kept if kept is not None else _own_history(path, module, derived)
         if written is not None:
             result[path] = written
@@ -195,10 +206,11 @@ def _module_at(root, path):
 def _from_fluid(module, value, alone):
     """Set the fluid of ``module``; ``alone`` keeps it from passing to the children."""
     try:
+        fluid = Fluid._given(value)
         if alone:
-            module._set_own_fluid(value)
+            module._set_own_fluid(fluid)
         else:
-            module.fluid = value
+            module.fluid = fluid
     except PydanticError as error:
         raise ValidationError(f"fluid: {error}", code="invalid_value") from error
 
@@ -215,16 +227,13 @@ def _from_history(module, entries):
     snapshots = []
     for index, item in enumerate(entries):
         try:
-            snapshot = DatedParams.model_validate(item)
+            snapshots += _dated_params(module, [item])
         except PydanticError as error:
             raise ValidationError(f"[{index}]: {error}", path=f"[{index}]") from error
-        for name, value in snapshot.params.items():
-            design.parameter(module, name).validate(value)
-        snapshots.append(snapshot)
     module._param_history = snapshots
     if module._derives_params():
         for snapshot in snapshots:
-            module.set_params("", snapshot.params, snapshot.valid_from)
+            module._set_si_params("", snapshot.params, snapshot.valid_from)
 
 
 def _from_order(section, entries):
@@ -259,20 +268,23 @@ def from_sections(root, data, report):
                 read(path, value)
 
 
-def from_params(root, params, report, prefix="params"):
-    """Set flat dotted ``params`` on the tree as undated design values.
+def from_params(set_params, params, report, prefix="params"):
+    """Set flat dotted ``params`` with ``set_params`` as undated design values.
+
+    ``set_params`` is ``root.set_params`` for values as a plant dict states them (quantities for
+    a dimension) or ``root._set_si_params`` for values in SI.
 
     All in one call, so that values which need each other, a depth and its geotherm, may come in
     any order. If that fails, one by one, so that each problem is reported at its own name.
     """
     try:
-        root.set_params("", params)
+        set_params("", params)
         return
     except GeminiError:
         pass
     for name, value in params.items():
         with report.guard(f"{prefix}.{name}"):
-            root.set_params("", {name: value})
+            set_params("", {name: value})
 
 
 def tree_dict(module):
@@ -289,6 +301,6 @@ def tree_from_dict(cls, data):
         raise error
     report = Report(strict=True)
     root = cls()
-    from_params(root, data.get("params", {}), report)
+    from_params(root._set_si_params, data.get("params", {}), report)
     from_sections(root, data, report)
     return root

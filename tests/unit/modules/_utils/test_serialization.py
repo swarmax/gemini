@@ -26,10 +26,14 @@ def test_a_tree_that_is_no_plant_stores_flat_params():
 
 def test_fluids_bindings_and_history_round_trip():
     """Non-default sections are written and read back."""
-    exchanger = gm.modules.HeatExchanger().set_params("", {"thermal_conductance": 1.0})
+    exchanger = gm.modules.HeatExchanger().set_params(
+        "", {"thermal_conductance": gm.units.Quantity(1.0, "W/K")}
+    )
     exchanger.fluid = gm.WATER
     exchanger.set_bindings("", {"duty": {"column": "d", "unit": "kW"}})
-    exchanger.set_params("", {"thermal_conductance": 2.0}, valid_from="2020-01-01")
+    exchanger.set_params(
+        "", {"thermal_conductance": gm.units.Quantity(2.0, "W/K")}, valid_from="2020-01-01"
+    )
     spec = serialization.tree_dict(exchanger)
     assert spec["fluids"][""]["kind"] == "water" and "boundary" not in spec
     loaded = serialization.tree_from_dict(gm.modules.HeatExchanger, spec)

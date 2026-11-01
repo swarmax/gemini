@@ -15,7 +15,12 @@ FLUID = gm.Fluid(kind="gas", gas_composition=COMPOSITION)
 
 def stream(flow):
     """Return a gas stream of ``flow`` [kg/s]."""
-    return gm.Stream(m_dot=flow, T=330, p=2e5, fluid=FLUID)
+    return gm.Stream(
+        m_dot=gm.units.Quantity(flow, "kg/s"),
+        T=gm.units.Quantity(330, "K"),
+        p=gm.units.Quantity(2e5, "Pa"),
+        fluid=FLUID,
+    )
 
 
 def test_emissions_come_from_the_composition():
@@ -36,7 +41,14 @@ def test_emissions_come_from_the_composition():
 def test_a_stream_without_a_composition_emits_nothing():
     """Nothing is known about the gas, so nothing is reported."""
     assert (
-        with_values(Flare())(gas_in=gm.Stream(m_dot=0.1, T=330, p=2e5)).outlets.flue_out.m_dot == 0
+        with_values(Flare())(
+            gas_in=gm.Stream(
+                m_dot=gm.units.Quantity(0.1, "kg/s"),
+                T=gm.units.Quantity(330, "K"),
+                p=gm.units.Quantity(2e5, "Pa"),
+            )
+        ).outlets.flue_out.m_dot
+        == 0
     )
 
 
@@ -57,7 +69,14 @@ def test_the_heat_of_burning_leaves_through_a_loss_port():
     """The chemical power burned is ``fuel``; it leaves through ``loss_out``; the audit closes."""
     fluid = gm.Fluid(kind="gas", gas_composition={"CH4": 1.0})
     flare = with_values(Flare())
-    result = flare(gas_in=gm.Stream(m_dot=0.1, T=300, p=2e5, fluid=fluid))
+    result = flare(
+        gas_in=gm.Stream(
+            m_dot=gm.units.Quantity(0.1, "kg/s"),
+            T=gm.units.Quantity(300, "K"),
+            p=gm.units.Quantity(2e5, "Pa"),
+            fluid=fluid,
+        )
+    )
     burned = 0.1 * fluid.heating_value() * flare.combustion_efficiency
     assert result.outlets.loss_out == pytest.approx(burned)
     assert result.outputs.fuel == pytest.approx(burned)

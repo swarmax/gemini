@@ -10,7 +10,7 @@ from gemini.evaluate.failures import failures
 from gemini.evaluate.totals import KPI_NAMES
 from gemini.run._utils.apply import applied_in_place
 from gemini.run.simulate import simulate
-from gemini.study._utils.target import is_case_name, parameter_value, with_case_values
+from gemini.study._utils.target import is_case_name, with_case_values
 from gemini.types.shapes import measure
 
 ECONOMICS = {
@@ -70,7 +70,7 @@ def _run(plant, case, plan, values):
     for name, number in values.items():
         if not is_case_name(name):
             path, _, parameter = name.rpartition(".")
-            trial.set_params(path, {parameter: parameter_value(trial, name, number)})
+            trial._set_si_params(path, {parameter: number})
     changed = with_case_values(case, {k: v for k, v in values.items() if is_case_name(k)})
     trial = applied_in_place(trial, changed)
     return trial, changed, simulate(trial, changed, plan=plan)

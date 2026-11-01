@@ -10,10 +10,15 @@ from gemini.modules.declarations import Inlet, Outlet, Output
 from gemini.modules.heating import ElectricBoiler
 from gemini.modules.subsurface import ThermalDecline
 from gemini.types import Stream
+from gemini.types.fluid import BRINE as DEFAULT_FLUID
 from tests.fixtures.equivalence import assert_function_matches, assert_same_error
 from tests.fixtures.reading import reading
 
-STREAM = Stream(m_dot=50, T=353.15, p=2e7)
+STREAM = Stream(
+    m_dot=gm.units.Quantity(50, "kg/s"),
+    T=gm.units.Quantity(353.15, "K"),
+    p=gm.units.Quantity(2e7, "Pa"),
+)
 WATER = 1000 * 4217.4
 AQUIFER = 0.2 * WATER + 0.8 * 2.5e6
 BREAKTHROUGH = math.pi * 1000**2 * 50 * AQUIFER / (3 * WATER)
@@ -24,10 +29,10 @@ def decline():
     module = ThermalDecline().set_params(
         "",
         {
-            "well_spacing": 1000,
-            "aquifer_thickness": 50,
+            "well_spacing": gm.units.Quantity(1000, "m"),
+            "aquifer_thickness": gm.units.Quantity(50, "m"),
             "porosity": 0.2,
-            "rock_volumetric_heat_capacity": 2.5e6,
+            "rock_volumetric_heat_capacity": gm.units.Quantity(2.5e6, "J/m3/K"),
         },
     )
     module.injection_temperature = 313.15
@@ -43,7 +48,9 @@ class Producer(Module):
 
         # Modules
         self.decline = decline()
-        self.heater = ElectricBoiler().set_params("", {"capacity": 1e7, "efficiency": 0.9})
+        self.heater = ElectricBoiler().set_params(
+            "", {"capacity": gm.units.Quantity(1e7, "W"), "efficiency": 0.9}
+        )
 
         # Inlets
         self.sandface = Inlet(Stream)
@@ -146,7 +153,7 @@ def test_decline_arithmetic_matches_on_arrays():
     module = decline()
 
     def numbers(m_dot, T, p):
-        inlet = Stream(m_dot=m_dot, T=T, p=p)
+        inlet = Stream._si(m_dot=m_dot, T=T, p=p, fluid=DEFAULT_FLUID)
         return dict(
             flow=module._liquid_flow(inlet),
             volume=module._breakthrough_volume(inlet),

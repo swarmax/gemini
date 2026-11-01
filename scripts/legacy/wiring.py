@@ -4,6 +4,8 @@ from copy import deepcopy
 
 from gemini.errors import ValidationError
 from gemini.modules._utils.wiring import trace_wiring
+from gemini.runtime import get_default_fluid
+from gemini.types import Stream
 
 from . import tables
 
@@ -42,7 +44,17 @@ def _traced_edges(plant):
         )
     trial = deepcopy(plant)
     trial._set_inputs(tables.TRACE_CONTROLS)
-    return trace_wiring(trial, trial._root_inputs())
+    return trace_wiring(trial, _inlet_streams(trial))
+
+
+def _inlet_streams(plant):
+    """Return the stated plant inlets as streams of SI values, the fluid being that of the plant."""
+    streams = {}
+    for port, fields in plant._root_inputs().items():
+        fluid = fields.get("fluid", get_default_fluid())
+        values = {name: value for name, value in fields.items() if name != "fluid"}
+        streams[port] = Stream._si(**values, fluid=fluid)
+    return streams
 
 
 def _endpoint(kinds, paths, node_id, port):

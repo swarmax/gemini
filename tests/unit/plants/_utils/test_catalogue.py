@@ -24,10 +24,10 @@ FORMER_EXAMPLES = {
     "CoolingSubstation": "3685c3ebc66824c6e0296386b373306ebe8254e9ad5d72b3cd2983fb7a2ba625",
     "DistrictEnergyPlant": "dc4fa5c020d5b7367d4c6d1c636998e7204e07fe77a240858a6f05955a27a3e0",
     "DistrictNetwork": "6f33b4f793e750d6efd7cc52934276a8a3ff2618ae5bd0b1c7c3106c90cdcab0",
-    "Doublet": "edc05bcafb3e3e3fb4cc08aed776aeb1f2783ed0f914afe01d5d31e80dcf9d78",
-    "DoubletHeatPlant": "30df8586e4eb31bf3b287b4f648f28c5091bfaa1b32580faaa197ea76a4540ed",
+    "Doublet": "08ee186137e2860c6897461955c4555ff03b9843b3e4dec782b705f8d78556e7",
+    "DoubletHeatPlant": "a085cd3460fab5a645aa5e9fffb92aff9bce87a93ffd836084b5bfe59b977b8e",
     "HeatingSubstation": "efb07bdf6b9e33ccad37d6fc0603938770d4142f3cb9dcacfcde1b12ae5ad48b",
-    "MultiWellPlant": "ae8ad0475f83134e0201f7acf997090a522f3624f21b2f264304ee35eaf99e07",
+    "MultiWellPlant": "d51e558cc13c37f1744c156e189dc14ad1e4346c0097a5417a085a62737e6d46",
     "NodalDoublet": "c9e66f2c96e83152a5cc44cbb6169dd2e7d55d0098077554553666e56299544f",
     "ParallelExchangerPlant": "bc36d7c313e147191ef5ac30a2480d34fca3da8d44cd9771b6ba20875ad0490f",
 }

@@ -14,9 +14,9 @@ def exchanger():
     return gm.modules.HeatExchanger().set_params(
         "",
         {
-            "thermal_conductance": 1e3,
-            "hot_nominal_pressure_drop": 1e4,
-            "cold_nominal_pressure_drop": 1e4,
+            "thermal_conductance": gm.units.Quantity(1e3, "W/K"),
+            "hot_nominal_pressure_drop": gm.units.Quantity(1e4, "Pa"),
+            "cold_nominal_pressure_drop": gm.units.Quantity(1e4, "Pa"),
         },
     )
 
@@ -33,8 +33,12 @@ def test_an_undated_set_changes_the_base_and_the_current_value(exchanger):
 
 def test_a_dated_snapshot_is_complete_and_sorted(exchanger):
     """Each snapshot holds the values in force merged with the change."""
-    exchanger.set_params("", {"thermal_conductance": 5.0}, valid_from="2021-01-01")
-    exchanger.set_params("", {"thermal_conductance": 3.0}, valid_from="2020-01-01")
+    exchanger.set_params(
+        "", {"thermal_conductance": gm.units.Quantity(5.0, "W/K")}, valid_from="2021-01-01"
+    )
+    exchanger.set_params(
+        "", {"thermal_conductance": gm.units.Quantity(3.0, "W/K")}, valid_from="2020-01-01"
+    )
     history = exchanger.param_history("")
     assert [item["valid_from"] for item in history] == [
         None,

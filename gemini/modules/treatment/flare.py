@@ -82,7 +82,7 @@ class Flare(Equipment, Module):
         if inlet.fluid.gas_composition is None:
             return FLUE_CO2
         co2, methane = self._released(inlet, 1.0)
-        return Fluid(
+        return Fluid._si(
             kind="gas", gas_composition=gas.composition_of_masses({"CO2": co2, "CH4": methane})
         )
 

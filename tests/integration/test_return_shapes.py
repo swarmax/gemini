@@ -71,21 +71,21 @@ def _run_entries(plant, results):
         "evaluate": lambda: gm.call(
             "HeatExchanger",
             {
-                "thermal_conductance": 5e5,
-                "hot_nominal_pressure_drop": 1e4,
-                "cold_nominal_pressure_drop": 1e4,
-                "hot_nominal_mass_flow": 40,
-                "cold_nominal_mass_flow": 40,
+                "thermal_conductance": gm.units.Quantity(5e5, "W/K"),
+                "hot_nominal_pressure_drop": gm.units.Quantity(1e4, "Pa"),
+                "cold_nominal_pressure_drop": gm.units.Quantity(1e4, "Pa"),
+                "hot_nominal_mass_flow": gm.units.Quantity(40, "kg/s"),
+                "cold_nominal_mass_flow": gm.units.Quantity(40, "kg/s"),
                 "arrangement": "counterflow",
             },
             {
                 "hot_in": {
-                    "m_dot": 40.0,
+                    "m_dot": gm.units.Quantity(40.0, "kg/s"),
                     "T": {"value": 90, "unit": "degC"},
                     "p": {"value": 5, "unit": "bar"},
                 },
                 "cold_in": {
-                    "m_dot": 40.0,
+                    "m_dot": gm.units.Quantity(40.0, "kg/s"),
                     "T": {"value": 40, "unit": "degC"},
                     "p": {"value": 5, "unit": "bar"},
                 },

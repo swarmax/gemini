@@ -30,7 +30,7 @@ class GasGrid(Module):
 
     def _offer(self, inlets):
         """Offer the grid gas at normal conditions."""
-        offered = Stream(
+        offered = Stream._si(
             m_dot=0.0,
             T=gas.NORMAL_TEMPERATURE,
             p=gas.NORMAL_PRESSURE,

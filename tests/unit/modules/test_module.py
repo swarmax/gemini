@@ -69,7 +69,11 @@ def test_registration_construction_and_state():
 
 def test_call_output_and_signature_guards():
     """All supported inlet call forms resolve to the same fixed Ports shape."""
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     module = PassThrough().set_params("", {"value": 2})
     results = [
         module(fluid_in=stream, multiplier=4),
@@ -86,7 +90,11 @@ def test_call_output_and_signature_guards():
 
 def test_a_wrong_call_names_the_inlets():
     """Missing, misspelled, mixed, invalid and repeated inlets each say what is valid."""
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     module = PassThrough().set_params("", {"value": 2})
     with raises(
         gm.errors.ValidationError,
@@ -122,7 +130,11 @@ def test_a_wrong_call_names_the_inlets():
 
 def test_outlet_dict_names_and_flow_types_are_checked(monkeypatch):
     """Forward returns exactly one declared, correctly typed outlet dictionary."""
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     module = PassThrough().set_params("", {"value": 2})
 
     def scalar_forward(inlets):
@@ -182,7 +194,11 @@ class NestedParent(Module):
 
 def test_output_records_are_thread_local():
     """Concurrent evaluations never share output records."""
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     module = PassThrough().set_params("", {"value": 2})
     with ThreadPoolExecutor(max_workers=4) as pool:
         values = list(
@@ -194,7 +210,11 @@ def test_output_records_are_thread_local():
 
 def test_output_records_are_nested_per_call():
     """A child's call inside its parent keeps its own inputs and outputs."""
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     result = NestedParent()(fluid_in=stream)
     assert result.outputs.child_value == 6
     assert result.children["children_by_name.child"].outputs.result == 6
@@ -206,12 +226,24 @@ def test_uninitialized_and_hooks():
     module = PassThrough()
     assert [item["path"] for item in module.missing_parameters()] == ["value"]
     with raises(gm.errors.ValidationError, "missing_value", match="uninitialized"):
-        module(fluid_in=Stream(m_dot=1, T=300, p=1e5))
+        module(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(1, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            )
+        )
     module.value = 2
     calls = []
     before = module.register_forward_pre_hook(lambda module, inlets: calls.append("before"))
     after = module.register_forward_hook(lambda module, inlets, outlets: calls.append("after"))
-    module(fluid_in=Stream(m_dot=1, T=300, p=1e5))
+    module(
+        fluid_in=Stream(
+            m_dot=gm.units.Quantity(1, "kg/s"),
+            T=gm.units.Quantity(300, "K"),
+            p=gm.units.Quantity(1e5, "Pa"),
+        )
+    )
     assert calls == ["before", "after"]
     before.remove()
     after.remove()
@@ -253,7 +285,11 @@ class RequiredInputs(Module):
 
 def test_input_resolution_units_bounds_and_metadata():
     """Per-call, persistent and default values resolve in order and validate as SI."""
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     module = RequiredInputs()
     module.frequency = {"value": 40, "unit": "Hz"}
     module.grid_frequency = 50
@@ -268,7 +304,11 @@ def test_input_resolution_units_bounds_and_metadata():
 
 def test_missing_input_and_unknown_keyword_errors_are_complete():
     """Missing and unknown values report path, kind, unit and valid names before forward."""
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     module = RequiredInputs()
     with raises(
         gm.errors.ValidationError, "missing_value", match="required_inputs.frequency.*control.*Hz"
@@ -287,7 +327,11 @@ def test_missing_input_and_unknown_keyword_errors_are_complete():
 
 def test_call_inputs_and_hook_assignments_do_not_leak():
     """Context-local values survive nesting and pre-hook changes last for one call only."""
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     module = RequiredInputs()
     module._set_inputs({"frequency": 50, "grid_frequency": 50})
     seen = []
@@ -327,7 +371,11 @@ def test_call_inputs_and_hook_assignments_do_not_leak():
 
 def test_hooks_are_ordered_removable_and_observe_named_ports():
     """Hooks use named ports, preserve outlets and ignore their return value."""
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     replacement = stream.with_(p=2e5)
     module = PassThrough().set_params("", {"value": 2})
     calls = []
@@ -376,7 +424,11 @@ def test_set_inputs_uses_recursive_paths_and_suggests_mistakes():
 
             # Modules
             self.child(
-                fluid_in=Stream(m_dot=1, T=300, p=1e5),
+                fluid_in=Stream(
+                    m_dot=gm.units.Quantity(1, "kg/s"),
+                    T=gm.units.Quantity(300, "K"),
+                    p=gm.units.Quantity(1e5, "Pa"),
+                ),
             )
 
             outlets = dict()
@@ -422,7 +474,11 @@ def test_missing_output_and_named_hook_ordering():
             pass
             return outlets
 
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     module = MissingOutput()
     with pytest.raises(gm.errors.DefinitionError, match="missing_output.*value"):
         module(fluid_in=stream)
@@ -440,7 +496,11 @@ def test_missing_output_and_named_hook_ordering():
 
 def test_no_outputs_is_nested_thread_local_context_and_decorator():
     """The fast path skips output callbacks, formulas, hooks and output checks."""
-    stream = Stream(m_dot=1, T=300, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1, "kg/s"),
+        T=gm.units.Quantity(300, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     module = PassThrough().set_params("", {"value": 2})
     calls = []
 
@@ -463,7 +523,11 @@ def test_no_outputs_is_nested_thread_local_context_and_decorator():
     assert not fast_call().outputs
 
 
-STREAM = Stream(m_dot=1, T=300, p=1e5)
+STREAM = Stream(
+    m_dot=gm.units.Quantity(1, "kg/s"),
+    T=gm.units.Quantity(300, "K"),
+    p=gm.units.Quantity(1e5, "Pa"),
+)
 
 
 class EnergyLeaf(Module):
@@ -615,7 +679,11 @@ class Quotient(Module):
 def test_an_eager_call_divides_silently_and_returns_plain_python_values():
     """Parameters, controls and inlet fields are NumPy scalars inside; results are Python."""
     module = Quotient()
-    stream = Stream(m_dot=0.0, T=300.0, p=1e5)
+    stream = Stream(
+        m_dot=gm.units.Quantity(0.0, "kg/s"),
+        T=gm.units.Quantity(300.0, "K"),
+        p=gm.units.Quantity(1e5, "Pa"),
+    )
     result = module(fluid_in=stream)
     assert [kind.__name__ for kind in module.kinds] == ["float64"] * 3
     assert math.isinf(result.outputs.ratio) and type(result.outputs.ratio) is float
@@ -648,7 +716,11 @@ def test_a_forced_numpy_backend_keeps_plain_division_silent():
 
 
 def _rows_stream(flows):
-    return Stream(m_dot=np.array(flows), T=np.full(len(flows), 300.0), p=np.full(len(flows), 1e5))
+    return Stream(
+        m_dot=gm.units.Quantity(np.array(flows), "kg/s"),
+        T=gm.units.Quantity(np.full(len(flows), 300.0), "K"),
+        p=gm.units.Quantity(np.full(len(flows), 1e5), "Pa"),
+    )
 
 
 class ColumnOutputs(Module):

@@ -1,7 +1,5 @@
 """Stream dtype identity, composition and reference property models."""
 
-import json
-
 import numpy as np
 import pytest
 from pydantic import ValidationError as PydanticError
@@ -16,11 +14,25 @@ from tests.fixtures.equivalence import assert_function_matches
 from tests.fixtures.errors import raises
 
 
+def _read(data):
+    """Return the stream of the SI data a dump writes: stored data is not a public input."""
+    return Stream._si(**{**data, "fluid": Fluid.model_validate(data["fluid"])})
+
+
 def test_fluid_properties_and_identity():
     """Defaults preserve all legacy numbers; overrides travel with streams and cache safely."""
     assert BRINE.properties(1e5, 300) == FluidProperties()
-    brine = Fluid(density=1068, viscosity=0.00065, co2_mass_fraction=0.01)
-    stream = Stream(m_dot=106.8, p=1e5, T=300, fluid=brine)
+    brine = Fluid(
+        density=gm.units.Quantity(1068, "kg/m3"),
+        viscosity=gm.units.Quantity(0.00065, "Pa.s"),
+        co2_mass_fraction=0.01,
+    )
+    stream = Stream(
+        m_dot=gm.units.Quantity(106.8, "kg/s"),
+        p=gm.units.Quantity(1e5, "Pa"),
+        T=gm.units.Quantity(300, "K"),
+        fluid=brine,
+    )
     assert stream.volumetric_flow() == pytest.approx(0.1)
     assert stream.with_(T=310).fluid == brine
     assert brine.properties(1e5, 300) is brine.properties(2e5, 350)
@@ -28,10 +40,10 @@ def test_fluid_properties_and_identity():
     assert GLYCOL_30.properties(1e5, 313.15) == FluidProperties(
         rho_l=1029.85, cp_l=3841, k_l=0.4622, mu_l=0.0016295
     )
-    assert Fluid(gas_mass_fraction=0.1, specific_heat=4000).properties(1e5, 300) == (
-        FluidProperties(gmf=0.1, cp_l=4000)
-    )
-    assert Stream(**json.loads(json.dumps(to_jsonable_python(stream)))) == stream
+    assert Fluid(gas_mass_fraction=0.1, specific_heat=gm.units.Quantity(4000, "J/kg/K")).properties(
+        1e5, 300
+    ) == (FluidProperties(gmf=0.1, cp_l=4000))
+    assert _read(to_jsonable_python(stream)) == stream
     with pytest.raises(PydanticError):
         brine.salinity = 0.5
     with pytest.raises(gm.errors.ValidationError):
@@ -44,8 +56,13 @@ def test_steam_kind_labels_vapour_without_changing_other_fluids():
     """``steam`` is a distinct, serialisable label; it keeps the default constant snapshot."""
     assert STEAM == Fluid(kind="steam") and STEAM not in (BRINE, WATER)
     assert STEAM.properties(6e5, 432) == FluidProperties()
-    stream = Stream(m_dot=20, T=432, p=6e5, fluid=STEAM)
-    assert Stream(**json.loads(json.dumps(to_jsonable_python(stream)))).fluid.kind == "steam"
+    stream = Stream(
+        m_dot=gm.units.Quantity(20, "kg/s"),
+        T=gm.units.Quantity(432, "K"),
+        p=gm.units.Quantity(6e5, "Pa"),
+        fluid=STEAM,
+    )
+    assert _read(to_jsonable_python(stream)).fluid.kind == "steam"
     assert BRINE.kind == "brine" and WATER.kind == "water"
 
 
@@ -53,7 +70,7 @@ def test_corrosion_composition_conversion():
     """Dissolved mass fraction is converted through Henry law, never used as gas mole fraction."""
     from gemini.physics.chemistry import henry_constant
 
-    fluid = Fluid(salinity=0.07, co2_mass_fraction=0.001, density=1068)
+    fluid = Fluid(salinity=0.07, co2_mass_fraction=0.001, density=gm.units.Quantity(1068, "kg/m3"))
     values = fluid.corrosion_inputs(1e6, 300)
     assert values["ionic_strength"] == pytest.approx(74.76)
     assert values["co2_partial_pressure"] * henry_constant(300) == pytest.approx(1.068 / 0.04401)
@@ -61,7 +78,7 @@ def test_corrosion_composition_conversion():
 
 def test_corrosion_inputs_on_arrays_match_floats():
     """The conversion works on arrays of pressure and temperature."""
-    fluid = Fluid(salinity=0.07, co2_mass_fraction=0.001, density=1068)
+    fluid = Fluid(salinity=0.07, co2_mass_fraction=0.001, density=gm.units.Quantity(1068, "kg/m3"))
     assert_function_matches(fluid.corrosion_inputs, [(1e6, 300.0), (2e6, 340.0), (5e5, 285.0)])
     values = fluid.corrosion_inputs(np.array([1e6, 2e6]), np.array([300.0, 340.0]))
     assert values["co2_partial_pressure"].shape == (2,)
@@ -118,11 +135,19 @@ def test_a_gas_fluid_is_an_ideal_gas_of_its_composition():
     normal = gas.density_at(101325.0, 273.15)
     assert normal == pytest.approx(gas.normal_density())
     assert gas.density_at(202650.0, 273.15) == pytest.approx(2 * normal)
-    stream = Stream(m_dot=1.0, p=101325.0, T=273.15, fluid=gas)
+    stream = Stream(
+        m_dot=gm.units.Quantity(1.0, "kg/s"),
+        p=gm.units.Quantity(101325.0, "Pa"),
+        T=gm.units.Quantity(273.15, "K"),
+        fluid=gas,
+    )
     assert stream.volumetric_flow() == pytest.approx(1 / normal)
     assert gas.density_at(np.array([101325.0, 202650.0]), 273.15)[1] == pytest.approx(2 * normal)
     assert Stream(
-        flow={"value": 10, "unit": "m3/h"}, p=101325.0, T=273.15, fluid=gas
+        flow={"value": 10, "unit": "m3/h"},
+        p=gm.units.Quantity(101325.0, "Pa"),
+        T=gm.units.Quantity(273.15, "K"),
+        fluid=gas,
     ).m_dot == pytest.approx(10 / 3600 * normal)
 
 
@@ -133,9 +158,12 @@ def test_a_brine_with_a_composition_mixes_with_its_gas_at_the_stream_pressure():
     assert brine.gas_density_at(200e5, 360.0) == pytest.approx(144.6, abs=0.5)
     assert 1020 < deep < 1030 and shallow < deep
     assert brine.properties(1e5, 300).rho_g == pytest.approx(brine.normal_density())
-    assert Stream(m_dot=1.0, p=200e5, T=360.0, fluid=brine).volumetric_flow() == pytest.approx(
-        1 / deep
-    )
+    assert Stream(
+        m_dot=gm.units.Quantity(1.0, "kg/s"),
+        p=gm.units.Quantity(200e5, "Pa"),
+        T=gm.units.Quantity(360.0, "K"),
+        fluid=brine,
+    ).volumetric_flow() == pytest.approx(1 / deep)
 
 
 def test_a_property_in_a_unit_of_another_dimension_reports_invalid_unit():

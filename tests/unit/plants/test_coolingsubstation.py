@@ -13,7 +13,11 @@ from tests.fixtures.designs import with_values
 from tests.fixtures.reading import reading
 
 CP = 4217.4
-NETWORK = Stream(m_dot=3.0, T=279.15, p=6e5)
+NETWORK = Stream(
+    m_dot=gm.units.Quantity(3.0, "kg/s"),
+    T=gm.units.Quantity(279.15, "K"),
+    p=gm.units.Quantity(6e5, "Pa"),
+)
 
 
 def counterflow_effectiveness(ua, c_min, c_max):

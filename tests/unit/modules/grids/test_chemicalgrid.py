@@ -21,7 +21,13 @@ def test_the_dosed_amount_is_read_from_the_port():
     plant.connect("feed", "dosing.fluid_in")
     plant.connect("dosing.fluid_out", "product")
     plant.dosing.dose = {"value": 10, "unit": "ppm"}
-    result = plant(feed=gm.Stream(m_dot=50, T=300, p=2e5))
+    result = plant(
+        feed=gm.Stream(
+            m_dot=gm.units.Quantity(50, "kg/s"),
+            T=gm.units.Quantity(300, "K"),
+            p=gm.units.Quantity(2e5, "Pa"),
+        )
+    )
     assert result.children["chemicals"].outlets.chemical_out.m_dot == 5e-4
     assert isinstance(plant.dosing, InhibitorDosing)
 

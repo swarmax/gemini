@@ -1,9 +1,9 @@
 """Dated parameters and bindings of a module tree, the one implementation behind ``Module``.
 
-``Module.set_params``, ``params_at``, ``param_history``, ``bindable`` and ``set_bindings`` call
-these functions with the module they belong to. Parameters are addressed by a module path below
-that module and a (possibly dotted) parameter name; values are validated by their declarations,
-so quantities are accepted and stored in SI.
+``Module.set_params`` (through ``in_si``), ``params_at``, ``param_history``, ``bindable`` and
+``set_bindings`` call these functions with the module they belong to. Parameters are addressed by
+a module path below that module and a (possibly dotted) parameter name; values are validated by
+their declarations, so quantities are accepted and stored in SI.
 """
 
 from collections.abc import Mapping
@@ -17,6 +17,7 @@ from gemini._utils.jsonable import to_plain
 from gemini._utils.strings import close_matches, did_you_mean, join_names, join_path
 from gemini._utils.time import EARLIEST, to_utc
 from gemini.errors import ValidationError
+from gemini.types import bare
 from gemini.types.bindings import Binding, DatedParams, ModuleBindings
 from gemini.types.flows import STREAM_FIELDS
 
@@ -119,9 +120,9 @@ def _deriving_owner(module, name):
 def set_params(module, path, params, valid_from=None):
     """Store a validated, complete snapshot for the module at ``path`` and return ``module``.
 
-    Each snapshot is the values in force at ``valid_from`` merged with ``params``. Without a
-    date the undated base entry changes, and so do the current values. A value on the way to a
-    module that overrides ``set_params`` goes through that method.
+    ``params`` are SI values. Each snapshot is the values in force at ``valid_from`` merged with
+    ``params``. Without a date the undated base entry changes, and so do the current values. A
+    value on the way to a module that overrides ``_set_si_params`` goes through that method.
     """
     when = None if valid_from is None else to_utc(valid_from)
     target = module.get_submodule(path)
@@ -140,7 +141,7 @@ def set_params(module, path, params, valid_from=None):
                 owner._parameters[name].set(value, explicit=False)
                 owner._param_overrides.pop(name, None)
     for owner, values in routed.items():
-        owner.set_params("", values, valid_from)
+        owner._set_si_params("", values, valid_from)
     return module
 
 
@@ -306,13 +307,37 @@ def refuse_bare(declaration, value, path):
     """Raise ``invalid_value`` for a plain number given to a declaration with a unit.
 
     A public input with a dimension is a ``Quantity`` or its dict: a number alone does not say
-    its unit.
+    its unit. The message names the path, the quantity and its accepted units.
     """
-    bare = isinstance(value, (int, float, list, tuple)) and not isinstance(value, bool)
-    if bare and declaration.unit not in (None, "-"):
-        raise ValidationError(
-            f"{path} = {value!r}; expected {units.QUANTITY_FORM}, because it has the unit "
-            f"{declaration.unit!r}",
-            path=path,
-            code="invalid_value",
-        )
+    bare.refuse(path, value, declaration.unit, declaration.quantity)
+
+
+def quantity_form(declaration, value):
+    """Return ``value`` as ``{"value", "unit"}`` when the declaration has a unit.
+
+    This is how a plant dict stores it.
+
+    A ``Quantity`` gives its dict; a value without a dimension, ``None``, text, a dict or a flag
+    stays as it is.
+    """
+    if isinstance(value, units.Quantity):
+        return value.to_dict()
+    unit = None if declaration is None else declaration.unit
+    if unit in (None, "-") or value is None or isinstance(value, (dict, str, bool)):
+        return value
+    return {"value": value, "unit": unit}
+
+
+def in_si(module, path, params):
+    """Return ``params`` of the module at ``path`` in SI, refusing a bare number with a unit.
+
+    This is the public door of ``Module.set_params``: each value is a ``Quantity``, its dict, or a
+    plain number only for a parameter without a dimension. Nothing is stored.
+    """
+    target = module.get_submodule(path)
+    result = {}
+    for name, value in params.items():
+        declaration = parameter(target, name)
+        refuse_bare(declaration, value, join_path(path, name))
+        result[name] = declaration.validate(value)
+    return result

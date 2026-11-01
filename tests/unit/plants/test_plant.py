@@ -27,7 +27,11 @@ def chain():
 
 def stream():
     """Return a brine stream."""
-    return gm.Stream(m_dot=10.0, T=350.0, p=5e5)
+    return gm.Stream(
+        m_dot=gm.units.Quantity(10.0, "kg/s"),
+        T=gm.units.Quantity(350.0, "K"),
+        p=gm.units.Quantity(5e5, "Pa"),
+    )
 
 
 def test_a_plant_is_a_module_in_the_plant_category():

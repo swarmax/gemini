@@ -114,7 +114,7 @@ def assert_health_matches(module, results, measured):
 def _stacked_stream(streams):
     if not isinstance(streams[0], Stream):
         return np.array(streams)
-    return Stream(
+    return Stream._si(
         **{field: np.array([getattr(s, field) for s in streams]) for field in STREAM_FIELDS},
         fluid=streams[0].fluid,
     )

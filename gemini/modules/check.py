@@ -97,8 +97,9 @@ def check(cls, example=None):
         The class to check.
     example : dict, optional
         Values for the ``call`` check, the arguments of ``gm.call``:
-        ``{"parameters": {...}, "inlets": {...}, "controls": {...}}``. Without it the call uses
-        the declared defaults, and a module that needs a value gets ``passed`` ``None``.
+        ``{"parameters": {...}, "inlets": {...}, "controls": {...}}``, with quantities for the
+        values with a dimension, as ``gm.call`` takes them. Without it the call uses the declared
+        defaults, and a module that needs a value gets ``passed`` ``None``.
 
     Returns
     -------

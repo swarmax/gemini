@@ -12,7 +12,12 @@ from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.reading import reading
 
-STEAM_FEED = Stream(m_dot=20, T=431.98, p=6e5, fluid=STEAM)
+STEAM_FEED = Stream(
+    m_dot=gm.units.Quantity(20, "kg/s"),
+    T=gm.units.Quantity(431.98, "K"),
+    p=gm.units.Quantity(6e5, "Pa"),
+    fluid=STEAM,
+)
 
 
 def turbine():
@@ -96,7 +101,11 @@ class SingleFlash(Module):
 def test_single_flash_plant_closure():
     """A 250 degC, 100 kg/s feed yields about 9.5 MW; the plant closes in IF97 enthalpies."""
     plant = SingleFlash()
-    feed = Stream(m_dot=100, T=523.15, p=40e5)
+    feed = Stream(
+        m_dot=gm.units.Quantity(100, "kg/s"),
+        T=gm.units.Quantity(523.15, "K"),
+        p=gm.units.Quantity(40e5, "Pa"),
+    )
     result = plant(geofluid_in=feed)
     brine, condensate = result.outlets.fluid_out, result.outlets.condensate_out
     net_power = result.children["turbine"].outlets.power_out
@@ -115,7 +124,14 @@ def test_single_flash_plant_closure():
 def test_traced_call_matches_one_call_per_row():
     """Several flows and inlet pressures trace and equal one call per row."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=420.0, p=p, fluid=STEAM))
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(420.0, "K"),
+                p=gm.units.Quantity(p, "Pa"),
+                fluid=STEAM,
+            )
+        )
         for m_dot, p in [(20.0, 6e5), (0.0, 6e5), (5.0, 2e6), (12.0, 2e5)]
     ]
     assert_module_matches(turbine(), rows)

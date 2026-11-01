@@ -8,7 +8,11 @@ from gemini.types import Stream
 from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 
-STREAM = Stream(m_dot=10, T=330, p=1e6)
+STREAM = Stream(
+    m_dot=gm.units.Quantity(10, "kg/s"),
+    T=gm.units.Quantity(330, "K"),
+    p=gm.units.Quantity(1e6, "Pa"),
+)
 
 
 class Train(Module):

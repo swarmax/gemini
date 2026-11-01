@@ -16,7 +16,11 @@ from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_function_matches, assert_same_error
 from tests.fixtures.reading import reading
 
-WARM = Stream(m_dot=30, T=291.15, p=3e5)
+WARM = Stream(
+    m_dot=gm.units.Quantity(30, "kg/s"),
+    T=gm.units.Quantity(291.15, "K"),
+    p=gm.units.Quantity(3e5, "Pa"),
+)
 COLD = WARM.with_(T=279.15)
 WATER = 1000 * 4217.4
 AQUIFER = 0.3 * WATER + 0.7 * 2.0e6
@@ -28,11 +32,11 @@ def storage(mode="charge"):
     module = with_values(AquiferStorage()).set_params(
         "",
         {
-            "aquifer_temperature": 284.15,
-            "aquifer_thickness": 30,
+            "aquifer_temperature": gm.units.Quantity(284.15, "K"),
+            "aquifer_thickness": gm.units.Quantity(30, "m"),
             "porosity": 0.3,
-            "rock_volumetric_heat_capacity": 2.0e6,
-            "ground_conductivity": 2.5,
+            "rock_volumetric_heat_capacity": gm.units.Quantity(2.0e6, "J/m3/K"),
+            "ground_conductivity": gm.units.Quantity(2.5, "W/m/K"),
         },
     )
     module.mode = mode
@@ -55,7 +59,9 @@ class Plant(Module):
         super().__init__()
 
         # Modules
-        self.heater = ElectricBoiler().set_params("", {"capacity": 1e7, "efficiency": 0.9})
+        self.heater = ElectricBoiler().set_params(
+            "", {"capacity": gm.units.Quantity(1e7, "W"), "efficiency": 0.9}
+        )
         self.storage = storage()
 
         # Inlets
@@ -191,7 +197,9 @@ class Reader(Module):
         object.__setattr__(self, "seen", seen)
 
         # Modules
-        self.storage = storage("discharge").set_params("", {"groundwater_pressure": 3e5})
+        self.storage = storage("discharge").set_params(
+            "", {"groundwater_pressure": gm.units.Quantity(3e5, "Pa")}
+        )
         self.storage.groundwater_flow = 30.0
 
         # Inlets

@@ -12,6 +12,7 @@ from gemini._utils.strings import close_matches, did_you_mean, first_paragraph
 from gemini.errors import ValidationError
 from gemini.errors.base import reported
 from gemini.modules.declarations import UNSET
+from gemini.types import bare
 from gemini.types.shapes import problem
 
 STREAM_FIELDS = {"m_dot": {"unit": "kg/s"}, "T": {"unit": "K"}, "p": {"unit": "Pa"}}
@@ -314,14 +315,25 @@ def check_value(name, declaration, value):
     return None
 
 
+def _check_public(name, declaration, value):
+    """Return the problem of a public ``value``: a bare number with a unit, or what it holds."""
+    try:
+        bare.refuse(name, value, declaration.unit, declaration.quantity)
+    except ValidationError as error:
+        return problem(name, error.code, error)
+    return check_value(name, declaration, value)
+
+
 def validate_params(module, params, on_error="raise"):
     """Check ``params`` and return ``[]``, or raise one ``ValidationError`` with every problem.
 
     With ``on_error="record"`` nothing is raised and the problems are returned, each
     ``{path, code, message, suggestions}``: the list the error carries in ``problems``.
-    ``params`` maps a parameter name (dotted for a child's) to a number, a unit string or a value
-    of the declared kind. The codes are ``unknown_name`` (with ``suggestions``),
-    ``invalid_unit``, ``out_of_bounds`` and ``invalid_value``. The module is not changed.
+    ``params`` maps a parameter name (dotted for a child's) to a ``Quantity`` or its dict for a
+    value with a dimension, as ``set_params`` takes it, or to a plain value of the declared kind;
+    a bare number for a value with a dimension is an ``invalid_value`` problem. The codes are
+    ``unknown_name`` (with ``suggestions``), ``invalid_unit``, ``out_of_bounds`` and
+    ``invalid_value``. The module is not changed.
     """
     declarations = dict(module.named_parameters())
     problems = []
@@ -332,7 +344,7 @@ def validate_params(module, params, on_error="raise"):
                 problem(name, "unknown_name", message, close_matches(name, declarations))
             )
             continue
-        found = check_value(name, declarations[name], value)
+        found = _check_public(name, declarations[name], value)
         if found is not None:
             problems.append(found)
     return reported(problems, on_error)

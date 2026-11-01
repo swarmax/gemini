@@ -19,6 +19,7 @@ from gemini.modules.treatment import Degasser, Filter
 from gemini.modules.wells import InjectionWell, ProductionWell
 from gemini.physics import geometry, separation
 from gemini.types.fluid import Fluid
+from gemini.units import Quantity
 
 PORTS = {
     "production_reservoir": {"out": "sandface_out"},
@@ -443,7 +444,8 @@ def reservoir_params_from_gemini(
 def reservoir_fluid(properties: dict) -> Fluid:
     """Return the fluid of an old reservoir: its stored density and viscosity, when given."""
     return Fluid(
-        density=properties.get("liquid_density"), viscosity=properties.get("liquid_viscosity")
+        density=Quantity(properties.get("liquid_density"), "kg/m3"),
+        viscosity=Quantity(properties.get("liquid_viscosity"), "Pa.s"),
     )
 
 

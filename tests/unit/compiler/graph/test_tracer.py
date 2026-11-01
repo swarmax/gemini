@@ -116,7 +116,11 @@ def test_a_stream_built_in_forward_traces_and_keeps_its_limits(gain):
     module = Drop().set_params("", {"scale": 1.0})
     graph = Tracer().trace(module, {"fluid_in": module.fluid})
     assert any(node.op == "check" for node in graph.nodes)
-    stream = gm.Stream(m_dot=np.array([1.0, 1.0]), T=300.0, p=np.array([2e5, 1e5]))
+    stream = gm.Stream(
+        m_dot=gm.units.Quantity(np.array([1.0, 1.0]), "kg/s"),
+        T=gm.units.Quantity(300.0, "K"),
+        p=gm.units.Quantity(np.array([2e5, 1e5]), "Pa"),
+    )
     assert run(module, {"fluid_in": stream}, {"gain": 0.0}).outlets["fluid_out"]["p"].tolist() == [
         2e5,
         1e5,
@@ -183,7 +187,12 @@ def test_writing_hooks_on_a_child_join_the_graph(line):
         module.rise = module.rise * 2
 
     line.gain.register_forward_hook(doubles)
-    inlet = gm.Stream(m_dot=np.ones(3), T=np.full(3, 300.0), p=np.full(3, 1e5), fluid=line.fluid)
+    inlet = gm.Stream(
+        m_dot=gm.units.Quantity(np.ones(3), "kg/s"),
+        T=gm.units.Quantity(np.full(3, 300.0), "K"),
+        p=gm.units.Quantity(np.full(3, 1e5), "Pa"),
+        fluid=line.fluid,
+    )
     result = run(line, {"fluid_in": inlet}, {"boost": np.array([1.0, 2.0, 3.0])})
     assert result.graph is not None
     assert result.outputs["rise"].tolist() == [12.0, 24.0, 36.0]

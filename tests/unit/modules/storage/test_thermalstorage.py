@@ -12,6 +12,7 @@ from gemini.modules import ElectricBoiler, Module, energy_balance, mass_balance
 from gemini.modules.declarations import Inlet, Outlet
 from gemini.modules.storage import ThermalStorage
 from gemini.types import Stream
+from tests.fixtures import si
 from tests.fixtures.air import air
 from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_close, assert_module_matches
@@ -24,8 +25,16 @@ CP = 4217.4
 CAPACITY = 1000 * CP * 2.0
 """Heat capacity [J/K] of the 2 m3 test tank of default fluid (1000 kg/m3)."""
 
-CHARGE = Stream(m_dot=1.0, T=353.15, p=3e5)
-DISCHARGE = Stream(m_dot=0.5, T=313.15, p=3e5)
+CHARGE = Stream(
+    m_dot=gm.units.Quantity(1.0, "kg/s"),
+    T=gm.units.Quantity(353.15, "K"),
+    p=gm.units.Quantity(3e5, "Pa"),
+)
+DISCHARGE = Stream(
+    m_dot=gm.units.Quantity(0.5, "kg/s"),
+    T=gm.units.Quantity(313.15, "K"),
+    p=gm.units.Quantity(3e5, "Pa"),
+)
 
 
 def _tank(service="hot", **changes):
@@ -33,7 +42,7 @@ def _tank(service="hot", **changes):
     params = dict(
         service=service, volume=2.0, heat_loss_conductance=10.0, reference_temperature=313.15
     )
-    return with_values(ThermalStorage()).set_params("", params | changes)
+    return si.set_params(with_values(ThermalStorage()), "", params | changes)
 
 
 def _inlets(charge=CHARGE, discharge=DISCHARGE, ambient=293.15):
@@ -99,8 +108,16 @@ def test_heat_exchanger_effectiveness_sets_the_circuit_outlets():
 def test_chilled_tank_in_a_warm_room_absorbs_heat():
     """A chilled tank reports stored cold, positive service duties and heat_absorbed."""
     tank = _tank("chilled", reference_temperature=285.15)
-    charge = Stream(m_dot=2.0, T=277.15, p=3e5)
-    discharge = Stream(m_dot=1.0, T=285.15, p=3e5)
+    charge = Stream(
+        m_dot=gm.units.Quantity(2.0, "kg/s"),
+        T=gm.units.Quantity(277.15, "K"),
+        p=gm.units.Quantity(3e5, "Pa"),
+    )
+    discharge = Stream(
+        m_dot=gm.units.Quantity(1.0, "kg/s"),
+        T=gm.units.Quantity(285.15, "K"),
+        p=gm.units.Quantity(3e5, "Pa"),
+    )
     state, result = tank.step({"temperature": 279.15}, 300, _inlets(charge, discharge, 298.15))
     out = reading(result)
     assert out.stored_energy == pytest.approx(CAPACITY * 6)
@@ -145,7 +162,9 @@ class BoilerCharging(Module):
         super().__init__()
 
         # Modules
-        self.boiler = ElectricBoiler().set_params("", {"capacity": 2e5, "efficiency": 0.9})
+        self.boiler = ElectricBoiler().set_params(
+            "", {"capacity": gm.units.Quantity(2e5, "W"), "efficiency": 0.9}
+        )
         self.storage = _tank()
 
         # Inlets
@@ -181,7 +200,11 @@ def test_composite_step_charges_the_tank():
     plant = BoilerCharging()
     plant.boiler.temperature_setpoint = 363.15
     assert plant.initial_state() == {"storage": {"temperature": 293.15}}
-    cold = Stream(m_dot=0.5, T=313.15, p=3e5)
+    cold = Stream(
+        m_dot=gm.units.Quantity(0.5, "kg/s"),
+        T=gm.units.Quantity(313.15, "K"),
+        p=gm.units.Quantity(3e5, "Pa"),
+    )
     state, _ = plant.step(None, 900, _inlets(cold, DISCHARGE))
     state, result = plant.step(state, 900, _inlets(cold, DISCHARGE))
     storage = reading(result.children["storage"])
@@ -195,8 +218,16 @@ def test_composite_step_charges_the_tank():
 def _rows():
     return [
         dict(
-            charge_in=Stream(m_dot=charge, T=353.15, p=3e5),
-            discharge_in=Stream(m_dot=discharge, T=313.15, p=3e5),
+            charge_in=Stream(
+                m_dot=gm.units.Quantity(charge, "kg/s"),
+                T=gm.units.Quantity(353.15, "K"),
+                p=gm.units.Quantity(3e5, "Pa"),
+            ),
+            discharge_in=Stream(
+                m_dot=gm.units.Quantity(discharge, "kg/s"),
+                T=gm.units.Quantity(313.15, "K"),
+                p=gm.units.Quantity(3e5, "Pa"),
+            ),
             air_in=air(ambient),
         )
         for charge, discharge, ambient in [(1.0, 0.5, 293.15), (0, 0.5, 303.15), (0, 0, 273.15)]
@@ -232,7 +263,10 @@ def test_thermal_storage_advance_matches_per_row(monkeypatch):
         for t, row in zip(temperatures, rows)
     ]
     stacked = [
-        Stream(**{f: np.array([getattr(row[n], f) for row in rows]) for f in ("m_dot", "T", "p")})
+        Stream._si(
+            **{f: np.array([getattr(row[n], f) for row in rows]) for f in ("m_dot", "T", "p")},
+            fluid=rows[0][n].fluid,
+        )
         for n in ("charge_in", "discharge_in")
     ]
     ambient = np.array([row["air_in"].T for row in rows])

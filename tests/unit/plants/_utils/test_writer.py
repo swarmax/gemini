@@ -2,6 +2,7 @@
 
 import gemini as gm
 from gemini.modules._utils.serialization import tree_params
+from tests.fixtures import si
 from tests.fixtures.designs import with_values
 
 
@@ -10,7 +11,7 @@ def test_a_stated_unit_string_stays_while_the_value_is_unchanged():
     plant = gm.Plant("Units")
     plant.add("Pipe", "pipe", params={"length": {"value": 100, "unit": "ft"}})
     assert plant.to_dict()["modules"]["pipe"]["params"] == {"length": {"value": 100, "unit": "ft"}}
-    plant.set_params("pipe", {"length": 1500.0})
+    si.set_params(plant, "pipe", {"length": 1500.0})
     assert plant.to_dict()["modules"]["pipe"]["params"] == {
         "length": {"value": 1500.0, "unit": "m"}
     }
@@ -21,7 +22,7 @@ def test_a_value_set_since_is_added():
     plant = gm.Plant("Added")
     plant.add("Pipe", "pipe")
     assert plant.to_dict()["modules"]["pipe"] == {"type": "Pipe", "params": {}}
-    plant.set_params("pipe", {"inner_diameter": 0.3})
+    si.set_params(plant, "pipe", {"inner_diameter": 0.3})
     assert plant.to_dict()["modules"]["pipe"]["params"] == {
         "inner_diameter": {"value": 0.3, "unit": "m"}
     }

@@ -84,7 +84,7 @@ def test_a_plant_inlet_field_is_an_input():
     plant.set_inputs(
         {
             "return_in.T": {"value": 40, "unit": "degC"},
-            "return_in.m_dot": 30,
+            "return_in.m_dot": gm.units.Quantity(30, "kg/s"),
             "return_in.p": {"value": 20, "unit": "bar"},
         }
     )

@@ -17,7 +17,8 @@ from gemini.modules.wells import InjectionWell, ProductionWell
 from gemini.physics import chemistry, corrosion, erosion, geometry, heat_transfer, hydraulics
 from gemini.types.flows import Stream
 from gemini.types.fluid import Fluid
-from tests.fixtures import FIXTURES
+from gemini.units import Quantity
+from tests.fixtures import FIXTURES, si
 from tests.fixtures.designs import WELL
 from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.old_names import RENAMED_NAMES
@@ -54,7 +55,9 @@ def assert_values(actual, expected):
 def configured(module_class, parameters):
     """Build a standalone module and set its parameters as explicit values."""
     module = module_class()
-    module.set_params("", {RENAMED_NAMES.get(key, key): value for key, value in parameters.items()})
+    si.set_params(
+        module, "", {RENAMED_NAMES.get(key, key): value for key, value in parameters.items()}
+    )
     return module
 
 
@@ -89,7 +92,11 @@ def _esp(parameters, inputs):
     """Evaluate the ESP polynomial at one frequency; efficiency in percent as captured."""
     outputs = configured(ESP, ESP_MODULE | parameters)(
         frequency=inputs["pump_freq"],
-        fluid_in=Stream(m_dot=inputs["pump_flow"] * 1000, T=300, p=1e5),
+        fluid_in=Stream(
+            m_dot=Quantity(inputs["pump_flow"] * 1000, "kg/s"),
+            T=Quantity(300, "K"),
+            p=Quantity(1e5, "Pa"),
+        ),
     ).outputs
     return dict(pump_head=outputs.head, pump_power=outputs.power, pump_eff=outputs.efficiency * 100)
 
@@ -113,7 +120,13 @@ def _reservoir_parameters():
 def _injection_ipr(inputs):
     """Evaluate the injection inflow performance at one sandface flow."""
     reservoir = configured(InjectionReservoir, _reservoir_parameters())
-    outputs = reservoir(sandface_in=Stream(m_dot=inputs["flow"] * 1000, T=300, p=23e6)).outputs
+    outputs = reservoir(
+        sandface_in=Stream(
+            m_dot=Quantity(inputs["flow"] * 1000, "kg/s"),
+            T=Quantity(300, "K"),
+            p=Quantity(23e6, "Pa"),
+        )
+    ).outputs
     return dict(bottomhole_pressure=outputs.bottomhole_pressure)
 
 
@@ -142,7 +155,10 @@ def _reservoir_dp(inputs):
     """Evaluate hydrostatic, skin, flow and radial pressure terms with measured fluid data."""
     parameters = _reservoir_parameters() | dict(skin=inputs["skin_factor"])
     reservoir = configured(ProductionReservoir, parameters)
-    reservoir.fluid = Fluid(density=inputs["density"], viscosity=inputs["viscosity"])
+    reservoir.fluid = Fluid(
+        density=Quantity(inputs["density"], "kg/m3"),
+        viscosity=Quantity(inputs["viscosity"], "Pa.s"),
+    )
     outputs = reservoir(production_rate=inputs["flow"] * inputs["density"]).outputs
     return dict(
         Hydrostatic_dp=outputs.hydrostatic_pressure_drop,
@@ -197,7 +213,11 @@ def _well(is_production, parameters, inputs):
             **({"segment": "full"} if is_production else {}),
         ),
     )
-    stream = Stream(m_dot=inputs["flowrate"] * 1000, p=inputs["pressure"], T=inputs["temperature"])
+    stream = Stream(
+        m_dot=Quantity(inputs["flowrate"] * 1000, "kg/s"),
+        p=Quantity(inputs["pressure"], "Pa"),
+        T=Quantity(inputs["temperature"], "K"),
+    )
     evaluated = well(**{inlet: stream})
     outputs, outlet_stream = evaluated.outputs, evaluated.outlets[outlet]
     return dict(

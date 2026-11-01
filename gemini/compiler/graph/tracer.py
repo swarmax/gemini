@@ -277,7 +277,7 @@ def _record_outlet(graph, port, value):
 def _inlet(graph, name, fluid):
     """Return the traced stream of one inlet: graph inputs for its fields, the fixed fluid."""
     fields = {field: graph.input(f"{name}.{field}", "inlet", unit) for field, unit in STREAM_FIELDS}
-    return Stream(fluid=fluid, **fields)
+    return Stream._si(fluid=fluid, **fields)
 
 
 def _parameters(graph, module, prefix):

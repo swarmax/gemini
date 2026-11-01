@@ -11,7 +11,11 @@ from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
-INLET = Stream(m_dot=50, T=340, p=8e5)
+INLET = Stream(
+    m_dot=gm.units.Quantity(50, "kg/s"),
+    T=gm.units.Quantity(340, "K"),
+    p=gm.units.Quantity(8e5, "Pa"),
+)
 
 
 PRODUCT = ChemicalGrid()._offered()["chemical_out"]
@@ -49,7 +53,15 @@ def test_inhibitordosing_matches_traced():
     """The dosing rates trace and equal one call per row."""
     module = InhibitorDosing().set_params("", {"product_concentration": 0.4})
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=300, p=1e6), chemical_in=PRODUCT, dose=dose)
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e6, "Pa"),
+            ),
+            chemical_in=PRODUCT,
+            dose=dose,
+        )
         for m_dot, dose in [(0, 1e-5), (10, 0), (50, 2e-5)]
     ]
     assert_module_matches(module, rows)

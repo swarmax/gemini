@@ -246,7 +246,7 @@ class ProductionReservoir(_Reservoir):
             production_rate, self.fluid.properties(self.pressure, self.temperature).rho_l
         )
         p_bh = hydraulics.productivity_pressure(self.pressure, flow, self.productivity_index)
-        return Stream(m_dot=production_rate, T=self.temperature, p=p_bh, fluid=self.fluid)
+        return Stream._si(m_dot=production_rate, T=self.temperature, p=p_bh, fluid=self.fluid)
 
 
 class InjectionReservoir(_Reservoir):

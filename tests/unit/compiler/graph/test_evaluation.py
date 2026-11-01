@@ -11,9 +11,9 @@ from gemini.errors import PhysicsError, ValidationError
 
 def _inlet(rows):
     return gm.Stream(
-        m_dot=np.ones(rows),
-        T=np.linspace(300.0, 310.0, rows),
-        p=np.linspace(1e5, 2e5, rows),
+        m_dot=gm.units.Quantity(np.ones(rows), "kg/s"),
+        T=gm.units.Quantity(np.linspace(300.0, 310.0, rows), "K"),
+        p=gm.units.Quantity(np.linspace(1e5, 2e5, rows), "Pa"),
         fluid=gm.WATER,
     )
 
@@ -52,7 +52,12 @@ def test_result_rows_equal_direct_calls(line, backend):
     result = _evaluation(line, {"boost": boosts}, 3, backend).result
     inlet = _inlet(3)
     for index in range(3):
-        stream = gm.Stream(m_dot=1.0, T=inlet.T[index], p=inlet.p[index], fluid=inlet.fluid)
+        stream = gm.Stream(
+            m_dot=gm.units.Quantity(1.0, "kg/s"),
+            T=gm.units.Quantity(inlet.T[index], "K"),
+            p=gm.units.Quantity(inlet.p[index], "Pa"),
+            fluid=inlet.fluid,
+        )
         direct = line(fluid_in=stream, boost=boosts[index])
         row = result.row(index)
         assert row.outputs.rise == direct.outputs.rise

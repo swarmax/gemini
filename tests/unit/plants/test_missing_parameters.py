@@ -91,5 +91,5 @@ def test_the_start_of_a_design_state_is_a_parameter_that_can_be_missing():
     tank = gm.modules.ThermalStorage()
     with raises(gm.errors.ValidationError, "missing_value", match="initial_temperature"):
         tank.initial_state()
-    tank.set_params("", {"initial_temperature": 300.0})
+    tank.set_params("", {"initial_temperature": gm.units.Quantity(300.0, "K")})
     assert tank.initial_state() == {"temperature": 300.0}

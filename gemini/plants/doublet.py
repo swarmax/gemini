@@ -165,21 +165,21 @@ class Doublet(Equipment, Plant):
             description="Production minus injection liquid volume flow",
         )
 
-    def set_params(self, path, params, valid_from=None):
+    def _set_si_params(self, path, params, valid_from=None):
         """Derive the children's values from the design, unless the same call states them."""
         if path:
-            return super().set_params(path, params, valid_from)
+            return super()._set_si_params(path, params, valid_from)
         fluid = self.fluid.properties(0, 0)
         values = {"drainage_radius": None, "roughness": None} | self._own_values(params, valid_from)
         if self._lacking(values):
-            return super().set_params("", params, valid_from)
+            return super()._set_si_params("", params, valid_from)
         skins = self._skins(params)
         if values["drainage_radius"] is None or None in skins.values():
             values = values | dict.fromkeys(doublet.FLOW_PATH)
         derived = doublet.design(
             values, fluid.rho_l, fluid.mu_l, skins, self._stated_pressure(params)
         )
-        return super().set_params("", self._keep_derived(derived, params) | params, valid_from)
+        return super()._set_si_params("", self._keep_derived(derived, params) | params, valid_from)
 
     def _skins(self, params):
         """Return the skin of each reservoir: stated by this call, else stored, else ``None``."""

@@ -116,7 +116,14 @@ class Circuit(Plant):
         self.connect("pump.loss_out", "loss_out")
         self.connect("relaxer.fluid_out", "pump.fluid_in")
         self.connect("pump.fluid_out", "relaxer.fluid_in")
-        self.pump.set_params("", {"flow": 2.0, "pressure_rise": 1e4, "loop_pressure": 2e5})
+        self.pump.set_params(
+            "",
+            {
+                "flow": gm.units.Quantity(2.0, "kg/s"),
+                "pressure_rise": gm.units.Quantity(1e4, "Pa"),
+                "loop_pressure": gm.units.Quantity(2e5, "Pa"),
+            },
+        )
 
 
 class Drifting(Relaxer):
@@ -243,7 +250,7 @@ def test_two_copies_with_other_parameters_share_one_trace():
     cache = GraphCache()
     first = _circuit()
     second = _circuit()
-    second.pump.set_params("", {"flow": 3.0})
+    second.pump.set_params("", {"flow": gm.units.Quantity(3.0, "kg/s")})
     one, _ = _compiled(first, FULL, cache=cache)
     two, other = _compiled(second, FULL, cache=cache)
     assert one is two and cache.traces == 1

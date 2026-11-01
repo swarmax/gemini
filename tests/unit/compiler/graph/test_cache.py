@@ -13,8 +13,12 @@ from tests.fixtures.designs import with_values
 def _wired(first, second):
     """Return a plant of two valves in series, ``first`` then ``second``."""
     plant = gm.Plant("series")
-    plant.add("Valve", name="a", params={"flow_coefficient": 1e-3})
-    plant.add("Valve", name="b", params={"flow_coefficient": 2e-3})
+    plant.add(
+        "Valve", name="a", params={"flow_coefficient": gm.units.Quantity(1e-3, "m3/s/Pa^0.5")}
+    )
+    plant.add(
+        "Valve", name="b", params={"flow_coefficient": gm.units.Quantity(2e-3, "m3/s/Pa^0.5")}
+    )
     plant.connect("fluid_in", f"{first}.fluid_in")
     plant.connect(f"{first}.fluid_out", f"{second}.fluid_in")
     plant.connect(f"{second}.fluid_out", "fluid_out")
@@ -22,7 +26,14 @@ def _wired(first, second):
 
 
 def _inlets(fluid):
-    return {"fluid_in": gm.Stream(m_dot=np.ones(2), T=np.full(2, 300.0), p=np.ones(2), fluid=fluid)}
+    return {
+        "fluid_in": gm.Stream(
+            m_dot=gm.units.Quantity(np.ones(2), "kg/s"),
+            T=gm.units.Quantity(np.full(2, 300.0), "K"),
+            p=gm.units.Quantity(np.ones(2), "Pa"),
+            fluid=fluid,
+        )
+    }
 
 
 def test_numeric_parameter_values_do_not_retrace_but_guards_do(gain):

@@ -69,7 +69,7 @@ def test_a_recalibrated_injectivity_reproduces_the_fitted_injection():
     bottom = doublet.injector(wellhead_in=FITTED_INJECTION).outlets.bottom_out
     flow = abs(bottom.m_dot) / doublet.sink.fluid.properties(bottom.p, bottom.T).rho_l
     index = doublet.sink.injectivity_from_measurements(flow, bottom.p)
-    doublet.sink.set_params("", {"injectivity_index": index})
+    doublet.sink.set_params("", {"injectivity_index": gm.units.Quantity(index, "m3/s/Pa")})
     outputs = plant(return_in=SECONDARY).children["doublet.injection_pump"].outputs
     assert round(gm.units.convert(index, "m3/s/Pa", "m3/h/bar"), 4) == 2.843
     assert round(outputs.get("discharge_pressure", unit="bar"), 2) == 44.47

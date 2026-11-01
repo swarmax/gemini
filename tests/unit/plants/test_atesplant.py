@@ -13,7 +13,11 @@ from tests.fixtures.reading import reading
 
 CP = 4217.4
 HOUR = 3600.0
-SUMMER = Stream(m_dot=40.0, T=290.15, p=3e5)
+SUMMER = Stream(
+    m_dot=gm.units.Quantity(40.0, "kg/s"),
+    T=gm.units.Quantity(290.15, "K"),
+    p=gm.units.Quantity(3e5, "Pa"),
+)
 WINTER = SUMMER.with_(T=303.15)
 
 
@@ -32,12 +36,12 @@ def _plant(mode="charge"):
     plant.storage.set_params(
         "",
         {
-            "groundwater_pressure": 3e5,
-            "aquifer_temperature": 284.15,
-            "aquifer_thickness": 30,
+            "groundwater_pressure": gm.units.Quantity(3e5, "Pa"),
+            "aquifer_temperature": gm.units.Quantity(284.15, "K"),
+            "aquifer_thickness": gm.units.Quantity(30, "m"),
             "porosity": 0.3,
-            "rock_volumetric_heat_capacity": 2.0e6,
-            "ground_conductivity": 2.5,
+            "rock_volumetric_heat_capacity": gm.units.Quantity(2.0e6, "J/m3/K"),
+            "ground_conductivity": gm.units.Quantity(2.5, "W/m/K"),
         },
     )
     _season(plant, mode)
@@ -45,9 +49,9 @@ def _plant(mode="charge"):
         "",
         {
             "head_coefficients": [3e5, 0.0, -1e8],
-            "rated_frequency": 50,
+            "rated_frequency": gm.units.Quantity(50, "Hz"),
             "best_efficiency": 0.7,
-            "best_efficiency_flow": 0.03,
+            "best_efficiency_flow": gm.units.Quantity(0.03, "m3/s"),
             "motor_efficiency": 0.9,
         },
     )
@@ -55,14 +59,14 @@ def _plant(mode="charge"):
     plant.heat_exchanger.set_params(
         "",
         {
-            "thermal_conductance": 1e6,
-            "hot_nominal_pressure_drop": 3e4,
-            "cold_nominal_pressure_drop": 3e4,
-            "hot_nominal_mass_flow": 40,
-            "cold_nominal_mass_flow": 30,
+            "thermal_conductance": gm.units.Quantity(1e6, "W/K"),
+            "hot_nominal_pressure_drop": gm.units.Quantity(3e4, "Pa"),
+            "cold_nominal_pressure_drop": gm.units.Quantity(3e4, "Pa"),
+            "hot_nominal_mass_flow": gm.units.Quantity(40, "kg/s"),
+            "cold_nominal_mass_flow": gm.units.Quantity(30, "kg/s"),
         },
     )
-    plant.heat_pump.set_params("", {"mode": "heating", "capacity": 2e6})
+    plant.heat_pump.set_params("", {"mode": "heating", "capacity": gm.units.Quantity(2e6, "W")})
     plant.heat_pump.temperature_setpoint = 313.15
     return plant
 

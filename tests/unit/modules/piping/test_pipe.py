@@ -8,13 +8,18 @@ import gemini as gm
 from gemini.modules import energy_balance, mass_balance
 from gemini.modules.piping import Pipe
 from gemini.types import Fluid, Stream
+from tests.fixtures import si
 from tests.fixtures.air import air
 from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
-STREAM = Stream(m_dot=10, T=353.15, p=5e5)
+STREAM = Stream(
+    m_dot=gm.units.Quantity(10, "kg/s"),
+    T=gm.units.Quantity(353.15, "K"),
+    p=gm.units.Quantity(5e5, "Pa"),
+)
 
 
 def pipe(**changes):
@@ -22,7 +27,7 @@ def pipe(**changes):
     params = dict(
         length=1000, inner_diameter=0.1, elevation_change=5, heat_transfer_coefficient=1.0
     )
-    return with_values(Pipe()).set_params("", params | changes)
+    return si.set_params(with_values(Pipe()), "", params | changes)
 
 
 def test_turbulent_flow_matches_hand_calculation():
@@ -110,7 +115,14 @@ def test_invalid_inputs_raise():
 def test_pipe_matches_traced_across_regimes():
     """Laminar, transition, turbulent, stopped and heat-absorbing rows equal one call per row."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=T, p=5e5), air_in=air(ambient))
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(T, "K"),
+                p=gm.units.Quantity(5e5, "Pa"),
+            ),
+            air_in=air(ambient),
+        )
         for m_dot, T, ambient in [
             (0.05, 353.15, 283.15),
             (0.08, 353.15, 283.15),

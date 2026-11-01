@@ -36,7 +36,9 @@ DESIGN = {
     "nominal_wellhead_pressure": {"value": 10, "unit": "bar"},
 } | ESP_DESIGN
 PRICES = {"electricity": Quantity(100, "EUR/MWh"), "gas": Quantity(40, "EUR/MWh")}
-BRINE = gm.Fluid(density=1030.0, viscosity=4e-4).properties(0, 0)
+BRINE = gm.Fluid(density=Quantity(1030.0, "kg/m3"), viscosity=Quantity(4e-4, "Pa.s")).properties(
+    0, 0
+)
 HEAT_PER_FLOW = BRINE.rho_l * BRINE.cp_l * 40.0
 FULL = 300 / 3600 * HEAT_PER_FLOW
 
@@ -127,11 +129,11 @@ def plant_of_two(names=("d0", "d1")):
         "HeatExchanger",
         name="hx",
         params=dict(
-            thermal_conductance=2e6,
-            hot_nominal_pressure_drop=0,
-            cold_nominal_pressure_drop=0,
-            hot_nominal_mass_flow=170.0,
-            cold_nominal_mass_flow=170.0,
+            thermal_conductance=Quantity(2e6, "W/K"),
+            hot_nominal_pressure_drop=Quantity(0, "Pa"),
+            cold_nominal_pressure_drop=Quantity(0, "Pa"),
+            hot_nominal_mass_flow=Quantity(170.0, "kg/s"),
+            cold_nominal_mass_flow=Quantity(170.0, "kg/s"),
         ),
     )
     plant.add("Splitter", name="injection")

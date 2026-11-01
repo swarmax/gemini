@@ -14,6 +14,8 @@ from gemini.modules.subsurface import InjectionReservoir, ProductionReservoir
 from gemini.modules.wells import InjectionWell, ProductionWell
 from gemini.physics.geometry import build_path, section_values
 from gemini.types.flows import Stream
+from gemini.units import Quantity
+from tests.fixtures import si
 from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 from tests.fixtures.esp_design import ESP_MODULE
@@ -60,13 +62,21 @@ def segment_of(path, segment):
 @pytest.fixture(scope="module")
 def producer():
     """Return reservoir, lower well, ESP and riser of the upstream producer."""
-    reservoir = with_values(ProductionReservoir()).set_params(
-        "", {"pressure": 250e5, "productivity_index": INDEX, "top_depth": 2400, **RESERVOIR}
+    reservoir = si.set_params(
+        with_values(ProductionReservoir()),
+        "",
+        {
+            "pressure": Quantity(250e5, "Pa"),
+            "productivity_index": Quantity(INDEX, "m3/s/Pa"),
+            "top_depth": Quantity(2400, "m"),
+            **RESERVOIR,
+        },
     )
     path = vertical_path(2400)
-    well = with_values(ProductionWell()).set_params("", segment_of(path, "below_esp"))
-    riser = with_values(ProductionWell()).set_params("", segment_of(path, "above_esp"))
-    esp = ESP().set_params(
+    well = si.set_params(with_values(ProductionWell()), "", segment_of(path, "below_esp"))
+    riser = si.set_params(with_values(ProductionWell()), "", segment_of(path, "above_esp"))
+    esp = si.set_params(
+        ESP(),
         "",
         ESP_MODULE
         | {
@@ -95,11 +105,20 @@ def producer():
 @pytest.fixture(scope="module")
 def injector():
     """Return the upstream injection well and receiving aquifer."""
-    well = with_values(InjectionWell()).set_params(
-        "", {**section_values(vertical_path(3100)), "soil_temperature": 293.15}
+    well = si.set_params(
+        with_values(InjectionWell()),
+        "",
+        {**section_values(vertical_path(3100)), "soil_temperature": Quantity(293.15, "K")},
     )
-    sink = with_values(InjectionReservoir()).set_params(
-        "", {"pressure": 240e5, "injectivity_index": INDEX, "top_depth": 3100, **RESERVOIR}
+    sink = si.set_params(
+        with_values(InjectionReservoir()),
+        "",
+        {
+            "pressure": Quantity(240e5, "Pa"),
+            "injectivity_index": Quantity(INDEX, "m3/s/Pa"),
+            "top_depth": Quantity(3100, "m"),
+            **RESERVOIR,
+        },
     )
     return well, sink
 
@@ -139,11 +158,24 @@ def test_production_rate_and_esp_power_match_the_upstream_reference(producer):
 
 def test_production_rate_without_esp():
     """A free-flowing well solves the same balance through one full-length segment."""
-    reservoir = with_values(ProductionReservoir()).set_params(
-        "", {"pressure": 250e5, "productivity_index": INDEX, "top_depth": 2400, **RESERVOIR}
+    reservoir = si.set_params(
+        with_values(ProductionReservoir()),
+        "",
+        {
+            "pressure": Quantity(250e5, "Pa"),
+            "productivity_index": Quantity(INDEX, "m3/s/Pa"),
+            "top_depth": Quantity(2400, "m"),
+            **RESERVOIR,
+        },
     )
-    well = with_values(ProductionWell()).set_params(
-        "", {**section_values(vertical_path(2400)), "soil_temperature": 293.15, "segment": "full"}
+    well = si.set_params(
+        with_values(ProductionWell()),
+        "",
+        {
+            **section_values(vertical_path(2400)),
+            "soil_temperature": Quantity(293.15, "K"),
+            "segment": "full",
+        },
     )
     rate = nodal.solve_production_rate(reservoir, well, 3e5, (1, 60))
     arrived = well(bottom_in=reservoir.sandface_stream(rate)).outlets.wellhead_out
@@ -153,7 +185,7 @@ def test_production_rate_without_esp():
 def test_injection_rate_balances_well_and_aquifer(injector):
     """The solved rate makes the well's bottom pressure the aquifer's required pressure."""
     well, sink = injector
-    wellhead = Stream(m_dot=1, T=293.15, p=1e5)
+    wellhead = Stream(m_dot=Quantity(1, "kg/s"), T=Quantity(293.15, "K"), p=Quantity(1e5, "Pa"))
     rate = nodal.solve_injection_rate(well, sink, wellhead, (1, 200))
     bottom = well(wellhead_in=wellhead.with_(m_dot=rate)).outlets.bottom_out
     assert bottom.p == pytest.approx(sink.required_pressure(bottom), abs=1e-3)
@@ -161,13 +193,24 @@ def test_injection_rate_balances_well_and_aquifer(injector):
 
 def test_injection_pressure_balances_a_shallow_injector():
     """A 2000 m injector into a 230 bar aquifer needs a pump; the solved pressure balances."""
-    well = with_values(InjectionWell()).set_params(
-        "", {**section_values(vertical_path(2000)), "soil_temperature": 293.15}
+    well = si.set_params(
+        with_values(InjectionWell()),
+        "",
+        {**section_values(vertical_path(2000)), "soil_temperature": Quantity(293.15, "K")},
     )
-    sink = with_values(InjectionReservoir()).set_params(
-        "", {"pressure": 230e5, "injectivity_index": INDEX, "top_depth": 2000, **RESERVOIR}
+    sink = si.set_params(
+        with_values(InjectionReservoir()),
+        "",
+        {
+            "pressure": Quantity(230e5, "Pa"),
+            "injectivity_index": Quantity(INDEX, "m3/s/Pa"),
+            "top_depth": Quantity(2000, "m"),
+            **RESERVOIR,
+        },
     )
-    wellhead = Stream(flow={"value": 129.02, "unit": "m3/h"}, T=293.15, p=2e5)
+    wellhead = Stream(
+        flow={"value": 129.02, "unit": "m3/h"}, T=Quantity(293.15, "K"), p=Quantity(2e5, "Pa")
+    )
     pressure = nodal.solve_injection_pressure(well, sink, wellhead, (2e5, 1e8))
     assert pressure > 2e5
     bottom = well(wellhead_in=wellhead.with_(p=pressure)).outlets.bottom_out
@@ -181,7 +224,9 @@ def test_deep_injector_needs_no_pump_and_draws_no_power(injector):
     electricity.
     """
     well, sink = injector
-    wellhead = Stream(flow={"value": 129.02, "unit": "m3/h"}, T=293.15, p=1e3)
+    wellhead = Stream(
+        flow={"value": 129.02, "unit": "m3/h"}, T=Quantity(293.15, "K"), p=Quantity(1e3, "Pa")
+    )
     assert nodal.solve_injection_pressure(well, sink, wellhead, (1e3, 1e8)) is None
     pump = InjectionPump().set_params("", {"pump_type": "unspecified", "efficiency": 0.8})
     result = pump(fluid_in=wellhead, pressure_setpoint=wellhead.p)
@@ -225,13 +270,24 @@ def test_injection_pressure_gap_to_upstream_is_the_friction_sign():
         (2327, 1883, 0.0995668),
     ]
     rows = [dict(MD=md, TVD=tvd, ID=bore, roughness=2e-5) for md, tvd, bore in stations]
-    well = with_values(InjectionWell()).set_params(
-        "", {**section_values(build_path(rows)), "soil_temperature": 293.15}
+    well = si.set_params(
+        with_values(InjectionWell()),
+        "",
+        {**section_values(build_path(rows)), "soil_temperature": Quantity(293.15, "K")},
     )
-    sink = with_values(InjectionReservoir()).set_params(
-        "", {"pressure": 180e5, "injectivity_index": 2.3 / 3.6e8, "top_depth": 1883, **RESERVOIR}
+    sink = si.set_params(
+        with_values(InjectionReservoir()),
+        "",
+        {
+            "pressure": Quantity(180e5, "Pa"),
+            "injectivity_index": Quantity(2.3 / 3.6e8, "m3/s/Pa"),
+            "top_depth": Quantity(1883, "m"),
+            **RESERVOIR,
+        },
     )
-    wellhead = Stream(flow={"value": 125.1, "unit": "m3/h"}, T=343.15, p=1e5)
+    wellhead = Stream(
+        flow={"value": 125.1, "unit": "m3/h"}, T=Quantity(343.15, "K"), p=Quantity(1e5, "Pa")
+    )
     pressure = nodal.solve_injection_pressure(well, sink, wellhead, (1e5, 1e8))
     out = reading(well(wellhead_in=wellhead.with_(p=pressure)))
     assert out.friction_pressure_drop == pytest.approx(-5.197358519692272e5, rel=1e-9)

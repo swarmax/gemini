@@ -8,9 +8,17 @@ from gemini.modules import Atmosphere
 from gemini.physics import gas
 from tests.fixtures.equivalence import assert_module_matches
 
-FLUE = gm.Stream(m_dot=0.2, T=330.0, p=1e5, fluid=gm.Fluid(kind="gas", gas_composition={"CO2": 1}))
+FLUE = gm.Stream(
+    m_dot=gm.units.Quantity(0.2, "kg/s"),
+    T=gm.units.Quantity(330.0, "K"),
+    p=gm.units.Quantity(1e5, "Pa"),
+    fluid=gm.Fluid(kind="gas", gas_composition={"CO2": 1}),
+)
 RELEASED = gm.Stream(
-    m_dot=0.1, T=330.0, p=1e5, fluid=gm.Fluid(kind="gas", gas_composition={"CH4": 0.8, "CO2": 0.2})
+    m_dot=gm.units.Quantity(0.1, "kg/s"),
+    T=gm.units.Quantity(330.0, "K"),
+    p=gm.units.Quantity(1e5, "Pa"),
+    fluid=gm.Fluid(kind="gas", gas_composition={"CH4": 0.8, "CO2": 0.2}),
 )
 
 

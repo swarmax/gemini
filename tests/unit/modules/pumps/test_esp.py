@@ -10,6 +10,7 @@ from gemini.errors import PhysicsError
 from gemini.modules.pumps import ESP
 from gemini.ops import kernels
 from gemini.types.flows import Stream
+from tests.fixtures import si
 from tests.fixtures.equivalence import assert_health_matches, assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.esp_design import ESP_MODULE
@@ -39,14 +40,14 @@ ESP_PARAMS = ESP_MODULE | {
 
 def test_original_nonzero_power_reference():
     """Preserve the original 200 m3/h, 60 Hz reference beyond the zero-power example."""
-    output = (
-        ESP()
-        .set_params("", ESP_PARAMS)(
-            frequency=60,
-            fluid_in=Stream(m_dot=units.m3h_to_m3s(200) * 1000, T=300, p=100000),
-        )
-        .outputs
-    )
+    output = si.set_params(ESP(), "", ESP_PARAMS)(
+        frequency=60,
+        fluid_in=Stream(
+            m_dot=gm.units.Quantity(units.m3h_to_m3s(200) * 1000, "kg/s"),
+            T=gm.units.Quantity(300, "K"),
+            p=gm.units.Quantity(100000, "Pa"),
+        ),
+    ).outputs
     assert units.pa_to_bar(output.head) == pytest.approx(23.37, abs=0.01)
     assert output.power == pytest.approx(183890, abs=10)
     assert output.efficiency == pytest.approx(0.7053, abs=0.0001)
@@ -54,14 +55,21 @@ def test_original_nonzero_power_reference():
 
 def test_fit_recovers_curve_and_health_threshold():
     """Synthetic curve fitting predicts withheld operating points and flags measured drift."""
-    pump = ESP().set_params("", ESP_PARAMS)
+    pump = si.set_params(ESP(), "", ESP_PARAMS)
     flows = np.linspace(0.01, 0.06, 20)
     freq = np.linspace(40, 60, 20)
     heads = [pump.head_function(q, f) for q, f in zip(flows, freq)]
     fitted = analysis.fit_head_coefficients(flows, freq, heads, 12)["value"]
-    other = ESP().set_params("", dict(ESP_PARAMS, head_coefficients=fitted))
+    other = si.set_params(ESP(), "", dict(ESP_PARAMS, head_coefficients=fitted))
     assert other.head_function(0.037, 53) == pytest.approx(pump.head_function(0.037, 53), rel=1e-9)
-    result = pump(frequency=60, fluid_in=Stream(m_dot=40, T=300, p=1e5))
+    result = pump(
+        frequency=60,
+        fluid_in=Stream(
+            m_dot=gm.units.Quantity(40, "kg/s"),
+            T=gm.units.Quantity(300, "K"),
+            p=gm.units.Quantity(1e5, "Pa"),
+        ),
+    )
     power = result.outputs.power
     assert not pump.health(result, {"power": power}).alarm
     assert pump.health(result, {"power": power * 1.11}).alarm
@@ -73,8 +81,15 @@ def test_fit_recovers_curve_and_health_threshold():
 
 def test_the_esp_alone_asks_for_a_plain_scope_under_float32_precision():
     """Float32 keeps Python floats next to the float32 coefficients; a stopped pump still runs."""
-    esp = ESP().set_params("", ESP_PARAMS)
-    stopped = dict(frequency=60, fluid_in=Stream(m_dot=0.0, T=300, p=100000))
+    esp = si.set_params(ESP(), "", ESP_PARAMS)
+    stopped = dict(
+        frequency=60,
+        fluid_in=Stream(
+            m_dot=gm.units.Quantity(0.0, "kg/s"),
+            T=gm.units.Quantity(300, "K"),
+            p=gm.units.Quantity(100000, "Pa"),
+        ),
+    )
     assert esp._scalar_mode() == kernels.WRAP
     reference = esp(**stopped).outputs.efficiency
     with gm.runtime.settings(precision="float32"):
@@ -84,12 +99,30 @@ def test_the_esp_alone_asks_for_a_plain_scope_under_float32_precision():
 
 
 def _health_rows(pump, flows_kg_s):
-    return [pump(frequency=60, fluid_in=Stream(m_dot=m_dot, T=300, p=1e5)) for m_dot in flows_kg_s]
+    return [
+        pump(
+            frequency=60,
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            ),
+        )
+        for m_dot in flows_kg_s
+    ]
 
 
 def test_health_on_arrays_equals_one_call_per_row():
     """Worst key, drift, window and message of every row match, with and without drifts."""
-    pump = ESP().set_params("", {**ESP_PARAMS, "minimum_flow": 0.03, "maximum_flow": 0.07})
+    pump = si.set_params(
+        ESP(),
+        "",
+        {
+            **ESP_PARAMS,
+            "minimum_flow": gm.units.Quantity(0.03, "m3/s"),
+            "maximum_flow": gm.units.Quantity(0.07, "m3/s"),
+        },
+    )
     results = _health_rows(pump, [20.0, 40.0, 40.0, 60.0, 30.0])
     outputs = [result.outputs for result in results]
     scales = [(1.0, 1.3), (1.2, 0.5), (1.0, 1.0), (0.8, 1.5), (1.05, 0.99)]
@@ -105,17 +138,24 @@ def test_health_on_arrays_equals_one_call_per_row():
 def test_traced_call_matches_one_call_per_row_on_every_backend():
     """Low, nominal and high flow, a trickle and a low frequency, on every backend."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=300, p=1e5), frequency=frequency)
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            ),
+            frequency=frequency,
+        )
         for m_dot, frequency in ((5, 60), (60, 60), (200, 50), (60, 60), (1e-3, 60), (60, 35))
     ]
-    assert_module_matches(ESP().set_params("", ESP_PARAMS), rows)
+    assert_module_matches(si.set_params(ESP(), "", ESP_PARAMS), rows)
 
 
 def _design():
     """Return an ESP with the values of the example doublet."""
     design = example_plant("Doublet").esp
     values = {name: parameter.value for name, parameter in design.named_parameters()}
-    return ESP().set_params("", values)
+    return si.set_params(ESP(), "", values)
 
 
 def test_keyword_mapping_and_positional_calls_agree():
@@ -158,46 +198,119 @@ def test_a_new_esp_names_what_it_misses():
 
 def test_a_flow_where_the_curves_extrapolate_is_a_failed_row_with_the_code():
     """A head or power below zero is the polynomial outside its range: ``out_of_range``."""
-    pump = ESP().set_params("", ESP_PARAMS)
-    inside = pump(frequency=60, fluid_in=Stream(m_dot=55.0, T=300, p=1e5)).outputs
+    pump = si.set_params(ESP(), "", ESP_PARAMS)
+    inside = pump(
+        frequency=60,
+        fluid_in=Stream(
+            m_dot=gm.units.Quantity(55.0, "kg/s"),
+            T=gm.units.Quantity(300, "K"),
+            p=gm.units.Quantity(1e5, "Pa"),
+        ),
+    ).outputs
     assert inside.power > 0
     with raises(PhysicsError, "out_of_range", match=r"esp: flow = .*head and power at least 0"):
-        pump(frequency=60, fluid_in=Stream(m_dot=90.0, T=300, p=1e5))
+        pump(
+            frequency=60,
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(90.0, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            ),
+        )
 
 
 def test_a_negative_power_is_outside_the_curve():
     """A power polynomial below zero is the curve outside its range."""
     curves = {**ESP_PARAMS, "power_coefficients": [-10.0, 0, 0, 0, 0, 0]}
     with raises(PhysicsError, "out_of_range", match="head and power at least 0"):
-        ESP().set_params("", curves)(frequency=60, fluid_in=Stream(m_dot=40.0, T=300, p=1e5))
+        si.set_params(ESP(), "", curves)(
+            frequency=60,
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(40.0, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            ),
+        )
 
 
 def test_a_stopped_pump_is_inside_its_curve():
     """No flow is no extrapolation."""
-    pump = ESP().set_params("", ESP_PARAMS)
-    assert pump(frequency=60, fluid_in=Stream(m_dot=0.0, T=300, p=1e5)).outputs.efficiency == 0
+    pump = si.set_params(ESP(), "", ESP_PARAMS)
+    assert (
+        pump(
+            frequency=60,
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(0.0, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            ),
+        ).outputs.efficiency
+        == 0
+    )
 
 
 def test_a_flow_above_the_speed_scaled_maximum_flow_is_a_failed_row_with_the_range():
     """The curves are valid up to ``maximum_flow`` scaled by the speed; above, the row fails."""
-    pump = ESP().set_params("", {**ESP_PARAMS, "maximum_flow": 0.05})
-    assert pump(frequency=60, fluid_in=Stream(m_dot=45.0, T=300, p=1e5)).outputs.power > 0
+    pump = si.set_params(ESP(), "", {**ESP_PARAMS, "maximum_flow": gm.units.Quantity(0.05, "m3/s")})
+    assert (
+        pump(
+            frequency=60,
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(45.0, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            ),
+        ).outputs.power
+        > 0
+    )
     with raises(PhysicsError, "out_of_range", match=r"esp: flow = 0\.06.*0\.05"):
-        pump(frequency=60, fluid_in=Stream(m_dot=60.0, T=300, p=1e5))
+        pump(
+            frequency=60,
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(60.0, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            ),
+        )
     with raises(PhysicsError, "out_of_range"):
-        pump(frequency=30, fluid_in=Stream(m_dot=30.0, T=300, p=1e5))
+        pump(
+            frequency=30,
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(30.0, "kg/s"),
+                T=gm.units.Quantity(300, "K"),
+                p=gm.units.Quantity(1e5, "Pa"),
+            ),
+        )
 
 
 GASSY = gm.Fluid(
-    density=1030.0, gas_liquid_ratio={"value": 0.8, "unit": "Nm3/m3"}, gas_composition={"CH4": 1.0}
+    density=gm.units.Quantity(1030.0, "kg/m3"),
+    gas_liquid_ratio={"value": 0.8, "unit": "Nm3/m3"},
+    gas_composition={"CH4": 1.0},
 )
 
 
 def test_intake_pressure_and_gas_volume_fraction_follow_the_suction_stream():
     """The intake pressure is the suction pressure; the gas share falls as it rises."""
-    pump = ESP().set_params("", ESP_PARAMS)
-    low = pump(frequency=60, fluid_in=Stream(m_dot=40.0, T=330, p=2e5, fluid=GASSY)).outputs
-    high = pump(frequency=60, fluid_in=Stream(m_dot=40.0, T=330, p=40e5, fluid=GASSY)).outputs
+    pump = si.set_params(ESP(), "", ESP_PARAMS)
+    low = pump(
+        frequency=60,
+        fluid_in=Stream(
+            m_dot=gm.units.Quantity(40.0, "kg/s"),
+            T=gm.units.Quantity(330, "K"),
+            p=gm.units.Quantity(2e5, "Pa"),
+            fluid=GASSY,
+        ),
+    ).outputs
+    high = pump(
+        frequency=60,
+        fluid_in=Stream(
+            m_dot=gm.units.Quantity(40.0, "kg/s"),
+            T=gm.units.Quantity(330, "K"),
+            p=gm.units.Quantity(40e5, "Pa"),
+            fluid=GASSY,
+        ),
+    ).outputs
     assert low.intake_pressure == 2e5 and high.intake_pressure == 40e5
     assert 0 < high.gas_volume_fraction < low.gas_volume_fraction < 1
     rho = GASSY.gas_density_at(2e5, 330)
@@ -209,29 +322,60 @@ def test_intake_pressure_and_gas_volume_fraction_follow_the_suction_stream():
 
 def test_a_liquid_without_gas_has_no_gas_at_the_intake():
     """The constant-property brine has a zero fraction."""
-    pump = ESP().set_params("", ESP_PARAMS)
-    outputs = pump(frequency=60, fluid_in=Stream(m_dot=40.0, T=300, p=1e5)).outputs
+    pump = si.set_params(ESP(), "", ESP_PARAMS)
+    outputs = pump(
+        frequency=60,
+        fluid_in=Stream(
+            m_dot=gm.units.Quantity(40.0, "kg/s"),
+            T=gm.units.Quantity(300, "K"),
+            p=gm.units.Quantity(1e5, "Pa"),
+        ),
+    ).outputs
     assert outputs.gas_volume_fraction == 0 and outputs.intake_pressure == 1e5
 
 
 def test_a_stopped_pump_has_defined_intake_values():
     """No flow still has a pressure and a gas share at the intake."""
-    pump = ESP().set_params("", ESP_PARAMS)
-    outputs = pump(frequency=60, fluid_in=Stream(m_dot=0.0, T=330, p=3e5, fluid=GASSY)).outputs
+    pump = si.set_params(ESP(), "", ESP_PARAMS)
+    outputs = pump(
+        frequency=60,
+        fluid_in=Stream(
+            m_dot=gm.units.Quantity(0.0, "kg/s"),
+            T=gm.units.Quantity(330, "K"),
+            p=gm.units.Quantity(3e5, "Pa"),
+            fluid=GASSY,
+        ),
+    ).outputs
     assert outputs.intake_pressure == 3e5 and 0 < outputs.gas_volume_fraction < 1
 
 
 def test_intake_values_match_one_call_per_row_on_every_backend():
     """Gas and pressure over a range from near vacuum to deep, on every backend."""
     rows = [
-        dict(fluid_in=Stream(m_dot=m_dot, T=330, p=p, fluid=GASSY), frequency=60)
+        dict(
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(m_dot, "kg/s"),
+                T=gm.units.Quantity(330, "K"),
+                p=gm.units.Quantity(p, "Pa"),
+                fluid=GASSY,
+            ),
+            frequency=60,
+        )
         for m_dot, p in ((0.0, 1e3), (40, 2e5), (40, 40e5), (0.0, 5e5))
     ]
-    assert_module_matches(ESP().set_params("", ESP_PARAMS), rows)
+    assert_module_matches(si.set_params(ESP(), "", ESP_PARAMS), rows)
 
 
 def test_an_out_of_range_row_names_the_intake_that_inflated_its_flow():
     """The failure carries the intake pressure and the gas share, so a low suction is seen."""
-    pump = ESP().set_params("", {**ESP_PARAMS, "maximum_flow": 0.05})
+    pump = si.set_params(ESP(), "", {**ESP_PARAMS, "maximum_flow": gm.units.Quantity(0.05, "m3/s")})
     with raises(PhysicsError, "out_of_range", match=r"intake pressure = 20000\.0 Pa and gas.*"):
-        pump(frequency=60, fluid_in=Stream(m_dot=90.0, T=330, p=2e4, fluid=GASSY))
+        pump(
+            frequency=60,
+            fluid_in=Stream(
+                m_dot=gm.units.Quantity(90.0, "kg/s"),
+                T=gm.units.Quantity(330, "K"),
+                p=gm.units.Quantity(2e4, "Pa"),
+                fluid=GASSY,
+            ),
+        )

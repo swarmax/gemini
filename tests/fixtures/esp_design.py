@@ -15,6 +15,6 @@ The setting depth is not here: the design derives it.
 """
 
 ESP_MODULE = {name.removeprefix("esp."): value for name, value in ESP_DESIGN.items()} | {
-    "setting_depth": 0
+    "setting_depth": {"value": 0, "unit": "m"}
 }
 """The same values for an ESP set on its own, with the setting depth it had by default."""

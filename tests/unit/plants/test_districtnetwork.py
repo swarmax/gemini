@@ -14,8 +14,16 @@ from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
 
 CP = 4217.4
-HOT = Stream(m_dot=4.0, T=348.15, p=6e5)
-CHILLED = Stream(m_dot=6.0, T=279.15, p=6e5)
+HOT = Stream(
+    m_dot=gm.units.Quantity(4.0, "kg/s"),
+    T=gm.units.Quantity(348.15, "K"),
+    p=gm.units.Quantity(6e5, "Pa"),
+)
+CHILLED = Stream(
+    m_dot=gm.units.Quantity(6.0, "kg/s"),
+    T=gm.units.Quantity(279.15, "K"),
+    p=gm.units.Quantity(6e5, "Pa"),
+)
 
 
 def _network(**parameters):

@@ -364,7 +364,11 @@ def test_durations_are_the_ones_of_the_dictionary(fast_run_results):
 def fast_run_results():
     """Return the results of a small run of two ticks."""
     plant = gm.Plant("Hot")
-    plant.add("HeatingGrid", name="users", params={"minimum_return_temperature": 313.15})
+    plant.add(
+        "HeatingGrid",
+        name="users",
+        params={"minimum_return_temperature": gm.units.Quantity(313.15, "K")},
+    )
     plant.connect("in_port", "users.supply_in")
     plant.connect("users.return_out", "out_port")
     index = pd.date_range("2027-01-01", periods=2, freq="D", tz="UTC", name="time")

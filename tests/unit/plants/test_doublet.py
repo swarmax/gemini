@@ -10,6 +10,7 @@ from gemini import units
 from gemini.physics import constants, hydraulics
 from gemini.run._utils.apply import apply_case
 from gemini.types import Stream
+from tests.fixtures import si
 from tests.fixtures.balance import assert_plant_closes
 from tests.fixtures.designs import WELL
 from tests.fixtures.esp_design import ESP_DESIGN
@@ -26,7 +27,12 @@ def doublet(fresh_plant):
 
 def test_supply_is_the_riser_wellhead_and_return_reaches_the_sink(doublet):
     """Both limbs run once; electricity and heat loss sum over every leaf call."""
-    returned = Stream(m_dot=40, T=330, p=5e6, fluid=doublet.fluid)
+    returned = Stream(
+        m_dot=gm.units.Quantity(40, "kg/s"),
+        T=gm.units.Quantity(330, "K"),
+        p=gm.units.Quantity(5e6, "Pa"),
+        fluid=doublet.fluid,
+    )
     result = doublet(return_in=returned)
     leaves = result.leaves()
     assert result.outlets.supply_out == leaves["riser"].outlets.wellhead_out
@@ -95,7 +101,7 @@ def design_case():
 def designed(**extra):
     """Return a doublet in a plant, designed from its depth, in a brine of 1030 kg/m3."""
     plant = gm.Plant("Holder")
-    doublet = plant.add("Doublet", name="d0", params=DESIGN | extra)
+    doublet = si.add(plant, "Doublet", name="d0", values=DESIGN | extra)
     plant.connect("return_in", "d0.return_in")
     plant.connect("power_in", "d0.power_in")
     plant.connect("d0.supply_out", "supply_out")
@@ -166,7 +172,12 @@ def test_the_pump_is_sized_at_its_nominal_flow():
             "d0.esp.frequency": constants.ESP_REFERENCE_FREQUENCY,
         }
     )
-    returned = gm.Stream(m_dot=flow * 1030, T=320, p=5e6, fluid=BRINE)
+    returned = gm.Stream(
+        m_dot=gm.units.Quantity(flow * 1030, "kg/s"),
+        T=gm.units.Quantity(320, "K"),
+        p=gm.units.Quantity(5e6, "Pa"),
+        fluid=BRINE,
+    )
     result = plant(return_in=returned)
     assert result.outlets.supply_out.p == pytest.approx(10e5, rel=2e-2)
     esp = reading(result.leaves()["d0.esp"])
@@ -179,7 +190,9 @@ def test_the_pump_is_sized_at_its_nominal_flow():
 def test_setting_the_fluid_derives_again():
     """Pressure and index follow a fluid set after the design."""
     _, doublet = designed()
-    doublet.fluid = gm.Fluid(density=1000.0, viscosity=8e-4)
+    doublet.fluid = gm.Fluid(
+        density=gm.units.Quantity(1000.0, "kg/m3"), viscosity=gm.units.Quantity(8e-4, "Pa.s")
+    )
     assert doublet.reservoir.pressure == pytest.approx(1000 * 9.81 * 2500 + 101325)
     assert doublet.reservoir.fluid.density == 1000
     assert doublet.sink.fluid.viscosity == 8e-4
@@ -267,7 +280,7 @@ def test_the_volume_imbalance_of_a_balanced_doublet_is_zero():
     """Produced and injected liquid at one density: the gas leaves in between, the liquid stays."""
     doublet = gm.plants.Doublet()
     doublet.fluid = gm.Fluid(
-        density=1030,
+        density=gm.units.Quantity(1030, "kg/m3"),
         viscosity={"value": 0.4, "unit": "mPa*s"},
         gas_liquid_ratio=0.8,
         gas_composition={"CH4": 0.8, "CO2": 0.2},
@@ -277,7 +290,12 @@ def test_the_volume_imbalance_of_a_balanced_doublet_is_zero():
     doublet.esp.frequency = {"value": 60, "unit": "Hz"}
     liquid = doublet.fluid.with_gas_fraction(0.0)
     produced = doublet.fluid.properties(0, 0)
-    injected = gm.Stream(m_dot=80.0 * (1 - produced.gmf), T=320.0, p=5e6, fluid=liquid)
+    injected = gm.Stream(
+        m_dot=gm.units.Quantity(80.0 * (1 - produced.gmf), "kg/s"),
+        T=gm.units.Quantity(320.0, "K"),
+        p=gm.units.Quantity(5e6, "Pa"),
+        fluid=liquid,
+    )
     outputs = doublet(return_in=injected).outputs
     assert outputs.volume_imbalance == pytest.approx(0, abs=1e-14)
 
@@ -285,9 +303,16 @@ def test_the_volume_imbalance_of_a_balanced_doublet_is_zero():
 def test_the_volume_imbalance_is_produced_less_injected():
     """Less injected than produced is a positive imbalance."""
     doublet = gm.plants.Doublet()
-    doublet.fluid = gm.Fluid(density=1030, viscosity={"value": 0.4, "unit": "mPa*s"})
+    doublet.fluid = gm.Fluid(
+        density=gm.units.Quantity(1030, "kg/m3"), viscosity={"value": 0.4, "unit": "mPa*s"}
+    )
     doublet.set_params("", DESIGN | PUMP)
     doublet.reservoir.production_rate = 80.0
     doublet.esp.frequency = {"value": 60, "unit": "Hz"}
-    injected = gm.Stream(m_dot=70.0, T=320.0, p=5e6, fluid=doublet.fluid)
+    injected = gm.Stream(
+        m_dot=gm.units.Quantity(70.0, "kg/s"),
+        T=gm.units.Quantity(320.0, "K"),
+        p=gm.units.Quantity(5e6, "Pa"),
+        fluid=doublet.fluid,
+    )
     assert doublet(return_in=injected).outputs.volume_imbalance == pytest.approx(10 / 1030)

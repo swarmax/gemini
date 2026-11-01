@@ -135,7 +135,7 @@ def _probe_inputs(module, supplied):
 
 def _probe_fluids(module, inlets, inputs):
     """Run ``forward`` once on representative inlets and return the fluid of every outlet."""
-    streams = {port: Stream(**PROBE, fluid=inlets[port].fluid) for port in module._fed_inlets()}
+    streams = {port: Stream._si(**PROBE, fluid=inlets[port].fluid) for port in module._fed_inlets()}
     call = _Call(
         module=module,
         inputs=inputs,

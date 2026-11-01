@@ -24,7 +24,7 @@ def _kwargs(plant, path, row):
     kwargs = {name: values[0] for name, values in block.inputs.items()}
     for port, fluid in block.fluids.items():
         fields = {name: block.fields[port, name][0] for name in ("m_dot", "T", "p")}
-        kwargs[port] = Stream(**fields, fluid=fluid)
+        kwargs[port] = Stream._si(**fields, fluid=fluid)
     return kwargs
 
 

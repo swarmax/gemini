@@ -25,13 +25,13 @@ class Column(Plant):
         self.height = Parameter(Length | None, default=None)
         self.density = Parameter(Density | None, default=None)
 
-    def set_params(self, path, params, valid_from=None):
+    def _set_si_params(self, path, params, valid_from=None):
         """Derive the reservoir pressure, unless the same call states it."""
         if path:
-            return super().set_params(path, params, valid_from)
+            return super()._set_si_params(path, params, valid_from)
         values = self._own_values(params, valid_from)
         derived = {}
         if values["height"] is not None and values["density"] is not None:
             pressure = hydraulics.hydrostatic_dp(values["density"], values["height"])
             derived["reservoir.pressure"] = pressure
-        return super().set_params("", self._keep_derived(derived, params) | params, valid_from)
+        return super()._set_si_params("", self._keep_derived(derived, params) | params, valid_from)
