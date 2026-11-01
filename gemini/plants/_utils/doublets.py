@@ -42,7 +42,11 @@ class DoubletsPlant(Plant):
         self.injection_splitters = ModuleList(Splitter() for _ in range(doublets - 1))
 
         # Parameters
-        self.depth = Parameter(Length | None, default=None)
+        self.depth = Parameter(
+            Length | None,
+            default=None,
+            description="True vertical depth of the reservoir midpoint, given to every doublet",
+        )
 
     def set_params(self, path, params, valid_from=None):
         """Pass ``depth`` to every doublet, unless the same call states one's own."""

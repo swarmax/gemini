@@ -66,37 +66,80 @@ class CoolingGrid(Module):
         self.fluid = WATER
 
         # Parameters
-        self.maximum_return_temperature = Parameter(Temperature | None, default=None)
-        self.dew_point_margin = Parameter(TemperatureDifference, ge=0)
+        self.maximum_return_temperature = Parameter(
+            Temperature | None,
+            default=None,
+            description=(
+                "Highest return temperature the consumer can warm the chilled water to; empty means"
+                " no limit"
+            ),
+        )
+        self.dew_point_margin = Parameter(
+            TemperatureDifference,
+            ge=0,
+            description="Margin above the dew point below which no latent load is taken",
+        )
         self.return_temperature = Parameter(
             Temperature | None,
             default=None,
             structural=True,
             case="demand.cooling.return_temperature",
+            description=(
+                "Return temperature of the chilled-water circuit; empty takes it from the case"
+            ),
         )
         self.maximum_supply_temperature = Parameter(
-            Temperature | None, default=None, case="demand.cooling.supply_temperature"
+            Temperature | None,
+            default=None,
+            case="demand.cooling.supply_temperature",
+            description=(
+                "Highest supply temperature at which the cooling demand is served; empty takes it "
+                "from the case"
+            ),
         )
-        self.return_pressure = Parameter(Pressure | None, default=None)
+        self.return_pressure = Parameter(
+            Pressure | None,
+            default=None,
+            description=(
+                "Pressure of the stream leaving the consumer; empty keeps the supply pressure"
+            ),
+        )
 
         # Inlets
         self.supply_in = Inlet(Stream, kind="chilled_water")
 
         # Controls
-        self.flow = Control(MassFlow | None, default=None, ge=0)
+        self.flow = Control(
+            MassFlow | None,
+            default=None,
+            ge=0,
+            description=(
+                "Mass flow of the chilled-water circuit; empty lets the supply stream impose it"
+            ),
+        )
 
         # Boundaries
-        self.sensible_cooling_demand = Boundary(Power, ge=0)
-        self.latent_cooling_demand = Boundary(Power, ge=0)
-        self.indoor_temperature = Boundary(Temperature)
-        self.indoor_relative_humidity = Boundary(Fraction, gt=0)
+        self.sensible_cooling_demand = Boundary(
+            Power, ge=0, description="Sensible cooling load of the building"
+        )
+        self.latent_cooling_demand = Boundary(
+            Power, ge=0, description="Latent cooling load of the building"
+        )
+        self.indoor_temperature = Boundary(
+            Temperature, description="Indoor air temperature of the building"
+        )
+        self.indoor_relative_humidity = Boundary(
+            Fraction, gt=0, description="Relative humidity of the indoor air"
+        )
 
         # Outputs
-        self.unmet_sensible = Output(Power)
-        self.unmet_latent = Output(Power)
-        self.surplus = Output(Power)
-        self.dew_point = Output(Temperature)
-        self.is_unmet = Output(bool)
+        self.unmet_sensible = Output(Power, description="Sensible cooling load not served")
+        self.unmet_latent = Output(Power, description="Latent cooling load not served")
+        self.surplus = Output(
+            Power, description="Heat offered to the consumer beyond what it could take"
+        )
+        self.dew_point = Output(Temperature, description="Dew point of the indoor air")
+        self.is_unmet = Output(bool, description="True when the demand was not fully served")
 
         # Outlets
         self.return_out = Outlet(Stream, kind="chilled_water", offered=True)

@@ -42,11 +42,17 @@ class Separator(Module):
         self.fluid_in = Inlet(Stream, kind="brine")
 
         # Controls
-        self.pressure_setpoint = Control(Pressure, gt=0)
+        self.pressure_setpoint = Control(
+            Pressure, gt=0, description="Pressure the geofluid flashes to"
+        )
 
         # Outputs
-        self.steam_fraction = Output(Fraction)
-        self.saturation_temperature = Output(Temperature)
+        self.steam_fraction = Output(
+            Fraction, description="Share of the inlet mass flow that flashes to steam"
+        )
+        self.saturation_temperature = Output(
+            Temperature, description="Saturation temperature at the separator pressure"
+        )
 
         # Outlets
         self.liquid_out = Outlet(Stream, kind="brine")

@@ -122,6 +122,7 @@ On an instance of `Module`; a class answers through a new instance, `gm.modules.
 | `parameter_schema()` | JSON Schema draft 2020-12; each property has `unit`, `quantity`; dotted child names | real |
 | `validate_params(params, on_error="raise")` | `[]`, or raises every problem; with `"record"` the list of problems | real |
 | `help()` | text, on the class too | real |
+| `missing_parameters()` | JSON list, one dict per unset parameter: `{path, type, quantity, unit, units, minimum, maximum, enum, description}`; `[]` when the tree can run | real |
 | `get(path)` | the declaration at a dotted path, whatever its kind | real |
 | `get_submodule(path)`, `named_modules()`, `modules()`, `children()`, `named_children()` | a module, or the tree | real |
 | `state_dict()`, `set_state_dict(state, strict=True)` | the state tree of a stateful module, and its restore | real |

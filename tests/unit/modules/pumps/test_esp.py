@@ -148,9 +148,11 @@ def test_no_outputs_keeps_the_outlet_of_a_full_call():
 def test_a_new_esp_names_what_it_misses():
     """A new pump is not initialized and lists its parameters until they are assigned."""
     esp = ESP()
-    assert not esp.is_initialized and "stage_count" in esp.missing_parameters()
+    missing = [item["path"] for item in esp.missing_parameters()]
+    assert not esp.is_initialized and "stage_count" in missing
     esp.stage_count = 120
-    assert esp.stage_count == 120 and "stage_count" not in esp.missing_parameters()
+    missing = [item["path"] for item in esp.missing_parameters()]
+    assert esp.stage_count == 120 and "stage_count" not in missing
 
 
 def test_a_flow_where_the_curves_extrapolate_is_a_failed_row_with_the_code():

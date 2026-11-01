@@ -105,8 +105,6 @@ def catalogue(tmp_path_factory):
     return Sized(tmp_path_factory.mktemp("catalogue"), plant=gm.plants.get("DoubletHeatPlant"))
 
 
-
-
 def test_the_shallow_sample_needs_one_doublet_and_covers_its_peak(tmp_path):
     """One doublet of 4.7 MW at the flow and cooling limits covers the 3.03 MW peak."""
     design = gm.study.size(shallow_plant(), quick(tmp_path), backup="peak")
@@ -199,9 +197,9 @@ def test_a_lower_peak_gives_smaller_units(base, half):
     """Halving the demand halves the boiler, the heat pump and the chiller."""
     for name in ("peak_boiler", "heat_pump", "compression_chiller"):
         assert half.capacity(name) < base.capacity(name)
-    assert half.design.get_submodule("d0").nominal_flow <= base.design.get_submodule(
-        "d0"
-    ).nominal_flow
+    assert (
+        half.design.get_submodule("d0").nominal_flow <= base.design.get_submodule("d0").nominal_flow
+    )
 
 
 def test_a_heat_pump_gets_its_share_not_the_peak(base):

@@ -254,7 +254,7 @@ def test_two_copies_with_other_parameters_share_one_trace():
 def test_a_constraint_plant_is_still_a_root_break(monkeypatch):
     """A solve needs a scan: its root is called row by row."""
     plant = gm.plants.get("BoilerChpPlant")
-    monkeypatch.setattr(type(plant), "missing_parameters", lambda self: [])
+    monkeypatch.setattr(type(plant), "_missing_paths", lambda self: [])
     graph = GraphCache().graph(plant, {name: gm.WATER for name in plant._fed_inlets()})
     assert graph.root_break and "constraint" in graph.breaks[0][1]
 

@@ -32,18 +32,38 @@ class _Well(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.pipe_path = Parameter(geometry.PipePath)
-        self.friction_correlation = Parameter(Literal["darcy_weisbach"], default="darcy_weisbach")
-        self.two_phase_friction_correlation = Parameter(Literal["BeggsBrill"], default="BeggsBrill")
-        self.correction_factors = Parameter(
-            tuple[Dimensionless, PressureDifference], default=(1, 0), calibratable=True
+        self.pipe_path = Parameter(
+            geometry.PipePath,
+            description="Path of the well as a list of sections with depth, direction and diameter",
         )
-        self.soil_temperature = Parameter(Temperature)
+        self.friction_correlation = Parameter(
+            Literal["darcy_weisbach"],
+            default="darcy_weisbach",
+            description="Correlation of the single-phase friction",
+        )
+        self.two_phase_friction_correlation = Parameter(
+            Literal["BeggsBrill"],
+            default="BeggsBrill",
+            description="Correlation of the two-phase friction",
+        )
+        self.correction_factors = Parameter(
+            tuple[Dimensionless, PressureDifference],
+            default=(1, 0),
+            calibratable=True,
+            description=(
+                "Calibration factors of the pressure change: a multiplier and an added pressure "
+                "difference"
+            ),
+        )
+        self.soil_temperature = Parameter(
+            Temperature, description="Temperature of the soil around the well"
+        )
         self.heat_transfer_coefficient = Parameter(
             HeatTransferCoefficient,
             default=hydraulics.DEFAULT_WELL_U_VALUE,
             ge=0,
             calibratable=True,
+            description="Overall heat transfer coefficient from the fluid to the soil",
         )
 
     def capex(self, finance):

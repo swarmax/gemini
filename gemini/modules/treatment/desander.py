@@ -38,20 +38,36 @@ class Desander(Module):
         super().__init__()
 
         # Parameters
-        self.separation_efficiency = Parameter(Fraction)
-        self.nominal_pressure_drop = Parameter(PressureDifference, ge=0)
-        self.nominal_mass_flow = Parameter(MassFlow, gt=0)
+        self.separation_efficiency = Parameter(
+            Fraction, description="Share removed from the inlet stream"
+        )
+        self.nominal_pressure_drop = Parameter(
+            PressureDifference,
+            ge=0,
+            description="Pressure drop of the hydrocyclone at the nominal mass flow",
+        )
+        self.nominal_mass_flow = Parameter(
+            MassFlow, gt=0, description="Mass flow at which the nominal pressure drop holds"
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="brine")
 
         # Boundaries
-        self.sand_concentration = Boundary(MassConcentration)
+        self.sand_concentration = Boundary(
+            MassConcentration, description="Mass concentration of sand in the produced stream"
+        )
 
         # Outputs
-        self.pressure_drop = Output(PressureDifference, soft_sensor=True)
-        self.sand_removal_rate = Output(MassFlow, soft_sensor=True)
-        self.residual_sand_concentration = Output(MassConcentration)
+        self.pressure_drop = Output(
+            PressureDifference, soft_sensor=True, description="Pressure lost through the desander"
+        )
+        self.sand_removal_rate = Output(
+            MassFlow, soft_sensor=True, description="Mass flow of sand removed"
+        )
+        self.residual_sand_concentration = Output(
+            MassConcentration, description="Mass concentration of sand left in the stream"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="brine")

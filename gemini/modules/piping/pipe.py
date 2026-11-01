@@ -58,19 +58,31 @@ class Pipe(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.length = Parameter(Length, gt=0)
-        self.inner_diameter = Parameter(Length, gt=0)
-        self.roughness = Parameter(Length, default=hydraulics.COMMERCIAL_STEEL_ROUGHNESS)
-        self.elevation_change = Parameter(Elevation)
-        self.heat_transfer_coefficient = Parameter(HeatTransferCoefficient)
+        self.length = Parameter(Length, gt=0, description="Length of the pipe")
+        self.inner_diameter = Parameter(Length, gt=0, description="Inner diameter of the pipe")
+        self.roughness = Parameter(
+            Length,
+            default=hydraulics.COMMERCIAL_STEEL_ROUGHNESS,
+            description="Absolute roughness of the inner pipe wall",
+        )
+        self.elevation_change = Parameter(
+            Elevation,
+            description="Height of the outlet above the inlet (positive when the outlet is higher)",
+        )
+        self.heat_transfer_coefficient = Parameter(
+            HeatTransferCoefficient,
+            description="Overall heat transfer coefficient to the surroundings",
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream)
         self.air_in = Inlet(Stream, kind="air")
 
         # Outputs
-        self.pressure_drop = Output(PressureDifference)
-        self.velocity = Output(Speed)
+        self.pressure_drop = Output(
+            PressureDifference, description="Pressure lost to friction and elevation in the pipe"
+        )
+        self.velocity = Output(Speed, description="Mean flow velocity in the pipe")
 
         # Outlets
         self.fluid_out = Outlet(Stream)

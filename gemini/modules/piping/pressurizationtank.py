@@ -33,10 +33,14 @@ class PressurizationTank(Module):
         self.fluid_in = Inlet(Stream)
 
         # Controls
-        self.pressure_setpoint = Control(Pressure, gt=0)
+        self.pressure_setpoint = Control(
+            Pressure, gt=0, description="Pressure the vessel holds the circuit at"
+        )
 
         # Outputs
-        self.pressure_correction = Output(PressureDifference)
+        self.pressure_correction = Output(
+            PressureDifference, description="Pressure setpoint minus the inlet pressure"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream)

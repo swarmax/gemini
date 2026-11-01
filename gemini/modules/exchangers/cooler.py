@@ -56,13 +56,35 @@ class Cooler(Equipment, Module):
         self.fluid = WATER
 
         # Parameters
-        self.cooler_type = Parameter(Literal["dry", "wet"])
-        self.capacity = Parameter(Power, gt=0)
-        self.approach = Parameter(TemperatureDifference, ge=0)
-        self.specific_fan_power = Parameter(Ratio)
-        self.loop_pressure = Parameter(Pressure | None, default=None, structural=True)
+        self.cooler_type = Parameter(
+            Literal["dry", "wet"],
+            description="Heat rejection type: dry air cooler or wet (evaporative) cooler",
+        )
+        self.capacity = Parameter(
+            Power, gt=0, description="Largest heat duty the cooler can reject"
+        )
+        self.approach = Parameter(
+            TemperatureDifference,
+            ge=0,
+            description="Smallest temperature difference between the cooled fluid and the air",
+        )
+        self.specific_fan_power = Parameter(
+            Ratio, description="Fan electricity per unit of heat rejected"
+        )
+        self.loop_pressure = Parameter(
+            Pressure | None,
+            default=None,
+            structural=True,
+            description=(
+                "Static pressure the closed loop is held at; empty leaves the pressure of the "
+                "stream"
+            ),
+        )
         self.latent_heat = Parameter(
-            SpecificEnthalpy, default=psychrometrics.DEFAULT_LATENT_HEAT, gt=0
+            SpecificEnthalpy,
+            default=psychrometrics.DEFAULT_LATENT_HEAT,
+            gt=0,
+            description="Latent heat of vaporization of the evaporated water",
         )
 
         # Inlets
@@ -71,13 +93,22 @@ class Cooler(Equipment, Module):
         self.power_in = Inlet(Power, kind="electricity")
 
         # Controls
-        self.temperature_setpoint = Control(Temperature)
+        self.temperature_setpoint = Control(
+            Temperature, description="Outlet temperature the cooler cools the fluid towards"
+        )
 
-        self.flow = Control(MassFlow | None, default=None, ge=0)
+        self.flow = Control(
+            MassFlow | None,
+            default=None,
+            ge=0,
+            description="Mass flow of the cooled fluid; empty takes the stream flow",
+        )
 
         # Outputs
-        self.evaporation_rate = Output(MassFlow)
-        self.is_capped = Output(bool)
+        self.evaporation_rate = Output(
+            MassFlow, description="Mass flow of water evaporated by a wet cooler"
+        )
+        self.is_capped = Output(bool, description="True when the duty was limited by the capacity")
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="hot_water", offered=True)

@@ -19,17 +19,24 @@ class _BoilerBody(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.capacity = Parameter(Power, gt=0)
-        self.efficiency = Parameter(Efficiency)
+        self.capacity = Parameter(
+            Power, gt=0, description="Maximum useful thermal duty the unit can deliver"
+        )
+        self.efficiency = Parameter(
+            Efficiency,
+            description="Thermal efficiency of the boiler: heat to water over fuel energy",
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="hot_water")
 
         # Controls
-        self.temperature_setpoint = Control(Temperature)
+        self.temperature_setpoint = Control(
+            Temperature, description="Outlet temperature the unit regulates the stream to"
+        )
 
         # Outputs
-        self.is_capped = Output(bool)
+        self.is_capped = Output(bool, description="True when the duty was limited by the capacity")
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="hot_water")
@@ -75,7 +82,7 @@ class Boiler(_BoilerBody):
         self.fuel_in = Inlet(Stream, kind="gas", drawn=True)
 
         # Outputs
-        self.fuel = Output(Fuel)
+        self.fuel = Output(Fuel, description="Fuel power burned, the duty over the efficiency")
 
         # Outlets
         self.flue_out = Outlet(Stream, kind="gas")

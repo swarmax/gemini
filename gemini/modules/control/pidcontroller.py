@@ -52,18 +52,37 @@ class PIDController(Module):
         super().__init__()
 
         # Parameters
-        self.proportional_gain = Parameter(Dimensionless, gt=0)
-        self.integral_time = Parameter(Duration | None, default=None, gt=0)
-        self.derivative_time = Parameter(Duration, default=0)
-        self.minimum_output = Parameter(Dimensionless)
-        self.maximum_output = Parameter(Dimensionless)
-        self.direction = Parameter(Literal["direct", "reverse"])
+        self.proportional_gain = Parameter(
+            Dimensionless, gt=0, description="Proportional gain K of the controller"
+        )
+        self.integral_time = Parameter(
+            Duration | None,
+            default=None,
+            gt=0,
+            description="Integral time Ti of the controller; empty disables the integral action",
+        )
+        self.derivative_time = Parameter(
+            Duration,
+            default=0,
+            description="Derivative time Td of the controller; zero disables the derivative action",
+        )
+        self.minimum_output = Parameter(Dimensionless, description="Lower limit of the command")
+        self.maximum_output = Parameter(Dimensionless, description="Upper limit of the command")
+        self.direction = Parameter(
+            Literal["direct", "reverse"],
+            description=(
+                "Sense of the control action: reverse raises the command when the measurement "
+                "falls, direct when it rises"
+            ),
+        )
 
         # Controls
-        self.setpoint = Control(Dimensionless)
+        self.setpoint = Control(Dimensionless, description="Target value of the measurement")
 
         # Boundaries
-        self.measurement = Boundary(Dimensionless)
+        self.measurement = Boundary(
+            Dimensionless, description="Measured value the controller regulates"
+        )
 
         # States
         self.integral = State(Dimensionless, default=0)
@@ -71,9 +90,17 @@ class PIDController(Module):
         self.previous_step = State(Duration | None, default=None, gt=0)
 
         # Outputs
-        self.error = Output(Dimensionless)
-        self.command = Output(Dimensionless)
-        self.is_saturated = Output(bool)
+        self.error = Output(
+            Dimensionless,
+            description=(
+                "Control error: the distance of the measurement from the setpoint in the acting "
+                "direction"
+            ),
+        )
+        self.command = Output(
+            Dimensionless, description="Command the controller outputs, within its limits"
+        )
+        self.is_saturated = Output(bool, description="True when the command is held at a limit")
 
     def forward(self, inlets):
         """Move no fluid; the command is an output."""

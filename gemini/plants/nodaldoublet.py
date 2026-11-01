@@ -45,15 +45,22 @@ class NodalDoublet(Plant):
         self.sink = InjectionReservoir()
 
         # Parameters
-        self.production_rates = Parameter(tuple[MassFlow, MassFlow])
-        self.maximum_injection_pressure = Parameter(Pressure)
+        self.production_rates = Parameter(
+            tuple[MassFlow, MassFlow],
+            description="Lowest and highest mass flow the production solve may use",
+        )
+        self.maximum_injection_pressure = Parameter(
+            Pressure, description="Highest pressure the injection pump may deliver"
+        )
 
         # Inlets
         self.return_in = Inlet(Stream)
         self.power_in = Inlet(Power, kind="electricity")
 
         # Boundaries
-        self.wellhead_pressure = Boundary(Pressure)
+        self.wellhead_pressure = Boundary(
+            Pressure, description="Pressure required at the production wellhead"
+        )
 
         # Outlets
         self.supply_out = Outlet(Stream)

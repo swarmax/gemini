@@ -62,6 +62,14 @@ def _kind(plant, path):
     return FIELD_KINDS[name]
 
 
+_MEANINGS = {
+    "difference": "{0} minus {1}",
+    "ratio": "{0} over {1}",
+    "sum": "Sum of {joined}",
+}
+"""The description of an output by the key of its entry in a plant dict."""
+
+
 def _result_kind(key, kind):
     """Return the kind of an output of ``key`` over values of ``kind``."""
     if key == "ratio":
@@ -96,7 +104,8 @@ def declare(plant, name, data):
     if name in plant._children:
         raise ValidationError(f"{name}: an output cannot share the name of a module", path="")
     kinds = [_kind(plant, path) for path in paths]
-    output = Output(_result_kind(key, kinds[0]))
+    meaning = _MEANINGS[key].format(*paths, joined=", ".join(paths))
+    output = Output(_result_kind(key, kinds[0]), description=meaning)
     output.formula = (key, *paths)
     return output
 

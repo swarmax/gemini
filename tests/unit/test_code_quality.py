@@ -268,13 +268,15 @@ def test_functions_nest_at_most_three_blocks(path):
 def test_functions_are_short_or_documented_exceptions(path):
     """Functions stay within about 40 lines; each longer one is listed with its reason.
 
-    The ``__init__`` of a plant class is exempt: it is one list of declarations and connections.
+    The ``__init__`` of a module or plant class is exempt: it is one list of declarations.
     """
     long = {
         f"{path}::{function.name}"
         for function in functions(path)
         if body_lines(function) > MAX_LINES
-        and not (path.startswith("gemini/plants/") and function.name == "__init__")
+        and not (
+            path.startswith(("gemini/plants/", "gemini/modules/")) and function.name == "__init__"
+        )
     }
     assert long == {name for name in LONG_FUNCTIONS if name.startswith(f"{path}::")}
 
@@ -1119,3 +1121,37 @@ def test_the_unused_guard_finds_a_dead_function_and_not_a_used_or_hooked_one():
         "_called()\nrun(_passed)\ngetattr(x, '_named')\n"
     )
     assert private_functions_unused({"x.py": ast.parse(source)}) == ["x.py::_dead"]
+
+
+DECLARATIONS = ("Parameter", "Control", "Boundary", "Output")
+
+
+def declaration_calls(path):
+    """Return the lines of the declarations in a file that give no ``description``."""
+    tests = ast.walk(tree(path))
+    named = {id(node.value) for node in tests if isinstance(node, ast.Attribute)}
+    lines = []
+    for node in ast.walk(tree(path)):
+        if not isinstance(node, ast.Call) or id(node) in named:
+            continue
+        function = node.func
+        name = function.id if isinstance(function, ast.Name) else None
+        if isinstance(function, ast.Attribute) and isinstance(function.value, ast.Name):
+            name = function.value.id
+        if name in DECLARATIONS and not any(key.arg == "description" for key in node.keywords):
+            lines.append(node.lineno)
+    return lines
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        path
+        for path in python_files()
+        if path.startswith(("gemini/modules/", "gemini/plants/"))
+        and path != "gemini/modules/declarations.py"
+    ],
+)
+def test_every_public_declaration_has_a_description(path):
+    """A parameter, control, boundary or output says what it means, so an agent can fill it."""
+    assert declaration_calls(path) == [], f"{path}: declaration without description="

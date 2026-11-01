@@ -20,7 +20,10 @@ class GasGrid(Module):
 
         # Parameters
         self.composition = Parameter(
-            dict[str, Fraction], default=gas.GRID_COMPOSITION, structural=True
+            dict[str, Fraction],
+            default=gas.GRID_COMPOSITION,
+            structural=True,
+            description="Mole or mass fractions of the gas components by name",
         )
 
         # Outlets

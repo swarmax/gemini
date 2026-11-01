@@ -108,7 +108,9 @@ def test_to_dict_shows_display_units_or_the_ones_given_and_the_report_stays_si()
     assert plain["heat_delivered"]["unit"] == "MWh"
     assert plain["heat_delivered"]["value"] == pytest.approx(0.024)
     assert plain["capacities"] == {}
-    sized = Report(capacities=gm.evaluate.capacities(boiler_plant(), make_case(count=3), boiler_run()))
+    sized = Report(
+        capacities=gm.evaluate.capacities(boiler_plant(), make_case(count=3), boiler_run())
+    )
     boiler = sized.to_dict()["capacities"]["boiler"]
     assert boiler["capacity"] == {"value": pytest.approx(0.01), "unit": "MW"}
     assert boiler["share"]["unit"] == "-"

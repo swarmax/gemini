@@ -45,22 +45,40 @@ class GasCompressor(Module):
         super().__init__()
 
         # Parameters
-        self.isentropic_efficiency = Parameter(Efficiency, calibratable=True)
-        self.heat_capacity_ratio = Parameter(Ratio, gt=1)
-        self.gas_specific_heat = Parameter(SpecificHeat)
-        self.stage_count = Parameter(Count, default=1)
-        self.motor_efficiency = Parameter(Efficiency)
+        self.isentropic_efficiency = Parameter(
+            Efficiency, calibratable=True, description="Isentropic efficiency of the compression"
+        )
+        self.heat_capacity_ratio = Parameter(
+            Ratio, gt=1, description="Ratio of specific heats of the gas (cp over cv)"
+        )
+        self.gas_specific_heat = Parameter(
+            SpecificHeat, description="Specific heat capacity at constant pressure of the gas"
+        )
+        self.stage_count = Parameter(
+            Count,
+            default=1,
+            description="Number of compression stages sharing the pressure ratio equally",
+        )
+        self.motor_efficiency = Parameter(
+            Efficiency, description="Efficiency of the motor: shaft power over electric power drawn"
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="gas")
         self.power_in = Inlet(Power, kind="electricity")
 
         # Controls
-        self.pressure_setpoint = Control(Pressure)
+        self.pressure_setpoint = Control(
+            Pressure, description="Discharge pressure the compressor raises the gas to"
+        )
 
         # Outputs
-        self.pressure_ratio = Output(Ratio)
-        self.shaft_power = Output(Power, soft_sensor=True)
+        self.pressure_ratio = Output(
+            Ratio, description="Outlet over suction pressure of the compressor"
+        )
+        self.shaft_power = Output(
+            Power, soft_sensor=True, description="Mechanical power on the compressor shaft"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="gas")

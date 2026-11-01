@@ -45,24 +45,54 @@ class ORC(Module):
         super().__init__()
 
         # Parameters
-        self.minimum_brine_outlet_temperature = Parameter(Temperature)
-        self.pinch = Parameter(TemperatureDifference, ge=0)
-        self.carnot_fraction = Parameter(Efficiency)
-        self.condenser_approach = Parameter(TemperatureDifference, ge=0)
-        self.parasitic_fraction = Parameter(Fraction, lt=1)
-        self.capacity = Parameter(Power, gt=0)
+        self.minimum_brine_outlet_temperature = Parameter(
+            Temperature, description="Lowest temperature the brine may leave the plant at"
+        )
+        self.pinch = Parameter(
+            TemperatureDifference,
+            ge=0,
+            description=(
+                "Smallest temperature difference between brine and working fluid in the heat "
+                "exchange"
+            ),
+        )
+        self.carnot_fraction = Parameter(
+            Efficiency, description="Share of the reversible (Lorenz) work reached by the cycle"
+        )
+        self.condenser_approach = Parameter(
+            TemperatureDifference,
+            ge=0,
+            description="Difference between the condensing and the ambient air temperature",
+        )
+        self.parasitic_fraction = Parameter(
+            Fraction, lt=1, description="Parasitic electric load as a share of the gross power"
+        )
+        self.capacity = Parameter(
+            Power, gt=0, description="Largest gross electric power of the plant"
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="brine")
         self.air_in = Inlet(Stream, kind="air")
 
         # Outputs
-        self.gross_power = Output(Power)
-        self.parasitic_power = Output(Power)
-        self.condenser_duty = Output(Power)
-        self.thermal_efficiency = Output(Fraction | None)
-        self.condensing_temperature = Output(Temperature)
-        self.is_capped = Output(bool)
+        self.gross_power = Output(
+            Power, description="Electric power generated before parasitic loads"
+        )
+        self.parasitic_power = Output(
+            Power, description="Electric power consumed by the plant itself"
+        )
+        self.condenser_duty = Output(Power, description="Heat rejected in the condenser")
+        self.thermal_efficiency = Output(
+            Fraction | None,
+            description=(
+                "Gross power over the heat taken from the brine; empty when no heat is taken"
+            ),
+        )
+        self.condensing_temperature = Output(
+            Temperature, description="Temperature at which the working fluid condenses"
+        )
+        self.is_capped = Output(bool, description="True when the duty was limited by the capacity")
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="brine")

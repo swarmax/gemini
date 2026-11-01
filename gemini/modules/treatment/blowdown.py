@@ -36,7 +36,9 @@ class Blowdown(Module):
         self.fluid_in = Inlet(Stream, kind="brine")
 
         # Controls
-        self.blowdown_fraction = Control(Fraction)
+        self.blowdown_fraction = Control(
+            Fraction, description="Share of the feed mass flow bled to drain"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="brine")

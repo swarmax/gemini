@@ -75,16 +75,31 @@ class IceStorage(Module):
         super().__init__()
 
         # Parameters
-        self.water_mass = Parameter(Mass, gt=0)
-        self.thermal_conductance = Parameter(ThermalConductance, gt=0)
-        self.latent_heat = Parameter(SpecificEnthalpy, default=_physics.DEFAULT_LATENT_HEAT, gt=0)
+        self.water_mass = Parameter(Mass, gt=0, description="Mass of water in the store")
+        self.thermal_conductance = Parameter(
+            ThermalConductance, gt=0, description="Conductance of the glycol coil against the store"
+        )
+        self.latent_heat = Parameter(
+            SpecificEnthalpy,
+            default=_physics.DEFAULT_LATENT_HEAT,
+            gt=0,
+            description="Latent heat of the phase change",
+        )
         self.freezing_temperature = Parameter(
-            Temperature, default=_physics.DEFAULT_FREEZING_TEMPERATURE
+            Temperature,
+            default=_physics.DEFAULT_FREEZING_TEMPERATURE,
+            description="Temperature at which the water freezes",
         )
         self.water_specific_heat = Parameter(
-            SpecificHeat, default=_physics.DEFAULT_WATER_HEAT_CAPACITY
+            SpecificHeat,
+            default=_physics.DEFAULT_WATER_HEAT_CAPACITY,
+            description="Specific heat capacity of liquid water",
         )
-        self.ice_specific_heat = Parameter(SpecificHeat, default=_physics.DEFAULT_ICE_HEAT_CAPACITY)
+        self.ice_specific_heat = Parameter(
+            SpecificHeat,
+            default=_physics.DEFAULT_ICE_HEAT_CAPACITY,
+            description="Specific heat capacity of ice",
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="chilled_water")
@@ -94,10 +109,18 @@ class IceStorage(Module):
         self.temperature = State(Temperature, default=units.ZERO_CELSIUS)
 
         # Outputs
-        self.stored_cold = Output(Energy)
-        self.heat_accumulation = Output(HeatAccumulation)
-        self.is_full = Output(bool)
-        self.is_empty = Output(bool)
+        self.stored_cold = Output(
+            Energy,
+            description=(
+                "Cold held in the store, as the heat needed to melt and warm it to its reference"
+            ),
+        )
+        self.heat_accumulation = Output(
+            HeatAccumulation,
+            description="Rate at which the store gains heat (negative when it loses)",
+        )
+        self.is_full = Output(bool, description="True when the store is completely frozen")
+        self.is_empty = Output(bool, description="True when the store is completely melted")
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="chilled_water")

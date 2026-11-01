@@ -68,16 +68,45 @@ class HeatPump(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.mode = Parameter(Literal["heating", "cooling"])
-        self.capacity = Parameter(Power, gt=0)
-        self.cop_model = Parameter(Literal["carnot", "lorenz"], default="carnot")
-        self.carnot_fraction = Parameter(Efficiency, default=refrigeration.DEFAULT_CARNOT_FRACTION)
-        self.lorenz_fraction = Parameter(Efficiency, default=refrigeration.DEFAULT_LORENZ_FRACTION)
-        self.minimum_temperature_lift = Parameter(
-            TemperatureDifference, default=refrigeration.DEFAULT_MINIMUM_LIFT, gt=0
+        self.mode = Parameter(
+            Literal["heating", "cooling"],
+            description=(
+                "Operating mode: heating (condenser duty) or cooling (evaporator duty, an electric "
+                "chiller)"
+            ),
         )
-        self.minimum_part_load = Parameter(Fraction, default=0)
-        self.minimum_source_outlet_temperature = Parameter(Temperature | None, default=None)
+        self.capacity = Parameter(Power, gt=0, description="Largest useful duty of the machine")
+        self.cop_model = Parameter(
+            Literal["carnot", "lorenz"],
+            default="carnot",
+            description="Model of the coefficient of performance: Carnot fraction or Lorenz",
+        )
+        self.carnot_fraction = Parameter(
+            Efficiency,
+            default=refrigeration.DEFAULT_CARNOT_FRACTION,
+            description="Share of the Carnot efficiency reached by the machine",
+        )
+        self.lorenz_fraction = Parameter(
+            Efficiency,
+            default=refrigeration.DEFAULT_LORENZ_FRACTION,
+            description="Share of the Lorenz efficiency reached by the machine",
+        )
+        self.minimum_temperature_lift = Parameter(
+            TemperatureDifference,
+            default=refrigeration.DEFAULT_MINIMUM_LIFT,
+            gt=0,
+            description="Smallest temperature lift used in the coefficient of performance",
+        )
+        self.minimum_part_load = Parameter(
+            Fraction,
+            default=0,
+            description="Smallest part load, as a share of capacity, at which the machine runs",
+        )
+        self.minimum_source_outlet_temperature = Parameter(
+            Temperature | None,
+            default=None,
+            description="Lowest temperature the source circuit may leave at; empty means no limit",
+        )
 
         # Inlets
         self.source_in = Inlet(Stream)
@@ -85,13 +114,23 @@ class HeatPump(Equipment, Module):
         self.power_in = Inlet(Power, kind="electricity")
 
         # Controls
-        self.temperature_setpoint = Control(Temperature)
+        self.temperature_setpoint = Control(
+            Temperature, description="Outlet temperature the unit regulates the stream to"
+        )
 
         # Outputs
-        self.cop = Output(Ratio | None)
-        self.temperature_lift = Output(TemperatureDifference)
-        self.is_capped = Output(bool)
-        self.is_running = Output(bool)
+        self.cop = Output(
+            Ratio | None,
+            description=(
+                "Coefficient of performance: useful duty over electric power; empty when off"
+            ),
+        )
+        self.temperature_lift = Output(
+            TemperatureDifference,
+            description="Temperature difference between the sink and the source",
+        )
+        self.is_capped = Output(bool, description="True when the duty was limited by the capacity")
+        self.is_running = Output(bool, description="True when the machine is on")
 
         # Outlets
         self.source_out = Outlet(Stream)
