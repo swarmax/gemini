@@ -18,7 +18,9 @@ def _index(key):
 
 def _renumbered(section, old, new):
     """Return ``section`` without the doublets from ``new`` on, and with the new ones as ``d0``."""
-    kept = {key: value for key, value in section.items() if (_index(key) or 0) < new}
+    kept = {
+        key: value for key, value in section.items() if _index(key) is None or _index(key) < new
+    }
     for key, value in section.items():
         if _index(key) == 0:
             for number in range(old, new):

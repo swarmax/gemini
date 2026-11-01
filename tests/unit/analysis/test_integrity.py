@@ -56,7 +56,7 @@ def test_a_wall_at_its_minimum_has_no_time_left():
     """Zero years left, not a negative number."""
     worn = dict(MODEL, thickness=0.007)
     forecast = integrity.corrosion_forecast(worn, "2025-01-01T00:00:00Z")
-    assert forecast["years_left"] == {"value": 0.0, "unit": "year"}
+    assert forecast["years_left"] == {"value": 0.0, "unit": "yr"}
 
 
 def test_the_rate_matches_the_physics_function_in_si(forecast):

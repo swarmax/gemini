@@ -8,6 +8,7 @@ import gemini as gm
 from gemini.units import SECONDS_PER_YEAR, Quantity
 from tests.fixtures.cases import costed_finance, make_case
 from tests.fixtures.costed_plants import day, heating_plant
+from tests.fixtures.result_tables import make_results
 
 KEYS = {
     "heat_delivered",
@@ -75,3 +76,13 @@ def test_to_dict_is_plain_json():
     assert plain["capex"]["unit"] == "currency" and plain["capex"]["value"] == 1000.0
     assert plain["constraints"][0]["role"] == "heating_supply"
     assert plain["failed_steps"] == 0
+
+
+def test_a_boiler_the_run_does_not_show_gives_no_heat_value():
+    """Boilers without port columns in the run leave the heat of the boilers unknown, not zero."""
+    plant = gm.Plant("Boiling")
+    plant.add("Boiler", "boiler")
+    plant.boiler.capacity = Quantity(1e6, "W")
+    results = make_results({"other": {"power_in": [1.0, 1.0]}})
+    heat = gm.evaluate.report(plant, make_case(), results)["boiler_heat"]
+    assert heat.value is None and "boilers" in heat.reason

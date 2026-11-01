@@ -113,7 +113,7 @@ def _analysis_entries(plant):
             [0.01, 0.02, 0.03], [2e7, 1.9e7, 1.81e7]
         ),
         "estimate_conductance": lambda: gm.analysis.estimate_conductance(
-            350, 320, 300, 330, 10, 10
+            350, 320, 300, 330, 10, 10, cp_hot=4180, cp_cold=4180, arrangement="counterflow"
         ),
     }
 

@@ -68,8 +68,8 @@ def _row(name, metric, shown, ends):
     return {
         "parameter": name,
         "metric": metric,
-        "low": shown[name][0],
-        "high": shown[name][1],
+        "low": shown[0],
+        "high": shown[1],
         "at_low": at_low,
         "at_high": at_high,
         "effect": measure(effect, unit, reason),
@@ -112,7 +112,7 @@ def sensitivity(plant, case, parameters, metrics, *, plan=None):
     bounds = _bounds(plant, case, parameters)
     rows = []
     for name, ends in bounds.items():
-        shown = {name: tuple(quantities(plant, case, {name: end})[name] for end in ends)}
+        shown = tuple(quantities(plant, case, {name: end})[name] for end in ends)
         runs = [run_trial(plant, case, plan, {name: end}, names) for end in ends]
         for metric in names:
             found = [_metric(items, metric, reason) for items, reason in runs]

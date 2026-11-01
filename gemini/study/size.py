@@ -11,13 +11,16 @@ from gemini.study._utils.resize import resized
 
 
 def _limit(case, quantity, bound, required=True):
-    """Return the ``bound`` of the constraint on ``quantity`` of each doublet, or raise."""
+    """Return the ``bound`` of the constraint on ``quantity`` of each doublet.
+
+    Without it, ``None`` when not ``required``, else ``missing_value`` is raised.
+    """
     for item in case.constraints or ():
         if (item.on, item.quantity, item.over) == ("doublet", quantity, "each"):
             if getattr(item, bound) is not None:
                 return getattr(item, bound)
     if not required:
-        return 0.0
+        return None
     raise ValidationError(
         f"constraints is missing a {bound} of {quantity} on each doublet; expected a value in the "
         "case (it has no default)",
@@ -67,7 +70,10 @@ def _doublets(plant, case, peak, notes):
         }
     )
     need = peak / (count * heat_capacity_rate(density, FluidProperties().cp_l) * cooling_max)
-    flow = max(_limit(case, "production_flow", "min", required=False), min(flow_max, need))
+    flow = min(flow_max, need)
+    flow_min = _limit(case, "production_flow", "min", required=False)
+    if flow_min is not None:
+        flow = max(flow_min, flow)
     for path in units_of(design, "doublet"):
         design.set_params(path, {"nominal_flow": units.Quantity(flow, "m3/s")})
         _note(

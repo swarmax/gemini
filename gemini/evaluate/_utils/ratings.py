@@ -34,14 +34,8 @@ def _gain(inlet, outlet):
     return use
 
 
-def _heat_pump(frame, path):
-    """Return the heat given to the sink circuit by a heat pump in heating mode."""
-    return _gain("sink_in", "sink_out")(frame, path)
-
-
-def _chiller(frame, path):
-    """Return the cold given by a heat pump in cooling mode."""
-    return _gain("source_out", "source_in")(frame, path)
+def _no_reading(frame, path):
+    """Return ``None``: the run holds no use of this equipment."""
 
 
 RATINGS = {
@@ -54,9 +48,9 @@ RATINGS = {
     Doublet: Rating("nominal_flow", "m3/s", _column("reservoir.liquid_flow")),
     CirculationPump: Rating("flow", "kg/s", _column("fluid_out.mass_flow")),
     CentrifugalPump: Rating("best_efficiency_flow", "m3/s", _column("fluid_in.volume_flow")),
-    HeatExchanger: Rating("thermal_conductance", "W/K", lambda frame, path: None),
-    ThermalStorage: Rating("volume", "m3", lambda frame, path: None),
-    Pipe: Rating("length", "m", lambda frame, path: None),
+    HeatExchanger: Rating("thermal_conductance", "W/K", _no_reading),
+    ThermalStorage: Rating("volume", "m3", _no_reading),
+    Pipe: Rating("length", "m", _no_reading),
 }
 """The rating of each class of equipment that has one.
 
@@ -67,5 +61,10 @@ mode makes useful."""
 def rating_of(module):
     """Return the ``Rating`` of an equipment module, or ``None`` when it has none."""
     if isinstance(module, HeatPump):
-        return Rating("capacity", "W", _heat_pump if module.mode == "heating" else _chiller)
+        use = (
+            _gain("sink_in", "sink_out")
+            if module.mode == "heating"
+            else _gain("source_out", "source_in")
+        )
+        return Rating("capacity", "W", use)
     return next((rating for cls, rating in RATINGS.items() if type(module) is cls), None)

@@ -1,6 +1,7 @@
 """A plant on another number of doublets."""
 
 import gemini as gm
+from gemini.study._utils import resize
 from gemini.study._utils.resize import resized
 from tests.fixtures.errors import raises
 from tests.unit.study.conftest import shallow_plant
@@ -38,3 +39,9 @@ def test_a_count_the_class_does_not_allow_is_refused():
     """The class says its own limits."""
     with raises(gm.errors.ValidationError, "invalid_design"):
         resized(shallow_plant(), 4)
+
+
+def test_keys_without_a_doublet_survive_a_removal_of_every_doublet():
+    """Only the doublets go; a parameter of another module stays."""
+    section = {"d0.nominal_flow": 1, "heat_pump.capacity": 2}
+    assert resize._renumbered(section, 1, 0) == {"heat_pump.capacity": 2}

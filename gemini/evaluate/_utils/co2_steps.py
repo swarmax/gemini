@@ -3,7 +3,7 @@
 import numpy as np
 
 from gemini.evaluate._utils.level import level
-from gemini.evaluate._utils.series import edge_total, results_total
+from gemini.evaluate._utils.series import leaf_total, results_total, steps
 from gemini.modules.grids import ElectricityGrid
 
 EMISSIONS = "assumptions.emissions"
@@ -15,15 +15,15 @@ def released_steps(results, field):
     total = results_total(results, results.to_frame(), field)
     if total is None:
         return np.zeros(len(results.durations))
-    return np.nan_to_num(total.to_numpy(dtype=float)) * results.durations
+    return steps(total, results.durations)
 
 
 def grid_steps(plant, results):
     """Return the energy [J] of grid electricity drawn in each tick."""
-    total = edge_total(plant, results.to_frame(), "net_import", ElectricityGrid)
+    total = leaf_total(plant, results.to_frame(), "net_import", ElectricityGrid)
     if total is None:
         return np.zeros(len(results.durations))
-    return np.nan_to_num(total.to_numpy(dtype=float)) * results.durations
+    return steps(total, results.durations)
 
 
 def emissions_steps(plant, case, results):

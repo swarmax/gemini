@@ -22,6 +22,8 @@ from gemini.types.shapes import OutputUnits, value
 
 CURVE_POINTS = 21
 """Number of rates on the IPR and VLP curves of ``nodal``, from the low to the high bracket end."""
+PUMP_CURVE_POINTS = 50
+"""Number of flows on the head curve of ``pump_curve``, from zero to twice the maximum flow."""
 WELLHEAD_PRESSURES = (101325.0, 1e8)
 """The bracket [Pa] of an injection wellhead: the lowest is one atmosphere, the highest 1000 bar."""
 NO_PUMP = "the column of brine delivers what the aquifer needs: no pump, a choke holds the well"
@@ -196,11 +198,6 @@ def _aquifer_pressure(chain, temperature, rate):
     return chain.sink.required_pressure(stream)
 
 
-def _wellhead_value(pressure, output):
-    """Return the wellhead pressure of a point; ``None`` says that no pump is needed."""
-    return output.value(pressure, "Pa", "pressure", None if pressure is not None else NO_PUMP)
-
-
 def _injection_point(chain, conditions, temperature, rates, output):
     """Return the operating point: the rate and pressure of the case, the other one solved."""
     if "rate" in conditions:
@@ -211,7 +208,9 @@ def _injection_point(chain, conditions, temperature, rates, output):
         rate = _injected_rate(chain, temperature, pressure, rates)
     return {
         "rate": output.value(rate, "kg/s", "mass_flow"),
-        "wellhead_pressure": _wellhead_value(pressure, output),
+        "wellhead_pressure": output.value(
+            pressure, "Pa", "pressure", None if pressure is not None else NO_PUMP
+        ),
         "sandface_pressure": output.value(
             _aquifer_pressure(chain, temperature, rate), "Pa", "pressure"
         ),
@@ -286,7 +285,7 @@ def nodal(plant, well, conditions, on_error="raise", units=None):
         One case, or several for a what-if. Each has ``wellhead_pressure`` [Pa], ``rates``, the
         ``[low, high]`` bracket [kg/s] of the curves and of the solve (a trial outside the well
         model's domain fails the case), and ``frequency`` [Hz] when the chain has an ESP. Numbers
-        are SI; unit strings such as ``"3 bar"`` are accepted. An injection case has ``rates``,
+        are SI, or a ``Quantity``. An injection case has ``rates``,
         ``temperature`` [K], the temperature at the wellhead, and ``rate`` or
         ``wellhead_pressure``, which says what to solve for.
     on_error : {"raise", "record"}, optional
@@ -389,22 +388,21 @@ def _measured_point(point, output):
     }
 
 
-def _head_curve(module, frequency, n_points=50):
+def _head_curve(module, frequency):
     """Return plotting points (flow [m3/s], head [Pa]) of an ESP at a frequency [Hz].
 
     The flows run from zero to twice the speed-scaled maximum flow; the head is evaluated at the
     flow referred to the reference speed.
     """
-    if frequency <= 0 or n_points < 2:
+    if frequency <= 0:
         raise ValidationError(
-            f"{module.path}: positive frequency and at least two curve points required; got "
-            f"frequency = {frequency} Hz, n_points = {n_points}",
+            f"{module.path}: positive frequency required; got frequency = {frequency} Hz",
             code="invalid_design",
         )
     scale = frequency / constants.ESP_REFERENCE_FREQUENCY
     return [
         (float(flow), module.head_function(flow / scale, frequency))
-        for flow in np.linspace(0, 2 * module.maximum_flow * scale, n_points)
+        for flow in np.linspace(0, 2 * module.maximum_flow * scale, PUMP_CURVE_POINTS)
     ]
 
 
@@ -423,7 +421,7 @@ def pump_curve(plant, pump, measured=None, units=None):
     pump : str
         Dotted path of an ``ESP``, for example ``"doublet.esp"``.
     measured : list of dict, optional
-        Points ``{flow, frequency, head}`` in m3/s, Hz and Pa (unit strings accepted).
+        Points ``{flow, frequency, head}`` in m3/s, Hz and Pa (SI numbers or ``Quantity`` values).
     units : dict, optional
         A map from quantity to unit for the returned values.
 

@@ -6,19 +6,19 @@ column has no value (a skipped or failed row) is left out of that sum or peak.
 """
 
 from dataclasses import dataclass
+from functools import partial
 from typing import Any
 
 import numpy as np
 
 from gemini.evaluate._utils.series import (
-    delivered_cold,
-    delivered_heat,
-    edge_total,
+    COLD_DELIVERED,
+    HEAT_DELIVERED,
     energy,
     leaf_total,
+    port_difference,
     useful_cold,
     useful_heat,
-    window_seconds,
 )
 from gemini.modules.environment import Atmosphere, Formation
 from gemini.modules.grids import (
@@ -30,6 +30,8 @@ from gemini.modules.grids import (
     WasteGrid,
 )
 from gemini.types.shapes import measure
+
+__all__ = ["KPI_NAMES", "totals"]
 
 
 @dataclass(frozen=True)
@@ -50,49 +52,35 @@ def _read(plant, results):
     sensible = leaf_total(plant, frame, "unmet_sensible", CoolingGrid)
     latent = leaf_total(plant, frame, "unmet_latent", CoolingGrid)
     return _Series(
-        seconds=window_seconds(results),
+        seconds=results.durations,
         heat=useful_heat(plant, frame),
         heat_unmet=leaf_total(plant, frame, "unmet_demand", HeatingGrid),
         cold=useful_cold(plant, frame),
         cold_unmet=None if sensible is None or latent is None else sensible + latent,
-        electricity=edge_total(plant, frame, "power_out", ElectricityGrid),
+        electricity=leaf_total(plant, frame, "power_out", ElectricityGrid),
     )
 
 
-def _coverage(delivered, unmet, seconds, consumer):
+def _coverage(series, delivered, unmet, consumer):
     """Return delivered energy over demanded energy, or a reason when it is undefined."""
+    delivered, unmet = getattr(series, delivered), getattr(series, unmet)
     if delivered is None or unmet is None:
         return None, f"the plant has no {consumer}"
     demand = delivered + unmet
-    demanded = energy(demand, seconds)
+    demanded = energy(demand, series.seconds)
     if demanded <= 0:
         return None, "the demand is zero over the window"
-    return energy(delivered.where(demand.notna()), seconds) / demanded, None
+    return energy(delivered.where(demand.notna()), series.seconds) / demanded, None
 
 
-def _peak(delivered, consumer):
+def _peak(series, delivered, consumer):
     """Return the largest delivered power, or a reason when there is none."""
+    delivered = getattr(series, delivered)
     if delivered is None:
         return None, f"the plant has no {consumer}"
     if delivered.notna().sum() == 0:
         return None, "no tick has a delivered power"
     return float(delivered.max()), None
-
-
-def _heating_coverage(series):
-    return _coverage(series.heat, series.heat_unmet, series.seconds, "HeatingGrid")
-
-
-def _cooling_coverage(series):
-    return _coverage(series.cold, series.cold_unmet, series.seconds, "CoolingGrid")
-
-
-def _peak_heat(series):
-    return _peak(series.heat, "HeatingGrid")
-
-
-def _peak_cold(series):
-    return _peak(series.cold, "CoolingGrid")
 
 
 def _cop(series):
@@ -106,14 +94,18 @@ def _cop(series):
     return energy(series.heat.where(series.electricity.notna()), series.seconds) / consumed, None
 
 
-__all__ = ["KPI_NAMES", "totals"]
-
 _KPIS = {
-    "heating_coverage": ("-", _heating_coverage),
-    "cooling_coverage": ("-", _cooling_coverage),
+    "heating_coverage": (
+        "-",
+        partial(_coverage, delivered="heat", unmet="heat_unmet", consumer="HeatingGrid"),
+    ),
+    "cooling_coverage": (
+        "-",
+        partial(_coverage, delivered="cold", unmet="cold_unmet", consumer="CoolingGrid"),
+    ),
     "cop": ("-", _cop),
-    "peak_heat": ("W", _peak_heat),
-    "peak_cold": ("W", _peak_cold),
+    "peak_heat": ("W", partial(_peak, delivered="heat", consumer="HeatingGrid")),
+    "peak_cold": ("W", partial(_peak, delivered="cold", consumer="CoolingGrid")),
 }
 """Each KPI name with its unit and the function that computes ``(value, reason)``."""
 
@@ -190,19 +182,19 @@ def totals(plant, case, results):
         the KPIs that need one.
     """
     frame = results.to_frame()
-    seconds = window_seconds(results)
+    seconds = results.durations
     report = {
-        "heat_delivered": _integral(delivered_heat(plant, frame), seconds, "J"),
+        "heat_delivered": _integral(port_difference(plant, frame, *HEAT_DELIVERED), seconds, "J"),
         "heat_useful": _integral(useful_heat(plant, frame), seconds, "J"),
         "heat_surplus": _integral(leaf_total(plant, frame, "surplus", HeatingGrid), seconds, "J"),
-        "cold_delivered": _integral(delivered_cold(plant, frame), seconds, "J"),
+        "cold_delivered": _integral(port_difference(plant, frame, *COLD_DELIVERED), seconds, "J"),
         "cold_useful": _integral(useful_cold(plant, frame), seconds, "J"),
         "cold_surplus": _integral(leaf_total(plant, frame, "surplus", CoolingGrid), seconds, "J"),
     }
     for name, (unit, module_class, field) in _EDGE_TOTALS.items():
-        report[name] = _integral(edge_total(plant, frame, field, module_class), seconds, unit)
-    air = edge_total(plant, frame, "heat_in", Atmosphere)
-    ground = edge_total(plant, frame, "heat_in", Formation)
+        report[name] = _integral(leaf_total(plant, frame, field, module_class), seconds, unit)
+    air = leaf_total(plant, frame, "heat_in", Atmosphere)
+    ground = leaf_total(plant, frame, "heat_in", Formation)
     known = [series for series in (air, ground) if series is not None]
     report["losses"] = _integral(sum(known) if known else None, seconds, "J")
     return report | _kpis(plant, results)

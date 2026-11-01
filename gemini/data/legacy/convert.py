@@ -15,11 +15,6 @@ from gemini.plants._utils.legacy.reader import converted_bindings, si_unit
 from gemini.run.dataset import Dataset
 
 
-def _from_si(value, unit):
-    """Convert an SI value back to the old tag unit."""
-    return units.convert(value, si_unit(unit), unit)
-
-
 def to_dataset(project, frame):
     """Rename old tag columns, convert numeric values to SI and return an in-memory Dataset.
 
@@ -140,8 +135,8 @@ def to_frame(results, project):
         for field, binding in bound.measured.items():
             name = join_path(path, field)
             if name in frame:
-                output[binding.column] = (
-                    frame[name].map(lambda value: _from_si(value, binding.unit)).to_numpy()
+                output[binding.column] = units.array_convert(
+                    frame[name].to_numpy(), si_unit(binding.unit), binding.unit
                 )
     return output
 

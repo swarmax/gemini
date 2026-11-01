@@ -7,44 +7,37 @@ from gemini.modules.grids import CoolingGrid, HeatingGrid
 from gemini.modules.module import Module
 
 
-def window_seconds(results):
-    """Return the duration [s] of every completed tick of ``results``, as an array."""
-    return results.durations
+def _summed(frame, columns):
+    """Return the sum of ``columns`` of ``frame``, NaN where none has a value, or ``None``."""
+    return frame[columns].sum(axis=1, min_count=1) if columns else None
 
 
 def leaf_total(plant, frame, field, module_class=Module):
-    """Return the sum of declared output ``field`` over the leaves of ``module_class``.
+    """Return the sum of column ``field`` over the leaves of ``module_class``, or ``None``.
 
     Parameters
     ----------
     plant : Module
-        The plant whose leaves declare the output.
+        The plant whose leaves wrote the columns.
     frame : pandas.DataFrame
-        ``results.to_frame()``: one ``path.field`` column per leaf output, in the unit the leaf
-        declares.
+        ``results.to_frame()``: one ``path.field`` column per leaf output or port field.
     field : str
-        Output name, such as ``"unmet_demand"``.
+        Column name below the leaf path, such as ``"unmet_demand"`` or ``"gas_out.chemical_flow"``.
     module_class : type, optional
         Only leaves that are instances of this class count; every leaf by default.
 
     Returns
     -------
     pandas.Series or None
-        The sum on the result time index, in the unit of the field. A tick where no summed
-        column has a value is NaN. ``None`` when no leaf of the class declares the field or
-        none of them ran.
+        The sum on the result time index, in the unit of the column. A tick where no summed
+        column has a value is NaN. ``None`` when no leaf of the class has the column.
     """
     columns = [
         join_path(path, field)
         for path, module in plant.named_modules()
-        if module.is_leaf
-        and isinstance(module, module_class)
-        and field in module.outputs(recurse=False)
-        and join_path(path, field) in frame
+        if module.is_leaf and isinstance(module, module_class) and join_path(path, field) in frame
     ]
-    if not columns:
-        return None
-    return frame[columns].sum(axis=1, min_count=1)
+    return _summed(frame, columns)
 
 
 def port_difference(plant, frame, module_class, first, second):
@@ -63,42 +56,25 @@ def port_difference(plant, frame, module_class, first, second):
     return sum(frame[join_path(path, first)] - frame[join_path(path, second)] for path in paths)
 
 
-def delivered_heat(plant, frame):
-    """Return the heat delivered [W]: what the water loses across the ``HeatingGrid`` leaves."""
-    return port_difference(
-        plant, frame, HeatingGrid, "supply_in.enthalpy_flow", "return_out.enthalpy_flow"
-    )
+HEAT_DELIVERED = (HeatingGrid, "supply_in.enthalpy_flow", "return_out.enthalpy_flow")
+"""The class and the two ports whose enthalpy flows give the heat delivered [W]."""
 
-
-def delivered_cold(plant, frame):
-    """Return the cold delivered [W]: what the water gains across the ``CoolingGrid`` leaves."""
-    return port_difference(
-        plant, frame, CoolingGrid, "return_out.enthalpy_flow", "supply_in.enthalpy_flow"
-    )
+COLD_DELIVERED = (CoolingGrid, "return_out.enthalpy_flow", "supply_in.enthalpy_flow")
+"""The class and the two ports whose enthalpy flows give the cold delivered [W]."""
 
 
 def useful_heat(plant, frame):
     """Return the useful heat [W]: what the ``HeatingGrid`` leaves took, at most their demand."""
-    delivered = delivered_heat(plant, frame)
+    delivered = port_difference(plant, frame, *HEAT_DELIVERED)
     surplus = leaf_total(plant, frame, "surplus", HeatingGrid)
     return delivered if surplus is None or delivered is None else delivered - surplus
 
 
 def useful_cold(plant, frame):
     """Return the useful cold [W]: what the ``CoolingGrid`` leaves took, at most their demand."""
-    delivered = delivered_cold(plant, frame)
+    delivered = port_difference(plant, frame, *COLD_DELIVERED)
     surplus = leaf_total(plant, frame, "surplus", CoolingGrid)
     return delivered if surplus is None or delivered is None else delivered - surplus
-
-
-def edge_total(plant, frame, field, module_class):
-    """Return the sum of column ``field`` over the leaves of ``module_class``, or ``None``."""
-    columns = [
-        join_path(path, field)
-        for path, module in plant.named_modules()
-        if module.is_leaf and isinstance(module, module_class) and join_path(path, field) in frame
-    ]
-    return frame[columns].sum(axis=1, min_count=1) if columns else None
 
 
 def results_total(results, frame, field):
@@ -110,11 +86,14 @@ def results_total(results, frame, field):
     columns = [
         join_path(path, field) for path, fields in results.names().items() if field in fields
     ]
-    if not columns:
-        return None
-    return frame[columns].sum(axis=1, min_count=1)
+    return _summed(frame, columns)
+
+
+def steps(power, seconds):
+    """Return the energy [J] of each tick of a power series [W] over durations [s]; NaN gives 0."""
+    return np.nan_to_num(power.to_numpy(dtype=float)) * seconds
 
 
 def energy(power, seconds):
     """Return the energy [J] of a power series [W] over tick durations [s], skipping NaN ticks."""
-    return float(np.nansum(power.to_numpy(dtype=float) * seconds))
+    return float(steps(power, seconds).sum())

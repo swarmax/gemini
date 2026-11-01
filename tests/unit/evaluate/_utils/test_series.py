@@ -29,11 +29,6 @@ def consumers():
     return plant, results
 
 
-def test_window_seconds_are_the_tick_durations(consumers):
-    """Each tick lasts the step of the run."""
-    assert series.window_seconds(consumers[1]).tolist() == [1800.0] * 3
-
-
 def test_leaf_total_sums_the_leaves_of_one_class(consumers):
     """Outputs of cooling consumers add up, a heat consumer has none, a missing tick is NaN."""
     plant, results = consumers
@@ -47,9 +42,12 @@ def test_edge_totals_read_the_ports_of_the_edge_modules(consumers):
     """Delivered heat and cold are port differences; a missing tick is NaN."""
     plant, results = consumers
     frame = results.to_frame()
-    assert series.delivered_heat(plant, frame).iloc[:2].tolist() == [1.0, 2.0]
-    assert series.delivered_cold(plant, frame).iloc[0] == 11.0
-    assert math.isnan(series.delivered_cold(plant, frame).iloc[1])
+    assert series.port_difference(plant, frame, *series.HEAT_DELIVERED).iloc[:2].tolist() == [
+        1.0,
+        2.0,
+    ]
+    assert series.port_difference(plant, frame, *series.COLD_DELIVERED).iloc[0] == 11.0
+    assert math.isnan(series.port_difference(plant, frame, *series.COLD_DELIVERED).iloc[1])
 
 
 def test_leaf_total_is_none_without_a_declaring_leaf(consumers):
@@ -66,8 +64,15 @@ def test_results_total_sums_by_field_name(consumers):
     assert series.results_total(results, results.to_frame(), "fuel") is None
 
 
+def test_steps_are_the_energy_of_each_tick_and_skip_missing_ticks(consumers):
+    """A missing tick gives no energy."""
+    plant, results = consumers
+    heat = series.port_difference(plant, results.to_frame(), *series.HEAT_DELIVERED)
+    assert series.steps(heat, results.durations).tolist() == [1800.0, 3600.0, 0.0]
+
+
 def test_energy_integrates_power_and_skips_missing_ticks(consumers):
     """Energy is power times duration, over the ticks that have a value."""
     plant, results = consumers
-    heat = series.delivered_heat(plant, results.to_frame())
-    assert series.energy(heat, series.window_seconds(results)) == (1.0 + 2.0) * 1800.0
+    heat = series.port_difference(plant, results.to_frame(), *series.HEAT_DELIVERED)
+    assert series.energy(heat, results.durations) == (1.0 + 2.0) * 1800.0

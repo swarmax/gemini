@@ -192,13 +192,9 @@ class _Observed:
     data: Any
     bindings: Any
 
-    def unit(self, binding):
-        """Return the unit of a bound column; dataset metadata wins over the binding."""
-        return bound_unit(self.dataset, binding)
-
     def values(self, binding):
         """Return a bound column converted to SI."""
-        unit = self.unit(binding)
+        unit = bound_unit(self.dataset, binding)
         return array_to_si(self.data[binding.column], unit)
 
 
@@ -232,7 +228,7 @@ def _head_coefficient_guess(module, path, observed, measured, valid):
         return None
     suction = observed.bindings.inlets["fluid_in"]
     flows = observed.values(suction["m_dot"])
-    if observed.unit(suction["m_dot"]) in _MASS_FLOW_UNITS:
+    if bound_unit(observed.dataset, suction["m_dot"]) in _MASS_FLOW_UNITS:
         pressures, temperatures = observed.values(suction["p"]), observed.values(suction["T"])
         flows /= np.array(
             [module.fluid.properties(p, t).density for p, t in zip(pressures, temperatures)]

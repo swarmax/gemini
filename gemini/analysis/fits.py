@@ -142,9 +142,9 @@ def estimate_conductance(
     m_dot_hot,
     m_dot_cold,
     *,
-    cp_hot=heat_transfer.DEFAULT_CP,
-    cp_cold=heat_transfer.DEFAULT_CP,
-    arrangement="counterflow",
+    cp_hot,
+    cp_cold,
+    arrangement,
     units=None,
 ):
     """Return the apparent UA of an exchanger as a value in W/K, from temperatures and mass flows.

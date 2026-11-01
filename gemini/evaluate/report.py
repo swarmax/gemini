@@ -3,6 +3,7 @@
 from gemini._utils.jsonable import to_plain
 from gemini.evaluate._utils.cost import equipment
 from gemini.evaluate._utils.ratings import rating_of
+from gemini.evaluate._utils.series import energy
 from gemini.evaluate._utils.verdict import verdict
 from gemini.evaluate.capacities import capacities
 from gemini.evaluate.capex import capex
@@ -52,14 +53,14 @@ def report(plant, case, results):
         else ``None``) and ``failed_steps`` (the number of steps that failed). ``to_dict()`` gives
         plain JSON.
     """
-    energy = totals(plant, case, results)
+    edge = totals(plant, case, results)
     checks = constraints(plant, case, results)
     return Report(
-        heat_delivered=energy["heat_delivered"],
-        cold_delivered=energy["cold_delivered"],
+        heat_delivered=edge["heat_delivered"],
+        cold_delivered=edge["cold_delivered"],
         boiler_heat=_boiler_heat(apply_case(plant, case), results),
-        electricity_bought=energy["electricity_bought"],
-        gas_bought=energy["gas_bought"],
+        electricity_bought=edge["electricity_bought"],
+        gas_bought=edge["gas_bought"],
         capacities=capacities(plant, case, results),
         capex=capex(plant, case, "record"),
         opex=opex(plant, case, results, "record"),
@@ -84,5 +85,7 @@ def _boiler_heat(plant, results):
     if not boilers:
         return measure(None, "J", "the plant has no boiler")
     powers = [rating_of(module).use(frame, path) for path, module in boilers]
-    total = sum(power.fillna(0.0) for power in powers if power is not None)
-    return measure(float((total * results.durations).sum()), "J")
+    shown = [power for power in powers if power is not None]
+    if not shown:
+        return measure(None, "J", "the run shows no use of the boilers")
+    return measure(sum(energy(power, results.durations) for power in shown), "J")

@@ -4,11 +4,11 @@ import numpy as np
 
 from gemini.evaluate._utils.level import level
 from gemini.evaluate._utils.series import (
-    edge_total,
     energy,
+    leaf_total,
+    steps,
     useful_cold,
     useful_heat,
-    window_seconds,
 )
 from gemini.modules.grids import ChemicalGrid, ElectricityGrid, GasGrid, WasteGrid
 from gemini.units import SECONDS_PER_YEAR
@@ -35,15 +35,15 @@ class Flows:
     def __init__(self, plant, results):
         """Read the series of the six flows from the finished run ``results``."""
         frame = results.to_frame()
-        self.seconds = window_seconds(results)
+        self.seconds = results.durations
         self.scale = SECONDS_PER_YEAR / self.seconds.sum()
         self.series = {
             "heat": useful_heat(plant, frame),
             "cold": useful_cold(plant, frame),
-            "electricity": edge_total(plant, frame, "net_import", ElectricityGrid),
-            "fuel": edge_total(plant, frame, "gas_out.chemical_flow", GasGrid),
-            "waste": edge_total(plant, frame, "waste_in.mass_flow", WasteGrid),
-            "chemical": edge_total(plant, frame, "chemical_out.mass_flow", ChemicalGrid),
+            "electricity": leaf_total(plant, frame, "net_import", ElectricityGrid),
+            "fuel": leaf_total(plant, frame, "gas_out.chemical_flow", GasGrid),
+            "waste": leaf_total(plant, frame, "waste_in.mass_flow", WasteGrid),
+            "chemical": leaf_total(plant, frame, "chemical_out.mass_flow", ChemicalGrid),
         }
 
     def energy(self, name):
@@ -64,5 +64,4 @@ class Flows:
         price = level(case, PRICES[name], len(self.seconds))
         if np.ndim(price) == 0:
             return self.energy(name) * price
-        power = self.series[name].to_numpy(dtype=float)
-        return float(np.nansum(power * self.seconds * price)) * self.scale
+        return float((steps(self.series[name], self.seconds) * price).sum()) * self.scale

@@ -42,7 +42,7 @@ def _conditions(model):
 
 
 def _si(name, value):
-    """Return one condition in SI, converting a unit string."""
+    """Return one condition in SI, converting a ``Quantity``."""
     unit, quantity = _CONDITIONS[name]
     return physics_units.value_in_si(value, unit, f"model.conditions.{name}", quantity)
 
@@ -70,9 +70,10 @@ def corrosion_forecast(model, until, units=None):
         ``correlation`` (``"NORSOK"``, ``"DLM"`` or ``"DLD"``), ``conditions``, ``thickness`` [m]
         and ``minimum_thickness`` [m] of the wall at ``start``, and ``start`` (ISO 8601 UTC text
         or a datetime). ``conditions`` has the keyword arguments of ``co2_corrosion_rate`` with
-        SI values or unit strings: ``temperature`` [K], ``pressure`` [Pa], ``water_flow_rate``
-        [m3/s] and ``co2_partial_pressure`` [Pa] or ``co2_fraction`` [-], and optionally
-        ``water_density`` [kg/m3], ``water_viscosity`` [Pa.s], ``diameter`` and ``roughness`` [m],
+        SI values or ``Quantity`` values: ``temperature`` [K], ``pressure`` [Pa],
+        ``water_flow_rate`` [m3/s] and ``co2_partial_pressure`` [Pa] or ``co2_fraction`` [-], and
+        optionally ``water_density`` [kg/m3], ``water_viscosity`` [Pa.s], ``diameter`` and
+        ``roughness`` [m],
         ``bicarb_concentration`` and ``ionic_strength`` [kg/m3].
     until : str or datetime
         End of the forecast, after ``start``.
@@ -107,9 +108,9 @@ def corrosion_forecast(model, until, units=None):
     remaining = corrosion.time_to_minimum_wall(
         model["thickness"], model["minimum_thickness"], rate / 1000 / physics_units.SECONDS_PER_YEAR
     )
-    left = value(None, "year", "the corrosion rate is not positive")
+    left = value(None, "yr", "the corrosion rate is not positive")
     if rate > 0:
-        left = value(remaining / physics_units.SECONDS_PER_YEAR, "year")
+        left = value(remaining / physics_units.SECONDS_PER_YEAR, "yr")
     return {
         "correlation": model["correlation"],
         "rate": value(rate, "mm/year"),

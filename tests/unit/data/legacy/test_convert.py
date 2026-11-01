@@ -6,7 +6,6 @@ import pytest
 
 import gemini as gm
 from gemini.data import legacy
-from gemini.data.legacy import convert
 from gemini.errors import ValidationError
 from tests.fixtures import OLD_PROJECT
 from tests.fixtures.errors import raises
@@ -79,15 +78,6 @@ def test_to_dataset_converts_and_reports_missing_columns(project):
     assert values["esp_status"].iloc[0] == "Normal"
     with raises(ValidationError, "invalid_format", match="ESP_freq"):
         legacy.to_dataset(project, frame.drop(columns=["ESP_freq"]))
-
-
-def test_old_units_from_si():
-    """Gauge pressure subtracts one atmosphere; other old units use the SI inverse."""
-    assert convert._from_si(1e5 + 101325, "barg") == 1.0
-    assert convert._from_si(2e5, "bar") == 2.0
-    assert convert._from_si(293.15, "degC") == pytest.approx(20.0)
-    with raises(ValidationError, "invalid_format", match="psi"):
-        convert._from_si(1.0, "psi")
 
 
 def test_to_frame_uses_old_columns_and_units(project, converted, fast_dataset):

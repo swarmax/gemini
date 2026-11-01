@@ -64,7 +64,7 @@ def test_fit_recovers_curve_and_health_threshold():
     correction = analysis.fit_head_correction([1, 2, 3], [3, 5, 7])
     assert correction["slope"]["value"] == pytest.approx(2)
     assert correction["offset"]["value"] == pytest.approx(1)
-    assert len(wells._head_curve(pump, 50)) == 50
+    assert len(wells._head_curve(pump, 50)) == wells.PUMP_CURVE_POINTS
 
 
 def test_the_esp_alone_asks_for_a_plain_scope_under_float32_precision():

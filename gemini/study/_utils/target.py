@@ -1,7 +1,5 @@
 """What a study may vary: a value of the plant, or a value of the case named ``case.<path>``."""
 
-import numpy as np
-
 from gemini import units
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.case._utils.fields import Q, QMap, si_unit_of, to_si
@@ -165,19 +163,6 @@ def _case_bound(case, name, bound, difference):
         given = units.Quantity.from_dict(bound) if isinstance(bound, dict) else bound
         return number - units.to_si(0, given.unit)
     return number
-
-
-def current_si(plant, case, name):
-    """Return the present value of ``name`` in SI, or raise ``missing_value`` when it has none."""
-    if is_case_name(name):
-        found = case_field(case, name)[1]
-        value = None if found is None else np.mean(found)
-    else:
-        path, _, parameter = name.rpartition(".")
-        value = getattr(plant.get_submodule(path), parameter)
-    if value is None:
-        raise _missing(name)
-    return float(value)
 
 
 def quantities(plant, case, values):

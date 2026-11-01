@@ -52,17 +52,26 @@ def test_estimate_reservoir_pressure_finds_the_linear_inflow_pressure():
         analysis.estimate_reservoir_pressure([0, 1], [1, 2])
 
 
+STATED = {"cp_hot": 4000, "cp_cold": 4000, "arrangement": "counterflow"}
+
+
 def test_estimate_conductance_is_the_mean_duty_over_the_lmtd():
     """Equal terminal differences of 40 K give the duty over 40 K."""
-    conductance = analysis.estimate_conductance(
-        350, 340, 300, 310, 10, 10, cp_hot=4000, cp_cold=4000
-    )
+    conductance = analysis.estimate_conductance(350, 340, 300, 310, 10, 10, **STATED)
     assert conductance["value"] == pytest.approx(10 * 4000 * 10 / 40)
     assert conductance["unit"] == "W/K"
     with raises(PhysicsError, "too_little_data", match="agree"):
-        analysis.estimate_conductance(350, 340, 300, 340, 10, 10)
+        analysis.estimate_conductance(350, 340, 300, 340, 10, 10, **STATED)
     with raises(ValidationError, "unknown_name", match="arrangement"):
-        analysis.estimate_conductance(350, 340, 300, 310, 10, 10, arrangement="cross")
+        analysis.estimate_conductance(
+            350, 340, 300, 310, 10, 10, cp_hot=4000, cp_cold=4000, arrangement="cross"
+        )
+
+
+def test_estimate_conductance_needs_the_heat_capacities_and_the_arrangement():
+    """Nothing is assumed about the fluid or the flow arrangement."""
+    with pytest.raises(TypeError):
+        analysis.estimate_conductance(350, 340, 300, 310, 10, 10)
 
 
 def test_fits_take_units_for_what_has_a_quantity():
@@ -78,7 +87,7 @@ def test_fits_take_units_for_what_has_a_quantity():
     assert estimate["pressure"]["value"] == pytest.approx(200.0)
     assert estimate["pressure"]["unit"] == "bar"
     conductance = analysis.estimate_conductance(
-        350, 340, 300, 310, 10, 10, cp_hot=4000, cp_cold=4000, units={"thermal_conductance": "W/K"}
+        350, 340, 300, 310, 10, 10, **STATED, units={"thermal_conductance": "W/K"}
     )
     assert conductance["unit"] == "W/K"
     with pytest.raises(ValidationError):
