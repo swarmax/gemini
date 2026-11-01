@@ -88,7 +88,7 @@ def _health_rows(pump, flows_kg_s):
 
 def test_health_on_arrays_equals_one_call_per_row():
     """Worst key, drift, window and message of every row match, with and without drifts."""
-    pump = ESP().set_params("", {**ESP_PARAMS, "maximum_flow": 0.05})
+    pump = ESP().set_params("", {**ESP_PARAMS, "minimum_flow": 0.03, "maximum_flow": 0.07})
     results = _health_rows(pump, [20.0, 40.0, 40.0, 60.0, 30.0])
     outputs = [result.outputs for result in results]
     scales = [(1.0, 1.3), (1.2, 0.5), (1.0, 1.0), (0.8, 1.5), (1.05, 0.99)]
@@ -120,7 +120,7 @@ def _design():
 def test_keyword_mapping_and_positional_calls_agree():
     """Every way to pass the inlet gives one head, and a persisted command is that of the call."""
     esp, stream = _design(), Stream(
-        flow={"value": 150, "unit": "m3/h"},
+        flow={"value": 140, "unit": "m3/h"},
         T={"value": 80, "unit": "degC"},
         p={"value": 20, "unit": "bar"},
     )
@@ -134,7 +134,7 @@ def test_keyword_mapping_and_positional_calls_agree():
 def test_no_outputs_keeps_the_outlet_of_a_full_call():
     """Skipping the outputs leaves the outlet stream as it was."""
     esp, stream = _design(), Stream(
-        flow={"value": 150, "unit": "m3/h"},
+        flow={"value": 140, "unit": "m3/h"},
         T={"value": 80, "unit": "degC"},
         p={"value": 20, "unit": "bar"},
     )
@@ -175,3 +175,13 @@ def test_a_stopped_pump_is_inside_its_curve():
     """No flow is no extrapolation."""
     pump = ESP().set_params("", ESP_PARAMS)
     assert pump(frequency=60, fluid_in=Stream(m_dot=0.0, T=300, p=1e5)).outputs.efficiency == 0
+
+
+def test_a_flow_above_the_speed_scaled_maximum_flow_is_a_failed_row_with_the_range():
+    """The curves are valid up to ``maximum_flow`` scaled by the speed; above, the row fails."""
+    pump = ESP().set_params("", {**ESP_PARAMS, "maximum_flow": 0.05})
+    assert pump(frequency=60, fluid_in=Stream(m_dot=45.0, T=300, p=1e5)).outputs.power > 0
+    with raises(PhysicsError, "out_of_range", match=r"esp: flow = 0\.06.*0\.05"):
+        pump(frequency=60, fluid_in=Stream(m_dot=60.0, T=300, p=1e5))
+    with raises(PhysicsError, "out_of_range"):
+        pump(frequency=30, fluid_in=Stream(m_dot=30.0, T=300, p=1e5))
