@@ -89,13 +89,17 @@ def _capacities(design, case, notes):
         if not paths:
             continue
         peak = _peak(case, service)
-        if role == "heat_pump" and not _needs_heat_pump(design, case):
+        part = _lift_share(design, case) if role == "heat_pump" else 1.0
+        if part <= 0:
             _skip(notes, paths, "the reservoir is hotter than the heating supply temperature")
             continue
-        share = peak / len(paths)
+        share = part * peak / len(paths)
         for path in paths:
             design.set_params(path, {"capacity": units.Quantity(share, "W")})
-            reason = f"the {service} peak of {peak:.4g} W shared by {len(paths)} {role} unit(s)"
+            reason = (
+                f"{part:.3g} of the {service} peak of {peak:.4g} W "
+                f"shared by {len(paths)} {role} unit(s)"
+            )
             _note(notes, f"{path}.capacity", share, "W", reason)
     for role in ("chp", "heat_exchanger"):
         _skip(notes, units_of(design, role), "not sized from the demand")
@@ -106,8 +110,14 @@ def _skip(notes, paths, reason):
     notes["unchanged"].extend({"path": path, "reason": reason} for path in paths)
 
 
-def _needs_heat_pump(design, case):
-    """Whether the reservoir at the depth of the plant is colder than the heating supply."""
+def _lift_share(design, case):
+    """Return the part of the heating peak that the reservoir cannot reach by itself, 0 to 1.
+
+    ``(supply - reservoir) / (supply - return)`` with the reservoir temperature at the depth of the
+    plant: the water of the heating network warms to the reservoir temperature in the exchanger
+    and the heat pump lifts it the rest of the way. Zero when the reservoir is hotter than the
+    supply temperature.
+    """
     depth = getattr(design, "depth", None)
     if depth is None:
         doublet = units_of(design, "doublet")
@@ -119,7 +129,9 @@ def _needs_heat_pump(design, case):
             code="missing_value",
         )
     supply = require(case, "demand.heating.supply_temperature")
-    return case.environment.temperature_at(depth) < supply
+    back = require(case, "demand.heating.return_temperature")
+    reservoir = case.environment.temperature_at(depth)
+    return min(1.0, max(0.0, (supply - reservoir) / (supply - back)))
 
 
 def size(plant, case):
@@ -132,9 +144,18 @@ def size(plant, case):
       largest, with a note, when none does), for a plant class that takes the structural size
       ``doublets``; the nominal flow of each doublet, the heating peak shared by them, kept
       within the flow limits;
-    - the capacity of each ``boiler`` and, when the reservoir at the depth of the plant is colder
-      than the heating supply temperature, of each ``heat_pump``: the heating peak shared by the
-      units of the role; the capacity of each ``chiller``: the cooling peak shared likewise.
+    - the capacity of each ``boiler``: the whole heating peak shared by the units of the role, so
+      that the boiler alone carries the peak when a doublet is out (it is the one unit that does
+      not depend on the doublets); the capacity of each ``heat_pump``: the part of the heating
+      peak the reservoir cannot reach, ``(supply - reservoir) / (supply - return)`` of it, shared
+      by the units of the role, the reservoir temperature taken at the depth of the plant and
+      the temperatures from ``demand.heating`` (a heat pump is left unsized, with a note, when
+      the reservoir is hotter than the supply temperature); the capacity of each ``chiller``: the
+      cooling peak shared likewise.
+
+    The exchanger is taken as ideal for the heat pump share: a finite approach leaves the water
+    colder at the heat pump, which a boiler downstream makes up; a plant with a heat pump and no
+    boiler may then fall short of its supply temperature at the peak.
 
     A size that is not computed for a module kind (``chp``, ``heat_exchanger``, a heat pump that
     is not needed) leaves it unchanged and lists it.
