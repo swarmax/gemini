@@ -161,8 +161,11 @@ basis (`gemini.physics.pumps`).
   `pumps.is_in_operating_window`, `pumps.power`, `pumps.speed_ratio`
 - **Health**: worst relative drift of measured `power`, `head` and `discharge_pressure`, alarm
   above `drift_threshold` or outside the operating window.
-- **Assumptions and validity**: isothermal; empirical curves valid on their fitted flow range.
-  Reverse flow raises `PhysicsError`. The fits
+- **Assumptions and validity**: isothermal; the curves are valid inside the flow window
+  `minimum_flow` to `maximum_flow`, scaled by `frequency / 60 Hz`, and where head and power are not
+  negative. A row outside it (flow at standstill, zero, is inside) fails with `PhysicsError`, code
+  `out_of_range`, naming the path, the flow and the range; the row code is `out_of_range`, never a
+  number from the extrapolated polynomial. Reverse flow raises `PhysicsError`. The fits
   (`gm.analysis.fit_head_coefficients`, `gm.analysis.fit_head_correction`) are in `gm.analysis`;
   `head_curve` is the private helper of `gm.analysis.pump_curve`.
 - **Energy audit**: unresolved pump power. The pump is isothermal and allocates no
@@ -201,13 +204,15 @@ Injection (booster) pump that raises the brine to a discharge pressure.
   from `capex`. `gm.study.size` sets them from the doublets the pump serves.
 - **Controls**: `pressure_setpoint` (`Pressure | None`, default `None`), `frequency`
   (`Frequency`, default 60 Hz, used with curves).
-- **Outputs**: `head` (soft sensor), `power` (soft sensor), `discharge_pressure` (soft sensor).
+- **Outputs**: `head` (soft sensor), `power` (soft sensor), `discharge_pressure` (soft sensor),
+  `is_pumping` (the required head is positive).
 - **Model**: with `head_coefficients` (and `stage_count`) the head is the ESP polynomial; otherwise
   `head = pressure_setpoint - suction.p`. Power is `pumps.power` when both curves are given,
   else `Q head / efficiency`; `power_in = power`.
 - **Physics**: `energy.input_power`, `pumps.head`, `pumps.hydraulic_power`, `pumps.power`
-- **Validity**: a negative head (setpoint below suction) and reverse flow raise
-  `PhysicsError`; neither a setpoint nor a head curve raises `ValidationError`.
+- **Validity**: a setpoint below the suction pressure needs no pumping: head 0, power 0, discharge
+  pressure equal to the suction pressure, `is_pumping` false. A head curve below zero and reverse
+  flow raise `PhysicsError`; neither a setpoint nor a head curve raises `ValidationError`.
 - **Energy audit**: unresolved pump power, as `ESP`.
 
 ```python

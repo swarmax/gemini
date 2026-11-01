@@ -3,6 +3,7 @@
 import numpy as np
 
 from gemini import ops, runtime
+from gemini.errors import PhysicsError
 from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
@@ -103,17 +104,18 @@ class ESP(Module):
         flow = suction.volumetric_flow()
         require_forward(self.path, "suction volume flow", flow, "m3/s")
         head = self.head_function(flow, self.frequency)
+        power = self.power_function(flow, self.frequency)
+        self._check_inside_curve(flow, head, power)
 
         discharge = suction.with_(p=suction.p + head)
-        power = self.power_function(flow, self.frequency)
         power_in = energy.input_power(power, self.motor_efficiency)
 
         # Outputs
         self.head = head
         self.power = power
-        self.efficiency = _physics.esp_efficiency(flow, self.head, self.power)
-        scale = pumps.speed_ratio(self.frequency, constants.ESP_REFERENCE_FREQUENCY)
+        self.efficiency = _physics.esp_efficiency(flow, head, power)
         self.discharge_pressure = discharge.p
+        scale = pumps.speed_ratio(self.frequency, constants.ESP_REFERENCE_FREQUENCY)
         self.is_in_operating_window = pumps.is_in_operating_window(
             flow, self.minimum_flow, self.maximum_flow, scale
         )
@@ -123,6 +125,28 @@ class ESP(Module):
 
         outlets = dict(fluid_out=discharge, power_in=power_in)
         return outlets
+
+    def _check_inside_curve(self, flow, head, power):
+        """Fail the row where the polynomial curves give a number no pump can deliver.
+
+        The head and power polynomials are fitted on a finite flow range and extrapolate outside
+        it, to a negative head or a negative power. The range is read from the curves themselves:
+        a head or a power below zero is the curve outside the range it is valid for, and the row
+        fails with ``out_of_range`` naming the path, the flow, the head and the power. The flow
+        window ``minimum_flow`` to ``maximum_flow`` is the recommended operating range, not this
+        range: leaving it only raises the health alarm.
+        """
+        ops.check(
+            ops.logical_and(head >= 0, power >= 0),
+            PhysicsError,
+            "{path}: flow = {flow} m3/s gives head = {head} Pa and power = {power} W; expected "
+            "head and power at least 0, the range the curves are valid for",
+            code="out_of_range",
+            path=self.path,
+            flow=flow,
+            head=head,
+            power=power,
+        )
 
     def head_function(self, flow: float, frequency: float) -> float:
         """Return pump head [Pa] for flow [m3/s] and frequency [Hz]."""

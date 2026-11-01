@@ -5,11 +5,13 @@ import pytest
 
 import gemini as gm
 from gemini import analysis, units
+from gemini.errors import PhysicsError
 from gemini.analysis import wells
 from gemini.modules.pumps import ESP
 from gemini.ops import kernels
 from gemini.types.flows import Stream
 from tests.fixtures.equivalence import assert_health_matches, assert_module_matches
+from tests.fixtures.errors import raises
 
 ESP_PARAMS = {
     "pump_type": "HC27000",
@@ -102,7 +104,7 @@ def test_traced_call_matches_one_call_per_row_on_every_backend():
     """Low, nominal and high flow, a trickle and a low frequency, on every backend."""
     rows = [
         dict(fluid_in=Stream(m_dot=m_dot, T=300, p=1e5), frequency=frequency)
-        for m_dot, frequency in ((5, 60), (60, 60), (200, 50), (500, 60), (1e-3, 60), (60, 35))
+        for m_dot, frequency in ((5, 60), (60, 60), (200, 50), (60, 60), (1e-3, 60), (60, 35))
     ]
     assert_module_matches(ESP().set_params("", ESP_PARAMS), rows)
 
@@ -148,3 +150,25 @@ def test_a_new_esp_names_what_it_misses():
     assert not esp.is_initialized and "stage_count" in esp.missing_parameters()
     esp.stage_count = 120
     assert esp.stage_count == 120 and "stage_count" not in esp.missing_parameters()
+
+
+def test_a_flow_where_the_curves_extrapolate_is_a_failed_row_with_the_code():
+    """A head or power below zero is the polynomial outside its range: ``out_of_range``."""
+    pump = ESP().set_params("", ESP_PARAMS)
+    inside = pump(frequency=60, fluid_in=Stream(m_dot=55.0, T=300, p=1e5)).outputs
+    assert inside.power > 0
+    with raises(PhysicsError, "out_of_range", match=r"esp: flow = .*head and power at least 0"):
+        pump(frequency=60, fluid_in=Stream(m_dot=90.0, T=300, p=1e5))
+
+
+def test_a_negative_power_is_outside_the_curve():
+    """A power polynomial below zero is the curve outside its range."""
+    curves = {**ESP_PARAMS, "power_coefficients": [-10.0, 0, 0, 0, 0, 0]}
+    with raises(PhysicsError, "out_of_range", match="head and power at least 0"):
+        ESP().set_params("", curves)(frequency=60, fluid_in=Stream(m_dot=40.0, T=300, p=1e5))
+
+
+def test_a_stopped_pump_is_inside_its_curve():
+    """No flow is no extrapolation."""
+    pump = ESP().set_params("", ESP_PARAMS)
+    assert pump(frequency=60, fluid_in=Stream(m_dot=0.0, T=300, p=1e5)).outputs.efficiency == 0
