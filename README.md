@@ -73,9 +73,8 @@ while assignment (`esp.frequency = 50.0`) persists them.
 
 A leaf module computes and a plant connects: every composite is a `Plant` class that declares its
 children, ports and connections, and `gm.Plant(name)` builds one with `add` and `connect`.
-`gm.plants.names()` lists the plant classes, `gm.plants.get(name)` returns one without values,
-and `gm.Plant.from_legacy(folder)` turns an old project folder into a plant. The plant dict is the
-JSON form agents read and write: `plant.to_dict()`, `gm.Plant.from_dict`, `gm.plants.schema()`, and
+`gm.plants.names()` lists the plant classes, `gm.plants.get(name)` returns one without values.
+The plant dict is the JSON form agents read and write: `plant.to_dict()`, `gm.Plant.from_dict`, `gm.plants.schema()`, and
 `plant.to_json(path)`, `gm.Plant.from_json(path)` for a file. `gm.data` reads your demand, from a CSV
 file (`gm.data.from_csv`) or from values (`from_values`). Readers are `from_<format>` and writers
 `to_<format>` everywhere.

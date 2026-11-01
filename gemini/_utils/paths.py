@@ -34,8 +34,3 @@ def plant_values(name):
 def doublet_heat(name):
     """Return the path of the measured data file ``name``."""
     return _input(f"doublet_heat/{name}")
-
-
-def legacy_project():
-    """Return the folder of the legacy project."""
-    return _input("legacy_project")

@@ -11,7 +11,7 @@ from tests.fixtures.sample_cases import example_plant
 
 SNAPSHOTS = {
     "0.1.0": "f19ae90f18bb5a5a85e1b1f730276c9a50fdba0d46108c4bcd56488b48178a8b",
-    "0.2.0": "ed06aa7e2ba05683a2c278b4cff22b07f6531babb8256f0e5dd6dac932b7112f",
+    "0.2.0": "07bcfaf291fcbf1ecf2de8ebe8b0a387f94ef8576d64dbe41ba9ecc657935e87",
 }
 """Hash of the snapshot per ``gm.__version__``: a released entry never changes."""
 
@@ -119,6 +119,6 @@ def test_utils_stays_private():
     assert "_utils" not in gm.__all__
 
 
-def test_the_old_project_import_is_public_only_through_from_legacy():
-    """``gm.legacy`` is gone; ``gm.Plant.from_legacy`` is the one public entry."""
-    assert not hasattr(gm, "legacy") and callable(gm.Plant.from_legacy)
+def test_the_old_project_import_is_not_in_the_package():
+    """``gm.legacy`` and ``gm.Plant.from_legacy`` are gone."""
+    assert not hasattr(gm, "legacy") and not hasattr(gm.Plant, "from_legacy")

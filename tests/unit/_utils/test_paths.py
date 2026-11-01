@@ -16,7 +16,6 @@ def test_the_package_finds_its_folders():
     [
         (lambda: paths.plant_values("Doublet"), "plants/Doublet.json"),
         (lambda: paths.doublet_heat("data.csv"), "doublet_heat/data.csv"),
-        (paths.legacy_project, "legacy_project"),
     ],
 )
 def test_each_folder_of_the_inputs_lies_below_them(tmp_path, monkeypatch, call, name):

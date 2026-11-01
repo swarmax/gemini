@@ -10,8 +10,7 @@ The run lives in `engine/` (`Engine`, `Clock`, `executor.py`, `eager.py`, `rows.
 `engine`, `run`, `types`, `units`, `errors` and `_utils`. They import none of `compiler`, `data`,
 `study`, `evaluate` and `analysis`, not even inside a function; those sit above the run and import
 it. `modules` imports neither `plants` nor `run`: `gm.call` is `gemini/modules/call.py`, which needs
-no engine, and `run` re-exports it. The old project reader that builds a plant is
-`gemini/plants/_utils/legacy/`.
+no engine, and `run` re-exports it.
 
 `engine` imports `run` for `Results` and `Dataset`, and `run` imports `engine.engine`.
 `gemini/engine/__init__.py` imports `gemini.run` first and never `.engine`, which keeps one import

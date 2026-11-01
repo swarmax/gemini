@@ -2,8 +2,8 @@
 
 ``runtime_values.json`` holds values produced by the old monitoring runtime. They are rebuilt
 through public equipment models from the old ``.param`` files and the second row of the old
-semicolon CSV, including the documented arithmetic quirks of that runtime. The test lives with
-the legacy tests because it reads old formats through ``gemini.plants._utils.legacy.tables``.
+semicolon CSV, including the documented arithmetic quirks of that runtime. The old formats are
+read through ``scripts.legacy.tables``.
 """
 
 import json
@@ -18,8 +18,8 @@ from gemini.modules.pumps import ESP
 from gemini.modules.subsurface import InjectionReservoir, ProductionReservoir
 from gemini.modules.wells import InjectionWell, ProductionWell
 from gemini.physics import geometry
-from gemini.plants._utils.legacy import tables
 from gemini.types.flows import Stream
+from scripts.legacy import tables
 from tests.fixtures import FIXTURES, OLD_PROJECT
 from tests.fixtures.evaluate import assert_values, configured
 from tests.fixtures.reading import reading

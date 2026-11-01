@@ -95,22 +95,21 @@ def test_an_opened_plant_round_trips_its_nested_wiring():
 
 
 def test_params_set_since_and_validation_agree_with_the_builder():
-    """``Plant.validate()`` is ``gm.plants.validate`` of its spec."""
+    """``gm.plants.validate`` of a plant reports a root port that has no outer name."""
     plant = gm.Plant("Same")
     plant.add("Pipe", "pipe", params={"length": 5.0})
     plant.connect("feed", "pipe.fluid_in")
     plant.connect("air", "pipe.air_in")
     plant.connect("pipe.fluid_out", "product")
     plant.connect("pipe.loss_out", "loss")
-    found = plant.validate(on_error="record")
-    assert found == gm.plants.validate(plant.to_dict(), on_error="record")
+    found = gm.plants.validate(plant.to_dict(structure=True), on_error="record")
     assert {item["code"] for item in found} == {"root_plant_port"}
     with pytest.raises(gm.errors.ValidationError):
         plant.add("Pipe", "bad", params={"length": {"value": 5, "unit": "bar"}})
 
 
 def test_a_raised_error_carries_every_problem_of_the_list_record_returns():
-    """``from_dict``, ``gm.plants.validate`` and ``plant.validate`` tell one story in one try."""
+    """``from_dict`` and ``gm.plants.validate`` tell one story in one try."""
     spec = {
         "format": 2,
         "name": "DoubletHeatPlant",
@@ -132,20 +131,22 @@ def test_a_raised_error_carries_every_problem_of_the_list_record_returns():
 def test_a_valid_spec_returns_no_problems_under_both_policies():
     """Without problems nothing is raised; the list is empty."""
     plant = gm.Plant("Empty")
-    assert plant.validate() == plant.validate(on_error="record") == []
+    spec = plant.to_dict(structure=True)
+    assert gm.plants.validate(spec) == gm.plants.validate(spec, on_error="record") == []
     with pytest.raises(gm.errors.ValidationError, match="on_error"):
-        plant.validate(on_error="ignore")
+        gm.plants.validate(spec, on_error="ignore")
 
 
-def test_plant_validate_raises_what_the_spec_function_raises():
-    """A plant with a bad stated value fails its own ``validate``."""
+def test_validate_raises_what_it_records_for_a_plant():
+    """A plant with a bad binding fails ``gm.plants.validate`` with the problems it records."""
     plant = gm.Plant("Broken")
     plant.add("Pipe", name="pipe")
     plant.set_bindings("pipe", {"velocity": "v"})
     plant.bindings["no.such.module"] = plant.bindings["pipe"]
+    spec = plant.to_dict(structure=True)
     with pytest.raises(gm.errors.ValidationError) as caught:
-        plant.validate()
-    assert caught.value.problems == plant.validate(on_error="record")
+        gm.plants.validate(spec)
+    assert caught.value.problems == gm.plants.validate(spec, on_error="record")
 
 
 def test_a_broken_module_does_not_hide_the_other_end_of_a_connection():
@@ -200,7 +201,12 @@ def test_a_class_plant_edited_by_hand_stores_its_structure():
 
 def test_a_root_of_a_class_is_validated_with_its_structure():
     """``validate`` on a plant reports on its modules, whichever form it stores."""
-    assert example_plant("DoubletHeatPlant").validate(on_error="record") == []
+    assert (
+        gm.plants.validate(
+            example_plant("DoubletHeatPlant").to_dict(structure=True), on_error="record"
+        )
+        == []
+    )
 
 
 def test_a_wrong_size_is_a_problem_of_the_dict():

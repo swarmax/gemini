@@ -50,15 +50,3 @@ def test_a_dataset_knows_no_modules_or_engine():
     """``gemini/run/dataset.py`` is in-memory data, with nothing of a run."""
     names = imported_modules(ROOT / "gemini/run/dataset.py")
     assert [name for name in names if name.startswith(("gemini.modules", "gemini.engine"))] == []
-
-
-def test_the_legacy_bridge_knows_no_engine():
-    """Old formats reach the package through plants and datasets, never the engine."""
-    bad = [
-        name
-        for folder in ("gemini/data/legacy", "gemini/plants/_utils/legacy")
-        for path in sorted((ROOT / folder).rglob("*.py"))
-        for name in imported_modules(path)
-        if name.startswith("gemini.engine")
-    ]
-    assert bad == []

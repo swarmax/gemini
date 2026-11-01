@@ -39,7 +39,6 @@ CALLS = {
     "plants.validate": lambda plant, results: gm.plants.validate({"format": 2}, on_error="record"),
     "schema": lambda plant, results: gm.plants.schema(),
     "profile_schema": lambda plant, results: gm.data.profile_schema(),
-    "plant.validate": lambda plant, results: plant.validate(),
     "bindable": lambda plant, results: plant.bindable("heat_exchanger"),
     "params_at": lambda plant, results: plant.params_at("heat_exchanger"),
     "param_history": lambda plant, results: plant.param_history("heat_exchanger"),

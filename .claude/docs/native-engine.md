@@ -403,7 +403,7 @@ builds one with `add` and `connect`. There is one `forward`. JSON exists only as
   iteration on the tear streams), `constraints.py` (the solve of a constraint), `outputs.py` (the
   combinations), `reader.py` and `writer.py` (the plant dict in and out), `schema.py`, `factory.py`
   (a registry type or a group to a module) and `catalogue.py` (`names`, `get`,
-  `capabilities`, `validate`); `from_dict`, `from_json`, `to_json` and `from_legacy` are methods of
+  `capabilities`, `validate`); `from_dict`, `from_json` and `to_json` are methods of
   `Plant`. The dated parameters and bindings of `Module` are
   `modules/_utils/design.py`; the sections every plant shares are `modules/_utils/serialization.py`.
 - **Value order.** A connection orders its modules by the way the value travels: the source first

@@ -41,7 +41,7 @@ GeminiError
   RunError           dataset, clock, checkpoint, step
   Cancelled          a callback stopped a run; committed ticks stay readable
   NotImplementedYet  the name is final, its work lands in a later step
-GeminiWarning        root of warnings; the legacy conversion lists what it cannot map in one
+GeminiWarning        root of warnings
 ```
 
 `GeminiError` takes `path=`, `code=`, `suggestions=` and `problems=` as keywords. `code` defaults to

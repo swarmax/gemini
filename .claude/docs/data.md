@@ -159,7 +159,7 @@ There is one data folder, and no data file inside `gemini/`: a plant is a class.
 `inputs/` is at the repository root, next to `gemini/`, and is not installed. It holds everything
 that code reads: `examples/` (sample cases), `plants/` (example values: a `size`, `params`,
 `fluids`, `boundary`, `bindings`, `param_history` and `inputs`; the template plants have none),
-`doublet_heat/` (measured data) and `legacy_project/`. A function that needs it raises `RunError`
+`doublet_heat/` (measured data) and `legacy_project/` (read by tests only, [legacy.md](legacy.md)). A function that needs it raises `RunError`
 with code `inputs_missing` when it is absent, as in an installed wheel, and the message names the
 file. Nothing fails at import time, and `gm.plants.get` works without it.
 

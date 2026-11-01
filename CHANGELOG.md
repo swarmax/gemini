@@ -7,6 +7,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Removed
+- `gm.Plant.from_legacy`, `gemini.data.legacy`, `gemini/plants/_utils/legacy/`, `paths.legacy_project`
+  and `Plant.validate`: the package reads no old project. Use
+  `gm.plants.validate(plant.to_dict(structure=True))`. The old-project reader the tests still need
+  is `scripts/legacy/`.
+
 ### Changed
 - `gm.Case` and the folder `gm.case` replace `gm.Problem`, `gm.Constraint` and `gm.Assumptions`:
   fixed sections in a `case.json`, SI storage, no default for anything a user must decide. Every

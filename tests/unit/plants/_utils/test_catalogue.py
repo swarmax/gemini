@@ -127,7 +127,7 @@ def test_the_treatment_design_is_complete_and_valid():
     """Every port is connected and every parameter has a value."""
     plant = treatment_plant()
     assert plant.is_initialized
-    assert plant.validate(on_error="record") == []
+    assert gm.plants.validate(plant.to_dict(structure=True), on_error="record") == []
     assert plant.d0.reservoir.temperature == plant.d1.reservoir.temperature
     assert plant.heat_users.fluid == gm.WATER
 

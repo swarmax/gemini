@@ -128,9 +128,6 @@
    "from_json": [
     "path"
    ],
-   "from_legacy": [
-    "folder"
-   ],
    "input_value": [
     "path"
    ],
@@ -149,9 +146,6 @@
    ],
    "to_json": [
     "path"
-   ],
-   "validate": [
-    "on_error"
    ]
   },
   "Results": {
