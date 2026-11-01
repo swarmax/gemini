@@ -5,19 +5,19 @@ import json
 import pytest
 
 import gemini as gm
-from tests.fixtures.sample_cases import filled_plant
+from tests.fixtures.sample_cases import example_plant, filled_plant
 
 
 def test_from_dict_builds_a_plant_of_any_class():
     """``gm.Plant.from_dict`` gives the class of the dict, and a class-less plant without one."""
-    typed = gm.Plant.from_dict(gm.plants.example("Doublet").to_dict())
+    typed = gm.Plant.from_dict(example_plant("Doublet").to_dict())
     assert isinstance(typed, gm.plants.Doublet)
     assert not hasattr(gm.plants, "from_dict")
 
 
 def test_the_stored_plant_file_round_trips_exactly():
     """``to_spec(from_dict(x)) == x`` for the migrated example plant, JSON-safe."""
-    spec = gm.plants.example("DoubletHeatPlant").to_dict()
+    spec = example_plant("DoubletHeatPlant").to_dict()
     plant = gm.Plant.from_dict(spec)
     assert plant.to_dict() == spec
     assert plant.to_dict() == spec
@@ -200,7 +200,7 @@ def test_a_class_plant_edited_by_hand_stores_its_structure():
 
 def test_a_root_of_a_class_is_validated_with_its_structure():
     """``validate`` on a plant reports on its modules, whichever form it stores."""
-    assert gm.plants.example("DoubletHeatPlant").validate(on_error="record") == []
+    assert example_plant("DoubletHeatPlant").validate(on_error="record") == []
 
 
 def test_a_wrong_size_is_a_problem_of_the_dict():

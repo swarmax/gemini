@@ -41,7 +41,7 @@ SELECT_ALL = {"pyproject.toml", "tests/conftest.py", "tests/xdist_plugin.py"}
 EXAMPLES_TEST = "tests/e2e/test_examples.py"
 FIXTURE_PATHS = "tests/fixtures/__init__.py"
 INPUTS = "inputs/"
-INPUT_READERS = {"examples": "sample_cases", "plants": "example("}
+INPUT_READERS = {"examples": "sample_cases", "plants": "example_plant("}
 """What a test names to read a folder of ``inputs/`` through the public API."""
 QUALITY_TEST = "tests/unit/test_code_quality.py"
 QUALITY_REASON = "always runs: code-quality rules apply to every change"

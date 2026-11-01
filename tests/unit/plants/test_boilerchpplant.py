@@ -3,6 +3,7 @@
 import pytest
 
 import gemini as gm
+from tests.fixtures.sample_cases import example_plant
 
 SECONDARY = gm.Stream(
     flow={"value": 140, "unit": "m3/h"},
@@ -25,7 +26,7 @@ INPUTS = {
 @pytest.fixture(scope="module")
 def run():
     """Return the example plant and one call of it."""
-    plant = gm.plants.example("BoilerChpPlant")
+    plant = example_plant("BoilerChpPlant")
     plant._set_inputs(INPUTS)
     return plant, plant(return_in=SECONDARY)
 

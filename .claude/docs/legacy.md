@@ -29,7 +29,7 @@ caller's plant is not changed, and returns an empty list when the wiring matches
 `plant.to_json(path)` stores it. The folder holds `diagram.json`, one `.param` file per diagram node
 and any other file (the data CSV, `well_trajectory.csv`, `plant.conf`), which is read as-is and not
 converted; the data CSV is converted with `to_dataset`. On the example project the result equals
-`gm.plants.example("DoubletHeatPlant")` exactly (`tests/unit/plants/_utils/legacy/test_reader.py`).
+`example_plant("DoubletHeatPlant")` (`tests/fixtures/sample_cases.py`) exactly (`tests/unit/plants/_utils/legacy/test_reader.py`).
 The function is `gemini/plants/_utils/legacy/reader.py: from_folder`, which `Plant.from_legacy`
 calls.
 

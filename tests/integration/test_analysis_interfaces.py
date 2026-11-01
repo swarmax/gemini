@@ -72,19 +72,3 @@ def test_every_real_return_is_plain_json(example_run):
         plain = to_plain(result)
         text = json.dumps(plain, allow_nan=False)
         assert json.loads(text) == plain, name
-
-
-@pytest.mark.parametrize(
-    "call",
-    [
-        lambda: gm.analysis.injectivity(None, "doublet.injector"),
-        lambda: gm.analysis.calibrate_pump(None, "doublet.esp", None),
-        lambda: gm.analysis.calibrate_corrosion([]),
-        lambda: gm.analysis.erosion(None, "doublet"),
-    ],
-    ids=["injectivity", "calibrate_pump", "calibrate_corrosion", "erosion"],
-)
-def test_every_name_not_built_raises_not_implemented_yet(call):
-    """The final signature exists and the call says its work lands later."""
-    with pytest.raises(gm.errors.NotImplementedYet):
-        call()

@@ -12,6 +12,7 @@ from tests.fixtures import ROOT
 from tests.fixtures.cases import costed_finance, make_case
 from tests.fixtures.costed_plants import cooling_plant, day, heating_plant
 from tests.fixtures.json_schema import check
+from tests.fixtures.sample_cases import example_plant
 
 SCHEMAS = ROOT / "docs" / "schemas"
 PAGE = ROOT / ".claude" / "docs" / "api.md"
@@ -166,7 +167,7 @@ def _validation_entries(plant):
 @pytest.fixture(scope="module")
 def plant():
     """Give the example plant, not shared with tests that mutate it."""
-    return gm.plants.example("DoubletHeatPlant")
+    return example_plant("DoubletHeatPlant")
 
 
 @pytest.fixture(scope="module")
@@ -272,13 +273,10 @@ def test_every_data_entry_of_the_page_is_walked(entries):
     listed = set(re.findall(r"gm\.(?:analysis|evaluate)\.(\w+)\(", page))
     listed |= set(re.findall(r"`(mass_balance|bounds)\(", page))
     later = {
-        "injectivity",
-        "calibrate_pump",
-        "calibrate_corrosion",
-        "erosion",
         "capacities",
         "report",
         "compare",
+        "failures",
     }
     assert listed - later <= entries.keys()
 

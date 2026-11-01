@@ -16,6 +16,7 @@ from gemini._utils import paths
 from gemini.types import Profile
 from tests.fixtures import FIXTURES
 from tests.fixtures.frames import path_frame
+from tests.fixtures.sample_cases import example_plant
 
 OUTPUT = FIXTURES / "module_api_baseline"
 
@@ -23,7 +24,7 @@ OUTPUT = FIXTURES / "module_api_baseline"
 def main():
     """Write plant state, full replay, quickstart simulation and timing metadata."""
     OUTPUT.mkdir(exist_ok=True)
-    plant = gm.plants.example("DoubletHeatPlant")
+    plant = example_plant("DoubletHeatPlant")
     data = gm.Dataset.from_frame(
         pd.read_csv(paths.doublet_heat("doublet_2024_15min.csv"), parse_dates=["time"]),
         time_column="time",

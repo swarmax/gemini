@@ -305,8 +305,7 @@ read from the ports of its edge modules.
 ## Registered plants
 
 `gm.plants.names(category=None)` lists the plant classes, `category` being what they serve;
-`gm.plants.get(name)` gives a plant without values and `gm.plants.example(name)` one with real
-values.
+`gm.plants.get(name)` gives a plant without values.
 
 | Class | Serves | Size |
 | --- | --- | --- |
@@ -338,9 +337,9 @@ grid, and its setpoints as `inputs`:
 Example values live in `inputs/plants/<Name>.json`, in a source checkout only:
 `{"plant": "<Name>", "size": {...}, "params": {"<dotted path>": <value>, ...}}`, numbers as
 quantity dicts where the quantity converts to the same float, plus `fluids`, `boundary`, `bindings`,
-`param_history` and `inputs` under the names of the plant dict. `example(name)` builds the plant of
+`param_history` and `inputs` under the names of the plant dict. `example_plant(name)` of `tests/fixtures/sample_cases.py` builds the plant of
 that `size`, then `set_params` with `params` and these sections, and `to_dict()` writes the values in
-SI. The five template plants have no values of their own: a design is its plant dict. A plant with no file raises `NotImplementedYet`
+SI. The five template plants have no values of their own: a design is its plant dict. A plant with no file raises `FileNotFoundError`
 and a missing `inputs/` raises `inputs_missing`.
 
 `ATESPlant` has one wiring for both seasons: the `split_fraction` of `source_valve` and `load_valve`

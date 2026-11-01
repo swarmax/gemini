@@ -4,6 +4,7 @@ import pytest
 
 import gemini as gm
 from gemini.physics.geometry import build_path
+from tests.fixtures.sample_cases import example_plant
 
 PRODUCER_SURVEY = [
     (0, 0, 0.1778),
@@ -56,7 +57,7 @@ HEAD_COEFFICIENTS = [
 @pytest.fixture
 def deviated():
     """Return the doublet of the parallel exchangers case: 18 stages, 2.3 m3/h/bar injector."""
-    doublet = gm.plants.example("NodalDoublet")
+    doublet = example_plant("NodalDoublet")
     doublet.reservoir.set_params(
         "",
         {
@@ -98,7 +99,7 @@ def deviated():
 @pytest.fixture
 def vertical():
     """Return the example doublet of the boiler and CHP case at 65 Hz and 3 bar."""
-    doublet = gm.plants.example("NodalDoublet")
+    doublet = example_plant("NodalDoublet")
     doublet.esp.frequency = {"value": 65, "unit": "Hz"}
     doublet.wellhead_pressure = {"value": 3, "unit": "bar"}
     return doublet

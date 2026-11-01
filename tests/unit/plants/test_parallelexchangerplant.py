@@ -3,6 +3,7 @@
 import pytest
 
 import gemini as gm
+from tests.fixtures.sample_cases import example_plant
 
 SECONDARY = gm.Stream(
     flow={"value": 125.1, "unit": "m3/h"},
@@ -28,7 +29,7 @@ INPUTS = {
 @pytest.fixture(scope="module")
 def run():
     """Return the example plant and one call of it."""
-    plant = gm.plants.example("ParallelExchangerPlant")
+    plant = example_plant("ParallelExchangerPlant")
     plant._set_inputs(INPUTS)
     return plant, plant(return_in=SECONDARY)
 
@@ -62,7 +63,7 @@ def test_the_call_closes(run):
 
 def test_a_recalibrated_injectivity_reproduces_the_fitted_injection():
     """The index fitted to 44.47 bar at 125.1 m3/h gives that pressure and a smaller pump."""
-    plant = gm.plants.example("ParallelExchangerPlant")
+    plant = example_plant("ParallelExchangerPlant")
     plant._set_inputs(INPUTS)
     doublet = plant.doublet
     bottom = doublet.injector(wellhead_in=FITTED_INJECTION).outlets.bottom_out

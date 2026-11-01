@@ -41,6 +41,7 @@ import pandas as pd
 
 import gemini as gm
 from gemini._utils import paths
+from tests.fixtures.sample_cases import example_plant
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = paths.INPUTS / "examples"
@@ -122,7 +123,7 @@ def cases(only=None):
     for name, folder, plant_file in SAMPLES:
         plant = gm.Plant.from_json(plant_file)
         found.append(Case(name, plant, gm.Case.from_json(EXAMPLES / folder / "case.json")))
-    found.append(Case("doublet-heat-plain", gm.plants.example("DoubletHeatPlant")))
+    found.append(Case("doublet-heat-plain", example_plant("DoubletHeatPlant")))
     return [case for case in found if only is None or only in case.name]
 
 

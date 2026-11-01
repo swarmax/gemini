@@ -402,7 +402,7 @@ builds one with `add` and `connect`. There is one `forward`. JSON exists only as
   (order and wiring of the steps, tears and constraints), `run.py` (one plant call), `loops.py` (the
   iteration on the tear streams), `constraints.py` (the solve of a constraint), `outputs.py` (the
   combinations), `reader.py` and `writer.py` (the plant dict in and out), `schema.py`, `factory.py`
-  (a registry type or a group to a module) and `catalogue.py` (`names`, `get`, `example`,
+  (a registry type or a group to a module) and `catalogue.py` (`names`, `get`,
   `capabilities`, `validate`); `from_dict`, `from_json`, `to_json` and `from_legacy` are methods of
   `Plant`. The dated parameters and bindings of `Module` are
   `modules/_utils/design.py`; the sections every plant shares are `modules/_utils/serialization.py`.

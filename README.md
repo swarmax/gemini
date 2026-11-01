@@ -37,8 +37,9 @@ reports and compares six candidate plants on a case. The longer tour, from the r
 import pandas as pd
 
 import gemini as gm
+from tests.fixtures.sample_cases import example_plant
 
-plant = gm.plants.example("DoubletHeatPlant")
+plant = example_plant("DoubletHeatPlant")
 design = {name: parameter.value for name, parameter in plant.doublet.esp.named_parameters()}
 esp = gm.modules.ESP().set_params("", design)
 stream = gm.Stream(flow={"value": 150, "unit": "m3/h"}, T={"value": 80, "unit": "C"}, p={"value": 20, "unit": "bar"})
@@ -73,15 +74,15 @@ while assignment (`esp.frequency = 50.0`) persists them.
 
 A leaf module computes and a plant connects: every composite is a `Plant` class that declares its
 children, ports and connections, and `gm.Plant(name)` builds one with `add` and `connect`.
-`gm.plants.names()` lists the plant classes, `gm.plants.example(name)` returns one with real values,
+`gm.plants.names()` lists the plant classes, `gm.plants.get(name)` returns one without values,
 and `gm.Plant.from_legacy(folder)` turns an old project folder into a plant. The plant dict is the
 JSON form agents read and write: `plant.to_dict()`, `gm.Plant.from_dict`, `gm.plants.schema()`, and
 `plant.to_json(path)`, `gm.Plant.from_json(path)` for a file. `gm.data` reads your demand, from a CSV
 file (`gm.data.from_csv`) or from values (`from_values`). Readers are `from_<format>` and writers
 `to_<format>` everywhere.
 
-gemini holds no data file. `gm.plants.example` reads `inputs/`, which is in a
-source checkout and not installed, and outside one it raises `inputs_missing`:
+gemini holds no data file. The example values of the plants are in `inputs/`, which is in a
+source checkout and not installed; `example_plant` of `tests/fixtures/sample_cases.py` reads them:
 
 ```text
 inputs/             # repository only

@@ -85,8 +85,7 @@ at any constant step and of any length, one column per quantity in W, and `frame
 and `quantities`. Both validate through one check: a monotonic index with no gaps or repeats, a
 constant step, no negative or missing value, a known quantity. `profile_schema()` is the JSON Schema
 of the same frame as a document: `columns` (unit and quantity), `time` and `values`.
-`gm.data.synthesize(heating, cooling, start, step, ...)` will make a demand from a few figures and
-raises `NotImplementedYet`. A profile column becomes a run input when a plant binding names it as
+A profile column becomes a run input when a plant binding names it as
 its `column`.
 
 The committed CSVs under `inputs/doublet_heat/` are immutable source data. Two

@@ -4,11 +4,12 @@ import pytest
 
 import gemini as gm
 from gemini.plants._utils.run import Run
+from tests.fixtures.sample_cases import example_plant
 
 
 def plant():
     """Return the doublet of the example plant."""
-    return gm.plants.example("DoubletHeatPlant").doublet
+    return example_plant("DoubletHeatPlant").doublet
 
 
 def test_a_path_reads_a_declaration_of_the_plant():

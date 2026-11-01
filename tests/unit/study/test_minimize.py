@@ -7,6 +7,7 @@ import pytest
 import gemini as gm
 from gemini._utils.jsonable import to_plain
 from gemini.study._utils import trial
+from gemini.study._utils.best import Best
 from tests.fixtures.errors import raises
 from tests.unit.study.conftest import shallow_case, shallow_plant
 
@@ -45,10 +46,33 @@ def test_the_cheapest_count_wins_with_its_plant(found):
     assert design.depth == best.parts["parameters"]["depth"].value
 
 
-def test_the_result_is_plain_json_without_the_plant(found):
-    """The plant is no part of the JSON form."""
+def test_the_result_is_plain_json_with_the_plant_as_its_dict(found):
+    """``to_plain`` gives the JSON form, the best plant as its plant dict."""
     text = json.dumps(to_plain(found), allow_nan=False)
-    assert "peak_boiler" not in text
+    assert "peak_boiler" in text
+
+
+def test_best_round_trips_through_json_without_an_encoder(runs):
+    """``to_dict`` dumps as it is, quantities as ``{value, unit}``; ``from_dict`` reads it back."""
+    result = gm.study.minimize(shallow_plant(), shallow_case(), "lcts", DEPTH, evaluations=5)
+    best = result["best"]
+    plain = json.loads(json.dumps(best.to_dict(), allow_nan=False))
+    assert plain["plant"] == best["plant"].to_dict()
+    assert plain["parameters"]["depth"].keys() == {"value", "unit"}
+    again = Best.from_dict(plain)
+    assert again.value == best.value and again.unit == best.unit
+    assert again.parts["parameters"] == best.parts["parameters"]
+    assert again["plant"].to_dict() == best["plant"].to_dict()
+    assert again.to_dict() == best.to_dict()
+
+
+def test_a_best_without_a_trial_has_no_plant_in_its_json():
+    """With no trial that ran, ``plant`` is ``None`` and the round trip keeps the reason."""
+    empty = Best(None, "-", "every trial failed", {"parameters": None}, None)
+    plain = json.loads(json.dumps(empty.to_dict()))
+    assert plain["plant"] is None and plain["reason"] == "every trial failed"
+    again = Best.from_dict(plain)
+    assert again.value is None and again.plant is None and again.reason == "every trial failed"
 
 
 def test_the_search_leaves_the_plant_and_the_case_alone(runs):
