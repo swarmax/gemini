@@ -124,8 +124,16 @@ number of `gm.__version__` ([freeze rule](.claude/docs/conventions.md#public-api
 
 ## Branching
 
-Work directly on `refactor`: commit there and push `origin refactor`. Do not create another
-branch unless the user explicitly asks for one, and open a pull request only when asked.
+- `main` is the stable line (competition delivery, releases). Change it only on the user's
+  request.
+- `dev` is the development line: commit there and push `origin dev`.
+- `feature/<name>`, `fix/<name>` and `docs/<name>` hold one task each, with a short lowercase name
+  joined by hyphens (`feature/study-speed`, `fix/budget-tests`). Branch from `dev`, merge back into
+  `dev`, then delete the branch locally and on `origin`.
+- Temporary worker branches and worktrees of a coordinator session stay local, are never pushed,
+  and are removed at the end of the task.
+- Never name a branch `dev/...`: git cannot hold both `dev` and `dev/<name>`.
+- Open a pull request only when asked.
 
 ## Layout
 
