@@ -76,3 +76,25 @@ def test_a_sensitivity_that_does_not_fit_is_refused(parameters, code, runs):
     with raises(gm.errors.ValidationError, code):
         gm.study.sensitivity(shallow_plant(), shallow_case(), parameters, ["lcts"])
     assert runs == []
+
+
+def test_the_table_shows_a_metric_in_its_display_unit_or_the_unit_given(runs):
+    """The cost is 0.2 currency/J for the price, shown in EUR/MWh; the CO2 in kt."""
+    found = gm.study.sensitivity(shallow_plant(), shallow_case(), SPREADS, ["co2", "lcts"])
+    frame = found.to_frame()
+    price = frame[(frame["metric"] == "lcts") & (frame["parameter"] == PRICE)].iloc[0]
+    assert price["unit"] == "EUR/MWh" and price["effect"] == pytest.approx(0.2 * 3.6e9)
+    carbon = frame[frame["metric"] == "co2"].iloc[0]
+    assert carbon["unit"] == "kt" and carbon["effect"] == pytest.approx(0.5e-6)
+    kilo = found.to_frame({"lcts": "EUR/kWh"})
+    assert kilo[kilo["metric"] == "lcts"]["unit"].eq("EUR/kWh").all()
+    assert found[0]["effect"].unit == "kg"
+
+
+def test_the_table_refuses_a_unit_that_does_not_fit(runs):
+    """A metric that is not in the rows, and a unit of another dimension."""
+    found = gm.study.sensitivity(shallow_plant(), shallow_case(), SPREADS, ["lcts"])
+    with raises(gm.errors.ValidationError, "invalid_value", match="units.co2"):
+        found.to_frame({"co2": "kt"})
+    with raises(gm.errors.ValidationError, "invalid_unit"):
+        found.to_frame({"lcts": "kt"})

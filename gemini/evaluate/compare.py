@@ -5,26 +5,64 @@ import pandas as pd
 
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import ValidationError
+from gemini.evaluate._utils.display import display_units, in_unit
 
 SENSES = ("min", "max")
 """The two ways to prefer a metric: the smaller or the larger value."""
 
+SERVICES = {"heating": "heat_delivered", "cooling": "cold_delivered"}
+"""The metric that shows a service of the case being delivered."""
+
 
 class Comparison(list):
-    """A list of ``{index, values, ranks, pareto}``, one per report, in the order given."""
+    """A list of ``{index, values, ranks, pareto, feasible}``, one per report in the order given."""
 
-    def to_frame(self):
-        """Return one row per report: its metrics, its ``rank_<metric>`` and ``pareto``."""
+    def to_frame(self, units=None):
+        """Return one row per report: its metrics, its ``rank_<metric>``, ``pareto``, ``feasible``.
+
+        Parameters
+        ----------
+        units : dict, optional
+            ``{metric: unit}``. A metric is shown in its display unit (see ``display_units``)
+            unless a unit is given; its column is named ``<metric> [<unit>]``. A metric without a
+            display unit stays in SI under its own name. A name that is not a metric, or a unit of
+            another dimension, raises ``invalid_value`` or ``invalid_unit``.
+        """
+        names = list(self[0]["values"]) if self else []
+        shown = display_units(names, units)
         rows = [
-            {**entry["values"], **{f"rank_{name}": rank for name, rank in entry["ranks"].items()}}
-            | {"pareto": entry["pareto"]}
+            {
+                **{
+                    _label(name, shown): (
+                        in_unit(name, entry["values"][name], shown[name])
+                        if name in shown
+                        else entry["values"][name]
+                    )
+                    for name in names
+                },
+                **{f"rank_{name}": rank for name, rank in entry["ranks"].items()},
+                "pareto": entry["pareto"],
+                "feasible": entry["feasible"],
+            }
             for entry in self
         ]
         return pd.DataFrame(rows, index=pd.Index([entry["index"] for entry in self], name="index"))
 
 
+def _label(name, shown):
+    """Return the column name of a metric: with its unit in brackets when it has one."""
+    return f"{name} [{shown[name]}]" if name in shown else name
+
+
 def compare(reports, by):
-    """Rank reports by the given metrics and mark the Pareto front.
+    """Rank reports by the given metrics and mark the Pareto front of the feasible ones.
+
+    A report is feasible when ``passed`` is ``True`` (or ``None`` with no
+    constraint to check), it has no failed step and it delivers every
+    service in its ``services`` (``heat_delivered`` has a value for ``"heating"``,
+    ``cold_delivered`` for ``"cooling"``). A dict without these keys, such as a plain table of
+    figures, is feasible. Feasible reports rank before all infeasible ones; the infeasible are
+    ordered by their number of reasons, then by the metrics.
 
     Parameters
     ----------
@@ -39,23 +77,44 @@ def compare(reports, by):
     -------
     Comparison
         One entry per report, in the order given: ``index`` (its position), ``values`` (the
-        metrics in SI, ``None`` for no value), ``ranks`` (1 is best; equal values share a rank) and
-        ``pareto``, whether no other report is at least as good in every metric and better in one.
+        metrics as floats in SI, ``None`` for no value), ``ranks`` (1 is best; equal values share a
+        rank), ``pareto`` (whether no other feasible report is at least as good in every metric and
+        better in one; an infeasible report is never on it), ``feasible`` and, when not feasible,
+        ``reasons``: the failed constraints as ``gm.evaluate.constraints`` gives them, and
+        ``{name, reason}`` for a missing service, a failed step or constraints none of which
+        was checked.
         With one metric the front is its best reports. ``to_frame()`` gives a table.
     """
     senses = _senses(by, reports)
     values = {name: [_value(report, name) for report in reports] for name in senses}
-    ranks = {name: _ranks(values[name], senses[name]) for name in senses}
-    front = _front(values, senses, len(reports))
+    reasons = [_reasons(report) for report in reports]
+    feasible = [not found for found in reasons]
+    ranks = {name: _ranks(values[name], senses[name], reasons) for name in senses}
+    front = _front(values, senses, feasible)
     return Comparison(
         {
             "index": position,
             "values": {name: values[name][position] for name in senses},
             "ranks": {name: ranks[name][position] for name in senses},
             "pareto": bool(front[position]),
+            "feasible": feasible[position],
+            **({} if feasible[position] else {"reasons": reasons[position]}),
         }
         for position in range(len(reports))
     )
+
+
+def _reasons(report):
+    """Return why a report is not feasible: the failed constraints and the services not given."""
+    found = [item for item in report.get("constraints", []) if item["passed"] is False]
+    if "passed" in report and report["passed"] is None and report.get("constraints"):
+        found.append({"name": "constraints", "reason": "no constraint was checked"})
+    if report.get("failed_steps"):
+        found.append({"name": "failed_steps", "reason": f"{report['failed_steps']} steps failed"})
+    for service, key in SERVICES.items():
+        if service in report.get("services", ()) and _value(report, key) is None:
+            found.append({"name": key, "reason": f"the run gives no {key} for the {service}"})
+    return found
 
 
 def _senses(by, reports):
@@ -105,19 +164,26 @@ def _worse(values, sense):
     return np.array([np.inf if value is None else sign * value for value in values])
 
 
-def _ranks(values, sense):
-    """Return the rank of each value, 1 for the best; equal values share the lowest rank."""
-    return [int(rank) for rank in pd.Series(_worse(values, sense)).rank(method="min")]
+def _ranks(values, sense, reasons):
+    """Return the rank of each report, 1 for the best; the infeasible come after the feasible.
+
+    Equal reports share the lowest rank. The infeasible are ordered by their number of reasons,
+    then by the metric.
+    """
+    keys = list(zip((len(found) for found in reasons), _worse(values, sense)))
+    return [1 + sum(other < key for other in keys) for key in keys]
 
 
-def _front(values, senses, count):
-    """Return which reports no other report dominates."""
+def _front(values, senses, feasible):
+    """Return which feasible reports no other feasible report dominates."""
     table = np.column_stack([_worse(values[name], senses[name]) for name in senses])
-    front = np.ones(count, dtype=bool)
-    for position in range(count):
+    front = np.zeros(len(feasible), dtype=bool)
+    allowed = np.asarray(feasible)
+    rivals = table[allowed]
+    for position in np.flatnonzero(allowed):
         valued = np.isfinite(table[position]).all()
         beaten = (
-            (table <= table[position]).all(axis=1) & (table < table[position]).any(axis=1)
+            (rivals <= table[position]).all(axis=1) & (rivals < table[position]).any(axis=1)
         ).any()
         front[position] = valued and not beaten
     return front

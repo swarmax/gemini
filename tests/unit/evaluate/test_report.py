@@ -26,6 +26,7 @@ KEYS = {
     "constraints",
     "passed",
     "failed_steps",
+    "services",
 }
 
 
@@ -86,3 +87,10 @@ def test_a_boiler_the_run_does_not_show_gives_no_heat_value():
     results = make_results({"other": {"power_in": [1.0, 1.0]}})
     heat = gm.evaluate.report(plant, make_case(), results)["boiler_heat"]
     assert heat.value is None and "boilers" in heat.reason
+
+
+def test_the_report_lists_the_services_the_case_asks_for():
+    """No demand, no service; a heating demand is one."""
+    assert gm.evaluate.report(heating_plant(), case(), day())["services"] == []
+    asked = make_case(supply={"heating": Quantity(60, "degC")})
+    assert gm.evaluate.report(heating_plant(), asked, day())["services"] == ["heating"]

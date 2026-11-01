@@ -50,8 +50,9 @@ def report(plant, case, results):
         ``opex``, ``lcts``, ``lcoh``, ``lcoc`` and ``co2`` (values; ``capex`` and ``opex`` keep
         their parts, per module and per kind), ``constraints`` (the list of ``constraints``),
         ``passed`` (``False`` if any constraint failed, ``True`` if none failed and one passed,
-        else ``None``) and ``failed_steps`` (the number of steps that failed). ``to_dict()`` gives
-        plain JSON.
+        else ``None``), ``failed_steps`` (the number of steps that failed) and ``services`` (the
+        services the case asks for, ``"heating"`` and ``"cooling"``, which ``compare`` needs to
+        see that a design delivers them). ``to_dict()`` gives plain JSON.
     """
     edge = totals(plant, case, results)
     checks = constraints(plant, case, results)
@@ -71,7 +72,15 @@ def report(plant, case, results):
         constraints=checks,
         passed=verdict([item["passed"] for item in checks]),
         failed_steps=len(results.errors()),
+        services=_services(case),
     )
+
+
+def _services(case):
+    """Return the services that the demand of the case asks for."""
+    if case.demand is None:
+        return []
+    return [name for name in ("heating", "cooling") if getattr(case.demand, name) is not None]
 
 
 def _boiler_heat(plant, results):

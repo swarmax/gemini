@@ -4,6 +4,7 @@ import pandas as pd
 
 from gemini._utils.strings import join_names
 from gemini.errors import ValidationError
+from gemini.evaluate._utils.display import display_units, in_unit
 from gemini.study._utils.target import check_name, quantities, value_si
 from gemini.study._utils.trial import checked_metric, run_trial
 from gemini.types.shapes import measure
@@ -12,23 +13,37 @@ from gemini.types.shapes import measure
 class Tornado(list):
     """The rows of a one-at-a-time sensitivity, sorted by effect, with ``to_frame``."""
 
-    def to_frame(self):
-        """Return a table of the rows, numbers in SI, the unit of each metric in ``unit``."""
+    def to_frame(self, units=None):
+        """Return a table of the rows: the parameter bounds in SI, the metric in a display unit.
+
+        ``at_low``, ``at_high`` and ``effect`` are numbers in the unit of ``unit``: the display unit
+        of the metric (``gm.evaluate.display_units``), or the one given in ``units``, a dict
+        ``{metric: unit}`` of the metrics of the rows. A metric without a display unit stays in
+        SI. A name that is not a metric of the rows raises ``invalid_value``; a unit of another
+        dimension, ``invalid_unit``.
+        """
+        shown = display_units(list(dict.fromkeys(row["metric"] for row in self)), units)
         rows = [
             {
                 "parameter": row["parameter"],
                 "metric": row["metric"],
                 "low": row["low"].value,
                 "high": row["high"].value,
-                "at_low": row["at_low"].value,
-                "at_high": row["at_high"].value,
-                "effect": row["effect"].value,
-                "unit": str(row["effect"].unit),
+                **{name: _number(row, name, shown) for name in ("at_low", "at_high", "effect")},
+                "unit": shown.get(row["metric"], str(row["effect"].unit)),
             }
             for row in self
         ]
         columns = ["parameter", "metric", "low", "high", "at_low", "at_high", "effect", "unit"]
         return pd.DataFrame(rows, columns=columns)
+
+
+def _number(row, name, shown):
+    """Return the number of ``name`` of a row in the display unit of its metric, or in SI."""
+    found = row[name]
+    if row["metric"] not in shown:
+        return found.value
+    return in_unit(row["metric"], found.si, shown[row["metric"]])
 
 
 def _bounds(plant, case, parameters):
