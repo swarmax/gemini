@@ -160,7 +160,6 @@ def _validation_entries(plant):
             {"nope": 1}, on_error="record"
         ),
         "plants.validate": lambda: gm.plants.validate({"format": 2, "name": 3}, on_error="record"),
-        "p.validate": lambda: plant.validate(on_error="record"),
         "to_dict": lambda: [gm.errors.ValidationError("bad", code="invalid_unit").to_dict()],
     }
 

@@ -57,8 +57,7 @@ implementation or test.
   retain the well's `wellhead` port name; on the below-pump segment it denotes its local upper
   endpoint (pump intake).
 - Port mapping is explicit (`tables.PORTS`), including the HX hot/cold ports and both degasser
-  outlets. Every unmapped old property or tag, and every default taken for a property a project lacks (`tables.DEFAULTS`), is listed in one `GeminiWarning` from
-  `legacy.to_plant`. Redundant observations and absent measured sandface conditions are left
+  outlets. Every unmapped old property or tag, and every default taken for a property a project lacks (`tables.DEFAULTS`), was listed in one `GeminiWarning` by the converter, which is gone from the package. Redundant observations and absent measured sandface conditions are left
   unbound with an individual reason in `tables.IGNORED_TAGS`; empty tags are skipped.
 - Supplemental CSV bindings supply filter pressure differences, HX duty and hot-side pressure
   loss, degasser inlet temperature and production rate. Unmeasured secondary pressure is assumed
@@ -176,7 +175,7 @@ reservoir pressure/temperature and an appropriate variable-UA reference are the 
 - NumPy 2.0 is the lower bound because the float32 ESP golden path relies on its NEP 50 type
   promotion: under NumPy 1.x `np.float32 / float` stays float32 by value-based casting, and the
   captured ESP head becomes 37.05164 bar instead of 37.05164337158203
-  (`tests/unit/plants/_utils/legacy/test_monitoring_golden.py` fails).
+  (`tests/unit/modules/test_monitoring_golden.py` fails).
 - `NOTE(refactor)`: pandas 3 parses decimal CSV text correctly rounded, as pandas 2 did only with
   `float_precision="round_trip"`. The pandas 2 default parser reads 44,022 cells of the July CSV
   differently, by up to 2.3e-15 relative, so replay under pandas 3 differs from the committed
@@ -290,8 +289,7 @@ decisions outlast the move.
   and passes per row: the numbers of a year stay within 1e-9 of the row-by-row ones
   (`scripts/bench_check.py`). A daily year of `HeatingCoolingPlant` takes 0.34 s eager (median of 5
   after a warm-up, i5-8257U, load average 15), against 9 s row by row.
-- `DoubletHeatPlant` keeps its measured values, which `tests/fixtures/module_api_baseline` and
-  `convert_legacy` hold. Its ESP curve at 60 Hz gives 37 bar at 149 m3/h, 17 bar at 200 m3/h and -34
+- `DoubletHeatPlant` keeps its measured values, which `tests/fixtures/module_api_baseline` holds. Its ESP curve at 60 Hz gives 37 bar at 149 m3/h, 17 bar at 200 m3/h and -34
   bar at 300 m3/h, so it runs a schedule up to 165 m3/h. A sized pump needs a decision on those
   goldens, or a dated `param_history` entry after the measured data.
 - Errors of a root plant reach its leaves: such a plant has no outlet, and a row only failed when an

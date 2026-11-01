@@ -59,10 +59,13 @@ def test_an_unconnected_port_is_reported_with_its_path():
     plant.add("Degasser", "degasser")
     plant.connect("feed", "degasser.fluid_in")
     plant.connect("degasser.liquid_out", "product")
-    found = [(item["path"], item["code"]) for item in plant.validate(on_error="record")]
+    found = [
+        (item["path"], item["code"])
+        for item in gm.plants.validate(plant.to_dict(structure=True), on_error="record")
+    ]
     assert ("degasser.gas_out", "unconnected_port") in found
     with raises(ValidationError, "unconnected_port"):
-        plant.validate()
+        gm.plants.validate(plant.to_dict(structure=True))
     with raises(ValidationError, "unconnected_port") as caught:
         plant(feed=stream())
     assert caught.value.path == "degasser.gas_out"
@@ -234,7 +237,7 @@ def test_to_spec_is_json_and_validate_is_empty(chain):
     """The spec is plain JSON, rebuilds an equal plant and has no problems."""
     spec = chain.to_dict()
     assert json.loads(json.dumps(spec, allow_nan=False)) == spec
-    found = chain.validate(on_error="record")
+    found = gm.plants.validate(chain.to_dict(structure=True), on_error="record")
     assert {item["code"] for item in found} == {"root_plant_port"}
     assert [item["path"] for item in found] == [
         "inlets.feed",

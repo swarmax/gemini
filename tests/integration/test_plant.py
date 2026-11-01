@@ -5,9 +5,10 @@ from pathlib import Path
 import pytest
 
 import gemini as gm
-from gemini.data import legacy
 from gemini.modules._utils.balance import collect_flows, energy_balance, mass_balance
 from gemini.modules._utils.wiring import trace_wiring
+from scripts.legacy import wiring
+from scripts.legacy.project import GeminiProject
 from tests.fixtures import OLD_PROJECT
 from tests.fixtures.reading import reading
 
@@ -39,8 +40,8 @@ def test_handwritten_wiring_and_split_helpers(example):
     }
     traced = trace_wiring(plant, inputs)
     assert len(traced) == 10
-    project = legacy.GeminiProject.from_folder(OLD_PROJECT)
-    assert legacy.check_wiring(plant, project) == []
+    project = GeminiProject.from_folder(OLD_PROJECT)
+    assert wiring.check_wiring(plant, project) == []
     well = plant.doublet.well
     bottom = leaves["doublet.reservoir"].outlets["sandface_out"]
     assert well.intake_conditions(bottom) == leaves["doublet.well"].outlets["wellhead_out"]

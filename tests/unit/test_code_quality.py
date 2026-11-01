@@ -872,16 +872,9 @@ def test_no_reader_or_writer_breaks_the_naming_rule():
 
 
 GEMINI_FILES = [path for path in PYTHON_FILES if path.startswith("gemini/")]
-LEGACY_FOLDERS = ("gemini/plants/_utils/legacy/", "gemini/data/legacy/")
 OLD_NAME = re.compile(r"legacy|compat|deprecated|^old_|_old($|_)|_v1|_v2", re.IGNORECASE)
 """What a kept old name, shape or call path is called."""
-NAME_ALLOWANCE = {
-    "from_legacy": "gm.Plant.from_legacy is the public reader of the old GEMINI project folder",
-    "legacy_project": "paths.legacy_project is the sample folder of that reader",
-}
-"""Names with ``OLD_NAME`` outside the legacy folders, each with its reason."""
 WRAPPER_ALLOWANCE = {
-    "gemini/plants/plant.py::from_legacy": "the public name is api.md; the reader is its folder",
     "gemini/modules/module.py::fluid": "a property setter that calls the hook plants override",
 }
 """Public functions that only call another gemini function, each with its reason."""
@@ -1089,28 +1082,18 @@ def test_the_wrapper_guard_finds_a_forwarding_function():
     assert wrappers(ast.parse(source), "x.py") == ["x.py::caught", "x.py::method"]
 
 
-def test_no_name_keeps_something_old_outside_the_legacy_folders(package_trees):
+def test_no_name_keeps_something_old(package_trees):
     """No ``legacy``, ``compat``, ``deprecated``, ``old_``, ``_old``, ``_v1``, ``_v2`` in a name."""
     found = [
-        f"{path}: {name}"
-        for path in package_only(package_trees)
-        if not path.startswith(LEGACY_FOLDERS)
-        for name in file_old_names(path)
-        if name not in NAME_ALLOWANCE
+        f"{path}: {name}" for path in package_only(package_trees) for name in file_old_names(path)
     ]
     found += [
         path
         for path in tracked_files()
-        if path.startswith("gemini/") and not path.startswith(LEGACY_FOLDERS)
+        if path.startswith("gemini/")
         if OLD_NAME.search(path.removeprefix("gemini/"))
     ]
     assert found == []
-
-
-def test_every_name_allowance_is_still_used(package_trees):
-    """An allowed name that no file defines is removed from the allowance."""
-    used = {name for path in package_only(package_trees) for name in file_old_names(path)}
-    assert set(NAME_ALLOWANCE) <= used
 
 
 def test_the_old_name_guard_finds_old_names_and_not_words_that_contain_them():

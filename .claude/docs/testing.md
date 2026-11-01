@@ -234,7 +234,7 @@ data folders outside `gemini/_utils/paths.py`. It enforces the structure of the 
 
 - the run folders (`modules`, `plants`, `physics`, `ops`, `runtime`, `engine`, `run`, `types`,
   `units`, `errors`, `_utils`) import none of `compiler`, `data`, `study`, `evaluate`, `analysis`,
-  apart from `Plant.from_legacy` and `gm.modules.check`, which import inside a function ([conventions.md](conventions.md#dependencies));
+  apart from `gm.modules.check`, which imports inside a function ([conventions.md](conventions.md#dependencies));
 - `modules` never imports `plants`;
 - no folder named `core`, `base`, `testing`, `backends`, `checks`, `economics` or `profiles`
   exists in `gemini/`;
@@ -259,8 +259,7 @@ data folders outside `gemini/_utils/paths.py`. It enforces the structure of the 
 `tests/unit/<path>/test_<name>.py` that defines at least one test.
 `tests/unit/test_package_boundaries.py` checks that `gemini.errors` and the topic files of
 `gemini._utils` import nothing else from `gemini` (`paths.py` and `registry.py` may import
-`gemini.errors`), that `gemini/run/dataset.py` imports no module or engine code and that
-`gemini.data.legacy` and `gemini/plants/_utils/legacy/` import no engine code. `tests/unit/test_code_quality.py` enforces the comment rule, the
+`gemini.errors`), and that `gemini/run/dataset.py` imports no module or engine code. `tests/unit/test_code_quality.py` enforces the comment rule, the
 nesting limit, the function-length limit with its `LONG_FUNCTIONS` exceptions and the ban on the
 framework name (see [conventions.md](conventions.md#code-quality)); flake8 enforces complexity.
 The same file fails on a formula in a module and on two physics functions with one normalised body;
@@ -315,10 +314,11 @@ of `gm.study` replace the trial run with a fake, because a real trial takes abou
 
 ## Old formats, examples and e2e coverage
 
-Old-format files are read only by `tests/unit/data/legacy/`, `tests/unit/plants/_utils/legacy/`, `tests/e2e/test_legacy_bridge.py`,
-the `check_wiring` audit in `tests/e2e/test_full_replay.py`, and the golden reconstructions that
-build equipment from the original `.param` files: the subsurface, wells and exchangers unit tests,
-`tests/unit/physics/test_geometry.py`, `tests/integration/test_plant.py` and the historical
+Old-format files are read only through `scripts/legacy/` ([legacy.md](legacy.md)): by the
+`check_wiring` audits in `tests/e2e/test_full_replay.py` and `tests/integration/test_plant.py`, and
+the golden reconstructions that build equipment from the original `.param` files: the subsurface,
+wells and exchangers unit tests, `tests/unit/modules/test_monitoring_golden.py`,
+`tests/unit/physics/test_geometry.py` and the historical
 `tests/fixtures/capture_golden.py`. Shared paths live in `tests/fixtures/__init__.py` (`ROOT`,
 `FIXTURES`, `OLD_PROJECT`), and test code reaches `inputs/` through `gemini/_utils/paths.py`.
 

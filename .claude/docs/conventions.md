@@ -57,11 +57,8 @@ raises `inputs_missing` wherever it is needed.
 `tests/unit/test_code_quality.py` enforces the run-folder rule and the rule on `modules`
 ([testing.md](testing.md#structure-and-quality-tests)).
 
-Packages outside `gemini/plants/_utils/legacy/` and `gemini.data.legacy` never interpret old
-project names, tags, tables or node mappings. The reader that builds a plant is in the first, the
-CSV files and the way back to the old project in the second; both are internal, and the one public
-entry is
-`gm.Plant.from_legacy(folder)`.
+No package interprets old project names, tags, tables or node mappings; what the tests need of
+the old format is in `scripts/legacy/` ([legacy.md](legacy.md)).
 Equipment performs no file or database access. Calibration predicts only through public replay.
 A leaf module computes and a plant connects; no class does both. A leaf `Module` has physics calls
 and `forward`. Every composite is a `Plant`, a class that declares children, ports and connections
@@ -311,7 +308,7 @@ test-first bug fixes) are checked in review.
 - Update the code, never wrap it. When a refactor changes a name or a shape, every caller is
   changed in the same task, and no wrapper, alias or shim is written for the old one: no function
   that only calls another with its arguments, no second name, no `legacy`, `compat` or
-  `deprecated` branch outside the legacy readers. `tests/unit/test_code_quality.py` rejects such
+  `deprecated` branch. `tests/unit/test_code_quality.py` rejects such
   wrappers, old names and unused private functions; a public name kept on purpose is listed there
   with its reason.
 - Physics code uses plain operators (`/`, `**`, `-`) where the Python and NumPy results agree. A

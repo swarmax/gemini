@@ -11,7 +11,6 @@ from gemini.modules.module import Module
 from gemini.physics import energy
 from gemini.plants._utils import circuits, inputs, listing, loops, outputs, reader, writer
 from gemini.plants._utils.factory import make_module
-from gemini.plants._utils.legacy.reader import from_folder as from_project_folder
 from gemini.plants._utils.plan import STATE, PlanConstraint, compile_plan, is_group, port_ends
 from gemini.plants._utils.ports import PortResolver
 from gemini.plants._utils.run import Run
@@ -358,28 +357,12 @@ class Plant(PortResolver, Module):
         return cls.from_dict(files.from_json(path))
 
     @classmethod
-    def from_legacy(cls, folder):
-        """Return the plant of the old GEMINI project in ``folder``.
-
-        The folder holds what the old application saved: ``diagram.json`` (the nodes and links),
-        one ``<node>_<id>.param`` file per diagram node with its properties, dated values and tag
-        names, and any other file (the data CSV, ``well_trajectory.csv``, ``plant.conf``), which is
-        read as-is and not converted.
-        """
-        return from_project_folder(folder)
-
-    @classmethod
     def from_dict(cls, data):
         """Build any plant, of a class or without one, from a plant dict.
 
         One ``ValidationError`` lists every problem.
         """
         return reader.from_dict(cls, data)
-
-    def validate(self, on_error="raise"):
-        """Check the plant's structure as ``gm.plants.validate`` does; the same ``on_error``."""
-        data = self.to_dict(structure=True)
-        return reader.check(Plant, data, on_error)
 
     def _compiled(self):
         """Return the plan; which outlets are offered depends on how the modules are set."""

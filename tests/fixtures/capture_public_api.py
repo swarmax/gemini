@@ -54,12 +54,10 @@ METHODS = {
         "source_of",
         "feeds",
         "summary",
-        "validate",
         "to_dict",
         "from_dict",
         "to_json",
         "from_json",
-        "from_legacy",
     ),
     "Engine": (
         "__init__",

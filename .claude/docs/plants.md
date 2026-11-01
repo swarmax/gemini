@@ -14,8 +14,7 @@ reader and writer of the plant dict, the schema, the catalogue) is in
 
 Plants are defined in Python. gemini keeps no JSON file; JSON exists only as the plant dict that
 agents use: `gm.Plant.from_dict`, `plant.to_dict`, `gm.Plant.from_json`, `plant.to_json`,
-`gm.plants.schema`, `gm.plants.validate`. `gm.Plant.from_legacy(folder)` returns the plant of an old
-project folder ([legacy.md](legacy.md)).
+`gm.plants.schema`, `gm.plants.validate`.
 
 ## A plant class
 
@@ -97,7 +96,7 @@ plant.connect("esp", "riser")
 plant.connect("return_in", "injector.wellhead_in")
 plant.connect("riser.wellhead_out", "supply_out")
 print(plant.summary())
-print(plant.validate())
+print(gm.plants.validate(plant.to_dict(structure=True)))
 ```
 
 `add(type, name=None, params=None)` takes a registry name or a class and one dict of parameters,
@@ -110,7 +109,7 @@ call syntax.
 
 Every inlet and outlet of every module is connected to another module or to a named plant port. A
 plant port exists only when it is named; there are no automatic ports. An unconnected port is an
-error with code `unconnected_port` and the port path: `p.validate()`, `gm.plants.validate` and
+error with code `unconnected_port` and the port path: `gm.plants.validate` and
 `from_dict` report it, and a plant with one does not run. While you build, `add` and `connect` do
 not check it.
 

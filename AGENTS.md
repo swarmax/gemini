@@ -107,7 +107,7 @@ Read every file in `.claude/docs/` before changing the repository:
 - [Equipment](.claude/docs/equipment.md): every shipped module, its model and energy audit.
 - [Errors](.claude/docs/errors.md): the rule for raising, the seven `gm.errors` error classes and `GeminiWarning`, the codes.
 - [Glossary](.claude/docs/glossary.md): one name per concept for parameters, outputs and ports.
-- [Legacy](.claude/docs/legacy.md): the old-format boundary and conversion rules.
+- [Legacy](.claude/docs/legacy.md): the old-format reader kept in `scripts/legacy/` for the tests.
 - [Modules](.claude/docs/modules.md): declarations, listings, calls, outputs, hooks and state.
 - [Native engine](.claude/docs/native-engine.md): the computation-graph design and its status.
 - [Physics](.claude/docs/physics.md): every physics function by file, SI correlations and numerical
@@ -153,14 +153,14 @@ gemini/
 ├── engine/           # Engine, Clock, executor.py, eager.py, rows.py, loader, runner, chunks, checkpoint, callbacks
 ├── run/              # schedule, simulate, replay, live, resume, call, Results, Dataset; _utils/ (apply: the case on a plant copy, roles, limits, sources)
 ├── compiler/         # graph/ (Tracer, Graph, passes, cache), executor.py, gm.compiler.compile; optional, registers itself
-├── data/             # from_csv, from_values, profile_schema, legacy/ (old CSV files and the way back to the old project)
+├── data/             # from_csv, from_values, profile_schema
 ├── study/            # size, minimize, sample, sensitivity; _utils/ (trial, choices, target)
 ├── evaluate/         # totals, constraints, balances, bounds, run_all, capex, opex, lcoh, lcoc, lcts, annualised_cost, co2, npv, payback; capacities, report, compare
 └── analysis/         # calibrate, nodal, pump curve, corrosion forecast, fits
 docs/schemas/         # generated JSON Schemas and samples of the exchanged documents
-inputs/               # not installed: examples/ (sample cases), plants/ (example values), doublet_heat/, legacy_project/
+inputs/               # not installed: examples/ (sample cases), plants/ (example values), doublet_heat/, legacy_project/ (read by tests only)
 examples/             # five flat scripts: quickstart, hackathon, costs, uncertainty, plant
-scripts/              # test_changed.py, write_schemas.py
+scripts/              # test_changed.py, write_schemas.py, legacy/ (old-project reader for the tests)
 docker/               # sandbox.Dockerfile, the image of a module sandbox (make sandbox-image)
 tests/                # unit mirror, integration, e2e (expected/ holds example outputs), fixtures
 ```

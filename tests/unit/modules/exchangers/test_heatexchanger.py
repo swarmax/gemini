@@ -8,10 +8,10 @@ import gemini as gm
 from gemini import units
 from gemini.modules.exchangers import HeatExchanger
 from gemini.physics import heat_transfer
-from gemini.plants._utils.legacy import tables as mapping
 from gemini.types.flows import Stream
 from gemini.types.fluid import WATER
 from gemini.types.results import NOT_ASSESSED
+from scripts.legacy import tables as mapping
 from tests.fixtures import OLD_PROJECT
 from tests.fixtures.equivalence import assert_health_matches, assert_module_matches
 from tests.fixtures.errors import raises
