@@ -365,6 +365,7 @@
    "Revenue": "class",
    "Service": "class",
    "Time": "class",
+   "Uncertainty": "class",
    "roles": []
   },
   "compiler": {
@@ -792,6 +793,8 @@
    "state": []
   },
   "study": {
+   "Sample": "class",
+   "Tornado": "class",
    "minimize": [
     "plant",
     "case",
@@ -804,7 +807,6 @@
    "sample": [
     "plant",
     "case",
-    "distributions",
     "metrics",
     "count",
     "seed",
@@ -813,13 +815,13 @@
    "sensitivity": [
     "plant",
     "case",
-    "parameters",
     "metrics",
     "plan"
    ],
    "size": [
     "plant",
-    "case"
+    "case",
+    "backup"
    ]
   },
   "units": {
