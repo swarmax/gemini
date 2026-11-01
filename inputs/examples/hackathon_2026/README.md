@@ -183,6 +183,11 @@ other doublets rates its pump again. On `HeatingHeatPumpCoolingPlant` the pump i
   bubble point of the produced fluid) needs the PVT of the fluid, which the case does not give.
 - Intake values of the stored plants over the first 32 days of the case (one run, 300 m3/h per doublet): lowest pressure
   7.7 bar, largest gas share 12.1 %, so neither limit rejects a stored design. The 10 % rule of thumb would.
+- The limits do reject searched designs. Without them `HeatingFullCoolingPlant` searches to 3 doublets at 3319 m with an
+  intake of 2.0 bar and 35.7 % free gas, and `HeatingPlant` to 2 doublets at 3275 m with 3.0 bar and 27.2 %: both break
+  both limits, so the sourced gas limit alone rejects them. With the limits they search to 1 doublet at 2456 m (5.4 bar,
+  16.5 %, LCTS 55.59 EUR/MWh instead of 40.29) and 2 doublets at 3234 m (6.7 bar, 14.4 %, 29.83 instead of 29.45), and the
+  lowest LCTS among the designs that deliver heat and cold is now `HeatingHeatPumpCoolingPlant`, 40.34 EUR/MWh.
 
 ## Values the plants state that a module no longer defaults
 

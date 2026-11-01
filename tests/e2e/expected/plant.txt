@@ -1,6 +1,7 @@
 Bare class: 112 values missing, the first d0.drainage_radius:
   Radius of the drainage area around each well [m]
 Filled: 40 left: the reservoir and well of the case, the sizes
+Problems found by validate: 0
   sized size.doublets = {'value': 1, 'unit': '-'}
   sized d0.nominal_flow = {'value': 0.05, 'unit': 'm3/s'}
   sized compression_chiller.capacity = {'value': 150000.0, 'unit': 'W'}

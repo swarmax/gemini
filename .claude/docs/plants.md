@@ -96,11 +96,11 @@ plant.connect("esp", "riser")
 plant.connect("return_in", "injector.wellhead_in")
 plant.connect("riser.wellhead_out", "supply_out")
 print(plant.summary())
-print(gm.plants.validate(plant.to_dict(structure=True)))
+print(gm.plants.validate(plant))
 ```
 
 `add(type, name=None, params=None)` takes a registry name or a class and one dict of parameters,
-the dict `set_params` takes: a `Quantity` or its dict accepted for a value with a unit, a plain number being SI, dotted names for a composite
+the dict `set_params` takes: a `Quantity` or its dict for a value with a dimension (a bare number for it raises `invalid_value`), dotted names for a composite
 (`params={"reservoir.temperature": {"value": 87, "unit": "degC"}}`). `connect` takes a handle, `"path.port"` or a module
 path. A module path picks the only free port of a fitting kind; a port without a kind fits anything.
 If several pairs fit, a `ValidationError` with code `ambiguous_port` lists them. A bare word that
@@ -170,9 +170,9 @@ assert plant.to_dict() == data
 | `inlets`, `outlets` | structure | `{plant port: "path.port"}`, a list when several ends share a power or air port |
 | `outputs` | structure | `{name: {"difference": [a, b]}}`, `{"ratio": [a, b]}` or `{"sum": [a, b, ...]}`; see [outputs](#outputs) |
 | `constraints` | structure | `[{target, equals or at_least, by, bounds}]`; see [constraints](#constraints) |
-| `bindings`, `param_history` | both, always | `{path: {name: column}}`; `{path: [{valid_from, params}]}`; see [bindings](#parameters-by-date-and-bindings) |
-| `fluids`, `boundary` | both | `{path: {...}}`, the fluid and the stored assumptions of a module |
-| `inputs` | both | `{path: value}`, what `plant.set_inputs` was given: controls and boundaries by dotted path, plant inlet fields as `port.field` (`m_dot`, `T`, `p`, `fluid`), numbers in SI or quantities; left out when empty |
+| `bindings`, `param_history` | both, always | `{path: {name: column}}`; `{path: [{valid_from, params}]}`, the params as `{"value", "unit"}`; see [bindings](#parameters-by-date-and-bindings) |
+| `fluids`, `boundary` | both | `{path: {...}}`, the fluid (density, viscosity, specific heat and thermal conductivity as `{"value", "unit"}`) and the stored assumptions of a module |
+| `inputs` | both | `{path: value}`, what `plant.set_inputs` was given: controls and boundaries by dotted path, plant inlet fields as `port.field` (`m_dot`, `T`, `p`, `fluid`), quantities for a value with a dimension, numbers for the rest; left out when empty |
 
 - `type` of a module is a registry name. It may name a plant class, whose parameters are then dotted
   (`"esp.stage_count"`), so a plant can contain plants.
@@ -192,12 +192,12 @@ assert plant.to_dict() == data
   speaks for each. The fluid of a plant set in code passes to every child.
 
 `gm.plants.schema()` is generated from the code: the two forms, the enum of registered types, the
-output forms. `validate` reports `unconnected_port`, `unknown_name` with suggestions and the other
+output forms. `gm.plants.validate(data)` takes the dict or a `Plant` (it checks the plant's own `to_dict(structure=True)`, so a plant and its dict give the same result), and reports `unconnected_port`, `unknown_name` with suggestions and the other
 codes of [errors.md](errors.md) on the paths of the dict, such as `connections[1].target`, and on
 `inputs.<path>`: an unknown path, a path that is not an input (`unknown_name`), a wrong unit
 (`invalid_unit`).
 
-`plant.set_inputs` is the one public way to set inputs that are part of the design: a setpoint of a
+`plant.set_inputs` is the one public way to set inputs that are part of the design, with a quantity for a value with a dimension (a bare number raises `invalid_value`; `_set_si_inputs` is the private SI path of `gemini`): a setpoint of a
 stored heat pump is schedulable as it is read, `from_dict` applies it and `gm.schedule` reads it
 through `plant.input_value`. A column of the run wins over it. A value assigned on a module
 (`plant.pump.frequency = 50`) and the last tick a run leaves on a module are not stored.
@@ -216,15 +216,13 @@ sets is declared with `Parameter(..., case="<path in the case>")` (`Doublet.grad
 `surface_temperature`; `HeatingGrid` and `CoolingGrid` `return_temperature` and the required supply
 temperature): a plant dict that states one is refused with `invalid_value` naming the case path, and
 `to_dict` never writes it. A value with a unit in `params` or `inputs` is a `{"value", "unit"}` and
-`to_dict` writes it so; a bare number with a dimension is refused. Known limits:
+`to_dict` writes it so; a bare number with a dimension is refused, in `params`, `inputs`, `fluids` and `param_history`. Known limits:
 
 - `fluids` remains in the plant dict, for a module whose fluid differs from its class default. A
   plant with no case (a measured or replayed plant such as `DoubletHeatPlant`) carries its own
   brine there; with a case, a `Doublet` takes its fluid from `environment.fluid`.
 - The pressure of the water a consumer returns stays a design parameter of the plant: the case
   has no field for it.
-- `set_params`, `gm.call`, `gm.Stream` and `gm.Fluid` still take a bare number as SI, because
-  the plants pass derived SI values through them.
 
 ## Loops
 

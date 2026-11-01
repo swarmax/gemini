@@ -63,14 +63,17 @@ print(gm.evaluate.report(plant, case, results)["heat_delivered"].to("MWh").value
 - *One unit format.* A value with a unit is a `gm.units.Quantity` with a unit of the
   `gm.units.Unit` enum, or its dict `{"value": 150, "unit": "m3/h"}`; a string such as
   `"150 m3/h"` is never accepted, and nothing in the package parses unit text. A dimensionless value
-  is a number. Known limit: a bare number with a dimension is still read as SI in `set_params`,
-  `gm.call`, `gm.Stream` and `gm.Fluid`, which the engine uses for derived values
-  ([units](.claude/docs/conventions.md#units)).
+  is a number. A bare number with a dimension raises `invalid_value` at every public door
+  (`set_params`, `Plant.set_inputs`, `gm.Stream`, `gm.Fluid`, `gm.call`); `gemini` itself uses the
+  private SI path (`_set_si_params`, `Stream._si`, `Fluid._si`), and only attribute assignment and
+  `Stream.with_` stay in SI for module authors ([units](.claude/docs/conventions.md#units)).
 - *No defaults.* Nothing a user must decide has a default value in gemini: not a price, a
   temperature, a limit, a factor or an efficiency. Such a field is required, or absent (`None`),
   and a call that needs an absent value raises `missing_value` (`missing_assumption` below
   `assumptions`) naming its path. The only defaults of `gm.case` are `over="each"` and
-  `when="always"` of `Constraint`; `tests/unit/test_code_quality.py` checks this
+  `when="always"` of `Constraint`, and a module or plant declaration keeps a default only if it is
+  in `DECLARED_DEFAULTS` (a sourced constant or the zero of an accumulator);
+  `tests/unit/test_code_quality.py` checks this
   ([no defaults](.claude/docs/conventions.md#no-defaults)).
 - *The input is a case, never a problem.* The word `problem` is only the return shape of an error;
   `tests/unit/test_code_quality.py` rejects it as a name in `gemini/`.
@@ -86,7 +89,7 @@ goes through a port, and a plant total is read from the ports of the modules at 
 Every port of a module is connected or named as a plant port; there are no automatic plant ports
 ([plants](.claude/docs/plants.md#the-builder)). What a design holds beside its parameters, such as a
 setpoint, is set with `plant.set_inputs` and stored in the plant dict under `inputs`. A plant may derive its children's values by
-overriding `set_params`
+overriding `_set_si_params`
 ([modules](.claude/docs/modules.md#a-plant-that-sets-its-childrens-values)).
 
 Every public return uses one of three shapes, value, problem (the shape of an error) or check, built by

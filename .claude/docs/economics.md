@@ -186,7 +186,19 @@ its time); `sum`, `mean`, `max` and `min` judge one figure of the run; `duration
 time of the steps that count, `min` and `max` then being durations, passing within half a step.
 `when="running"` counts only the steps on which the module carried flow: the minimum flow holds
 while a doublet runs. A bound is a `Quantity` or its dict; a value on the limit passes within a
-relative 1e-9. The service requirement is checked as well: each `HeatingGrid` must receive water at
+relative 1e-9.
+
+The role `plant` is the plant as a whole (`unit_path` `""`, and the check is named after the quantity alone):
+`electricity_bought`, `gas_bought` and `heat_surplus` are powers, read from the same edge ports as
+`gm.evaluate.totals` (the net import of the electricity grid, the gas out of the gas grid, the surplus
+of the heating grid), and `co2` is the mass emitted in one step [kg] as `gm.evaluate.co2` counts it, so
+`over: "sum"` is the mass of the run and needs `assumptions.emissions.CO2.electricity` when the run
+buys electricity (`missing_assumption` otherwise). `heat_output` of a `heat_pump`, `boiler` or `chp` and
+`cold_output` of a `chiller` are the enthalpy delivered, the difference of the flows of two ports (a
+heat pump heating: sink out less sink in; cooling: source in less source out; absorption and adsorption:
+chilled in less chilled out; boiler and `CHP`: fluid out less fluid in). `doublet` also has
+`intake_pressure` and `intake_gas_fraction`, the outputs of its `ESP`. A `sum` of a power adds the step
+values, with no integration; `when="running"` of the plant counts the steps on which any unit carried flow. The service requirement is checked as well: each `HeatingGrid` must receive water at
 least at `demand.heating.supply_temperature` and each `CoolingGrid` at most at
 `demand.cooling.supply_temperature`; a service without a supply temperature adds no check.
 
@@ -346,7 +358,7 @@ and their ratio. `gm.evaluate.report(plant, case, results)` returns a `Report`, 
 `heat_delivered`, `cold_delivered`, `boiler_heat`, `electricity_bought`, `gas_bought` (J over the
 run), `capacities`, `capex`, `opex`, `lcts`, `lcoh`, `lcoc`, `co2`, `constraints`, `passed` and
 `failed_steps`; its costs are read with `on_error="record"`, so a cost the case cannot give is a
-value `None` with a `reason` and many designs stay comparable. `report.to_dict()` is plain JSON.
+value `None` with a `reason` and many designs stay comparable. `report.to_dict()` is plain JSON in display units, the parts of each value too: the annualised cost and the opex components in MEUR/yr, an energy per year in MWh/yr, a mass in kt, a duration in days (the lifetime included); `units=` reaches the parts of the same SI unit (`co2="t"` shows the kg parts in t); the values inside the report stay SI.
 `gm.evaluate.compare(reports, by)` ranks reports by the metrics `by` (a name, a list, or a
 `{metric: "min" | "max"}` dict) and returns a `Comparison`, a list with one entry per report in the
 order given (`index`, `values`, `ranks`, `pareto`, `feasible`, and `reasons` when not feasible) and

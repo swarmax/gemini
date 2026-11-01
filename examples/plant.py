@@ -6,8 +6,10 @@ decisions; the sizes that ``size`` computes from the case are left out. ``size``
 with notes on what it sized, what it left and what the sized design breaks. The plant then runs,
 and ``failures`` groups the steps that failed.
 
-Shows ``missing_parameters``, ``set_params``, ``gm.study.size`` with its ``sizing`` notes,
-``gm.simulate`` and ``gm.evaluate.failures``.
+A value with a dimension is a ``Quantity``: ``set_params`` refuses a bare number for it.
+
+Shows ``missing_parameters``, ``set_params`` with a quantity, ``gm.plants.validate``,
+``gm.study.size`` with its ``sizing`` notes, ``gm.simulate`` and ``gm.evaluate.failures``.
 
 Run with ``python examples/plant.py``.
 """
@@ -20,10 +22,8 @@ import gemini as gm
 SAMPLE = Path(__file__).resolve().parents[1] / "inputs/examples/shallow_district"
 SIZED = ("capacity", "nominal_flow", "nominal_head")
 """Name endings of the values ``size`` computes from the case."""
-KEPT = "compression_cooler.capacity"
-"""The cooler capacity, a design value ``size`` does not compute, so it stays."""
-COOLER = Q = gm.units.Quantity(1.0, "MW")
-"""The cooler capacity, the one size ``size`` leaves to the user, an assumption."""
+COOLER = gm.units.Quantity(1.0, "MW")
+"""The cooler capacity, a design value ``size`` does not compute: an assumption of this example."""
 
 
 def build(stored):
@@ -32,15 +32,13 @@ def build(stored):
     missing = plant.missing_parameters()
     print(f"Bare class: {len(missing)} values missing, the first {missing[0]['path']}:")
     print(f"  {missing[0]['description']} [{missing[0]['unit']}]")
-    designed = {
-        key: value
-        for key, value in stored["params"].items()
-        if key == KEPT or not key.endswith(SIZED)
-    }
+    designed = {key: value for key, value in stored["params"].items() if not key.endswith(SIZED)}
     plant.set_params("", designed)
+    plant.set_params("compression_cooler", {"capacity": COOLER})
     plant.set_inputs(stored["inputs"])
     left = len(plant.missing_parameters())
     print(f"Filled: {left} left: the reservoir and well of the case, the sizes")
+    print(f"Problems found by validate: {len(gm.plants.validate(plant, on_error='record'))}")
     return plant
 
 

@@ -140,8 +140,8 @@ Not names of module declarations, so not in the list above; the one meaning of e
 | Term | Meaning |
 | --- | --- |
 | case | `gm.Case`: everything a plant is asked to do and the world around it, in the sections `time`, `environment`, `demand`, `choices`, `constraints`, `assumptions` |
-| role | a kind of unit found in a plant by class and wiring (`doublet`, `heat_pump`, `boiler`, `chp`, `chiller`, `heat_exchanger`, `heating_supply`, `cooling_supply`); `gm.case.roles()` |
-| quantity of a role | what a constraint limits on every unit of the role (`production_flow`, `brine_cooling`, `cop`, ...) |
+| role | a kind of unit found in a plant by class and wiring (`doublet`, `heat_pump`, `boiler`, `chp`, `chiller`, `heat_exchanger`, `heating_supply`, `cooling_supply`, and `plant` for the plant as a whole); `gm.case.roles()` |
+| quantity of a role | what a constraint limits on every unit of the role (`production_flow`, `brine_cooling`, `cop`, `heat_output`, `electricity_bought`, ...) |
 | equipment kind | the key of `capex` and `opex.fixed` in the case (`drilling`, `heat_pump`, `boiler`, ...); a module that is equipment declares `equipment_kind` |
 | capex factor | the unit cost of a kind in the case, times the size of the equipment |
 | problem | only the shape `{path, code, message, suggestions}` of an error or a failed row; never an input |

@@ -39,9 +39,14 @@ import pandas as pd
 import gemini as gm
 
 plant = gm.Plant.from_json("inputs/doublet_heat/plant.json")
-design = {name: parameter.value for name, parameter in plant.doublet.esp.named_parameters()}
+design = {
+    name: parameter.value
+    if parameter.unit in (None, "-")
+    else gm.units.Quantity(parameter.value, parameter.unit)
+    for name, parameter in plant.doublet.esp.named_parameters()
+}
 esp = gm.modules.ESP().set_params("", design)
-stream = gm.Stream(flow={"value": 150, "unit": "m3/h"}, T={"value": 80, "unit": "C"}, p={"value": 20, "unit": "bar"})
+stream = gm.Stream(flow={"value": 100, "unit": "m3/h"}, T={"value": 80, "unit": "C"}, p={"value": 20, "unit": "bar"})
 out = esp(fluid_in=stream, frequency={"value": 50, "unit": "Hz"})
 assert out.outputs.head == esp({"fluid_in": stream}, frequency={"value": 50, "unit": "Hz"}).outputs.head
 assert out.outputs.head == esp(stream, frequency={"value": 50, "unit": "Hz"}).outputs.head
@@ -69,7 +74,9 @@ print(fit)
 
 A module is built without arguments and configured with `set_params`, which returns it. Calls
 accept inlets by keyword, mapping or position; controls given at the call apply to that call only,
-while assignment (`esp.frequency = 50.0`) persists them.
+while assignment (`esp.frequency = 50.0`, a bare SI number, author-level) persists them. A value with
+a dimension given to `set_params`, `gm.Stream`, `gm.Fluid` or `gm.call` is a quantity: a bare number for it
+raises `invalid_value`.
 
 A leaf module computes and a plant connects: every composite is a `Plant` class that declares its
 children, ports and connections, and `gm.Plant(name)` builds one with `add` and `connect`.

@@ -5,6 +5,9 @@ Runs the hackathon sample plant ``HeatingCoolingPlant`` for 2027 and reads its c
 case and shows the ``missing_assumption`` error that names the factor. Shows ``gm.evaluate.capex``
 and ``gm.errors.ValidationError``.
 
+A limit on the electricity the plant buys is a constraint of the case, an assumption of 6 MW, and
+``gm.evaluate.constraints`` checks it.
+
 Run with ``python examples/costs.py``.
 """
 
@@ -14,6 +17,13 @@ import gemini as gm
 
 SAMPLE = Path(__file__).resolve().parents[1] / "inputs/examples/hackathon_2026"
 MISSING = "heat_pump"
+BOUGHT = {
+    "on": "plant",
+    "quantity": "electricity_bought",
+    "over": "each",
+    "max": {"value": 6, "unit": "MW"},
+}
+"""A limit of 6 MW on the electricity bought at any step, an assumption of this example."""
 
 
 def show(label, quantity, unit):
@@ -31,6 +41,18 @@ def print_costs(plant, case, results):
     show("opex", gm.evaluate.opex(plant, case, results), "MEUR/yr")
     show("LCTS", gm.evaluate.lcts(plant, case, results), "EUR/MWh")
     show("CO2", gm.evaluate.co2(plant, case, results), "kt")
+
+
+def print_bought(plant, case, results):
+    """Add the limit on the electricity bought to the case and print its check."""
+    data = case.to_dict()
+    data["constraints"].append(BOUGHT)
+    limited = gm.Case.from_dict(data, SAMPLE)
+    for check in gm.evaluate.constraints(plant, limited, results):
+        if check["role"] == "plant":
+            value, limit = check["value"].to("MW"), check["limit"].to("MW")
+            print(f"{check['name']}: {value.value:.3f} MW, limit {limit.value:.0f} MW")
+            print(f"  passed: {check['passed']}")
 
 
 def case_without(case, kind):
@@ -54,6 +76,7 @@ def main():
     plant = gm.Plant.from_json(SAMPLE / "plants/HeatingCoolingPlant.json")
     results = gm.simulate(plant, case)
     print_costs(plant, case, results)
+    print_bought(plant, case, results)
     print_missing(plant, case)
 
 
