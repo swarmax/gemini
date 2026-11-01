@@ -345,11 +345,11 @@ def size(plant, case, backup=None):
 
         - ``"none"``: a boiler covers only the heat the doublets cannot reach, the larger of the
           step of the heating plus the drive heat of the sorption chillers less the heat of the
-          doublets at their limits and the part of it that the reservoir temperature cannot reach; a plant without doublets gets the peak;
-        - ``"peak"``: a boiler covers the whole heating plus drive heat of the sorption chillers (the
-          unit that draws heat from the boiler) at the step where they peak together, with the
-          doublets off, so that it
-          carries the peak when a doublet is out.
+          doublets at their limits and the part of it that the reservoir temperature cannot
+          reach; a plant without doublets gets the peak;
+        - ``"peak"``: a boiler covers the whole heating plus drive heat of the sorption chillers
+          (the unit that draws heat from the boiler) at the step where they peak together, with
+          the doublets off, so that it carries the peak when a doublet is out.
 
     Returns
     -------
@@ -358,8 +358,8 @@ def size(plant, case, backup=None):
         [...], "broken": [...], "simulation": str}``. Each size is ``{path, value, reason}`` with a
         ``Quantity`` value, each unit left unchanged ``{path, reason}``, each broken constraint
         ``{unit_path, role, quantity, value, limit, worst_step}`` as ``gm.evaluate.constraints``
-        gives it, and ``simulation`` says ``simulated``, or ``not simulated: <code>: <reason>`` when the
-        sized plant cannot run (a value it still lacks, a design the case refuses).
+        gives it, and ``simulation`` says ``simulated``, or ``not simulated: <code>: <reason>``
+        when the sized plant cannot run (a value it still lacks, a design the case refuses).
 
     Raises
     ------

@@ -1,4 +1,15 @@
-Modules: 22
-Same plant after the file: True
-Heat from the boiler: 31.4 MWh
-Heat delivered:       691.7 MWh
+Bare class: 64 values missing, the first d0.reservoir.pressure:
+  Static reservoir pressure [Pa]
+Filled: 37 left: the reservoir and well the case gives, and the sizes
+  sized size.doublets = {'value': 1, 'unit': '-'}
+  sized d0.nominal_flow = {'value': 0.05, 'unit': 'm3/s'}
+  sized compression_chiller.capacity = {'value': 150000.0, 'unit': 'W'}
+  sized peak_boiler.capacity = {'value': 3034000.0, 'unit': 'W'}
+  sized heat_pump.capacity = {'value': 1033807.4074074063, 'unit': 'W'}
+  sized injection_pump.nominal_flow = {'value': 0.05, 'unit': 'm3/s'}
+  sized injection_pump.nominal_head = {'value': 2435.610903562396, 'unit': 'Pa'}
+Left unchanged: ['heat_exchanger']
+Constraints broken by the start: 0
+Simulation of the start: simulated
+Failed steps: 0
+Heat delivered: 691.7 MWh

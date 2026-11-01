@@ -37,9 +37,8 @@ reports and compares six candidate plants on a case. The longer tour, from the r
 import pandas as pd
 
 import gemini as gm
-from tests.fixtures.sample_cases import example_plant
 
-plant = example_plant("DoubletHeatPlant")
+plant = gm.Plant.from_json("inputs/doublet_heat/plant.json")
 design = {name: parameter.value for name, parameter in plant.doublet.esp.named_parameters()}
 esp = gm.modules.ESP().set_params("", design)
 stream = gm.Stream(flow={"value": 150, "unit": "m3/h"}, T={"value": 80, "unit": "C"}, p={"value": 20, "unit": "bar"})
@@ -82,13 +81,13 @@ file (`gm.data.from_csv`) or from values (`from_values`). Readers are `from_<for
 `to_<format>` everywhere.
 
 gemini holds no data file. The example values of the plants are in `inputs/`, which is in a
-source checkout and not installed; `example_plant` of `tests/fixtures/sample_cases.py` reads them:
+source checkout and not installed; read a stored plant with `gm.Plant.from_json(path)`:
 
 ```text
 inputs/             # repository only
   examples/         # sample cases: case.json, demand CSV, plant dicts; examples and tests only
   plants/           # example values of plants
-  doublet_heat/     # measured data
+  doublet_heat/     # measured data and the plant dict that fits it
   legacy_project/   # an old project folder
 ```
 

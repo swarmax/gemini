@@ -29,6 +29,7 @@ class Sized:
     """A plant sized once for a module: its case, the design and the shares of its run."""
 
     def __init__(self, folder, plant=None, backup="peak", scale=1.0, **sections):
+        """Size ``plant`` (the shallow sample by default) on a case built with ``sections``."""
         self.case = quick(folder, **sections)
         self.case.demand.frame[["heating_demand", "cooling_demand"]] *= scale
         self.plant = plant or shallow_plant()
@@ -49,38 +50,38 @@ class Sized:
 
 @pytest.fixture(scope="module")
 def base(tmp_path_factory):
-    """The shallow sample sized with the whole-peak policy."""
+    """Return the shallow sample sized with the whole-peak policy."""
     return Sized(tmp_path_factory.mktemp("base"))
 
 
 @pytest.fixture(scope="module")
 def none(tmp_path_factory):
-    """The shallow sample sized with no backup policy."""
+    """Return the shallow sample sized with no backup policy."""
     return Sized(tmp_path_factory.mktemp("none"), backup="none")
 
 
 @pytest.fixture(scope="module")
 def tight(tmp_path_factory):
-    """A flow limit of 40 m3/h: three doublets."""
+    """Return a flow limit of 40 m3/h: three doublets."""
     return Sized(tmp_path_factory.mktemp("tight"), constraints=limited(40))
 
 
 @pytest.fixture(scope="module")
 def short(tmp_path_factory):
-    """A flow limit of 36 m3/h and twice the demand: three doublets do not cover the peak."""
+    """Return a flow limit of 36 m3/h and twice the demand: three doublets do not cover the peak."""
     return Sized(tmp_path_factory.mktemp("short"), scale=2.0, constraints=limited(36))
 
 
 @pytest.fixture(scope="module")
 def half(tmp_path_factory):
-    """The shallow sample with half its demand."""
+    """Return the shallow sample with half its demand."""
     folder = tmp_path_factory.mktemp("half")
     return Sized(folder, scale=0.5)
 
 
 @pytest.fixture(scope="module")
 def hot(tmp_path_factory):
-    """A reservoir hotter than the supply temperature."""
+    """Return a reservoir hotter than the supply temperature."""
     ground = {
         "ground": {
             "surface_temperature": {"value": 60, "unit": "degC"},
@@ -93,7 +94,7 @@ def hot(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def column(tmp_path_factory):
-    """A wellhead pressure above what the aquifer needs: the column injects alone."""
+    """Return a wellhead pressure above what the aquifer needs: the column injects alone."""
     plant = shallow_plant()
     plant.set_params("d0", {"nominal_wellhead_pressure": gm.units.Quantity(300, "bar")})
     return Sized(tmp_path_factory.mktemp("column"), plant=plant)
@@ -101,18 +102,8 @@ def column(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def catalogue(tmp_path_factory):
-    """A catalogue plant that states no design value: it cannot be simulated."""
+    """Return a catalogue plant that states no design value: it cannot be simulated."""
     return Sized(tmp_path_factory.mktemp("catalogue"), plant=gm.plants.get("DoubletHeatPlant"))
-
-
-def test_the_shallow_sample_needs_one_doublet_and_covers_its_peak(tmp_path):
-    """One doublet of 4.7 MW at the flow and cooling limits covers the 3.03 MW peak."""
-    design = gm.study.size(shallow_plant(), quick(tmp_path), backup="peak")
-    notes = {item["path"]: item for item in design.sizing["sized"]}
-    assert design.to_dict()["size"] == {"doublets": 1}
-    assert notes["size.doublets"]["value"].value == 1
-    assert "covers the heating peak" in notes["size.doublets"]["reason"]
-    assert 35 / 3600 <= notes["d0.nominal_flow"]["value"].value <= 180 / 3600
 
 
 def test_the_shallow_sample_needs_one_doublet_and_covers_its_peak(base):
@@ -322,22 +313,25 @@ def cooling_peak_case(folder, days=1, winter=True):
 
 @pytest.fixture(scope="module")
 def series(tmp_path_factory):
-    """The sample plant with three chillers in series, sized on the days of its cooling peak."""
+    """Return the sample plant with three chillers in series, sized on its cooling peak days."""
     case = cooling_peak_case(tmp_path_factory.mktemp("series"))
     plant = gm.Plant.from_json(HACKATHON / "plants/HeatingFullCoolingPlant.json")
     return gm.study.size(plant, case, backup="peak")
 
 
 def test_chillers_in_series_deliver_the_cooling_supply_at_the_peak(series):
-    """A sorption unit delivers less than its rating when its characteristic map says so; the
-    chiller that closes the series is rated for the whole peak and makes up the difference."""
+    """Rate the closing chiller for the whole peak, as a sorption unit may deliver less.
+
+    A sorption unit delivers less than its rating when its characteristic map says so; the chiller
+    that closes the series makes up the difference.
+    """
     assert [item for item in series.sizing["broken"] if item["quantity"] == "temperature"] == []
     assert series.get_submodule("compression_chiller").capacity == pytest.approx(10e6)
 
 
 @pytest.fixture(scope="module", params=["none", "peak"])
 def driven(request, tmp_path_factory):
-    """The sample plant on the cooling-peak day with its own, small heating demand."""
+    """Return the sample plant on the cooling-peak day with its own, small heating demand."""
     case = cooling_peak_case(tmp_path_factory.mktemp("driven"), winter=False)
     plant = gm.Plant.from_json(HACKATHON / "plants/HeatingFullCoolingPlant.json")
     return request.param, case, gm.study.size(plant, case, backup=request.param)
@@ -346,7 +340,8 @@ def driven(request, tmp_path_factory):
 def test_the_boiler_is_rated_for_the_heating_and_the_drive_heat_of_the_sorption_chillers(driven):
     """The sorption units draw their generator heat from the boiler: it adds to the heating.
 
-    ``none`` assumes an ideal exchanger, so it may break the supply, which the notes then list."""
+    ``none`` assumes an ideal exchanger, so it may break the supply, which the notes then list.
+    """
     backup, case, design = driven
     heating = case.demand.frame["heating_demand"].max()
     assert design.sizing["simulation"] == "simulated"

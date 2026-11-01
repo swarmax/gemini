@@ -21,8 +21,22 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   `sensitivity` shows display units.
 - `gm.optim` is `gm.study`; `gm.types.Cost` is removed, equipment declares `capex(finance)` and
   `fixed_opex(finance)` for its kind; `examples/` holds five flat scripts.
+- `gm.study.size(plant, case, backup)`: the policy of the top-up units (`"none"` or `"peak"`) has no
+  default; rated units carry the largest duty the case allows; the sized plant is simulated once
+  and `plant.sizing` lists what it breaks. `gm.study.sample(plant, case, metrics, count, seed)` and
+  `sensitivity(plant, case, metrics)` read the `uncertainty` the case declares; the `distributions`
+  and `parameters` arguments are gone. `Comparison` values are `Quantity`; `report.to_dict` and
+  `str(report)` show display units. A well's `pipe_path` is four `section_*` lists. An `ESP` row
+  outside its curve or over its speed-scaled maximum flow fails with `out_of_range`; a failed step makes a study trial infeasible (metrics `None`), and `sample` counts `failed`; an `InjectionPump` below its suction does not pump.
+- Removed, with no alias: `gm.plants.example` (read a plant with `gm.Plant.from_json` or build the
+  class), `gm.data.synthesize`, `gm.analysis.injectivity`, `calibrate_pump`, `calibrate_corrosion`,
+  `erosion`. The old -> new table is in [api.md](.claude/docs/api.md).
 
 ### Added
+- `uncertainty` next to a number of the case and `gm.case.Uncertainty`; `plant.missing_parameters()`
+  and an error that lists every missing value with its meaning; `gm.evaluate.failures`; `to_dict()`
+  and `from_dict` of every study result; `gm.runtime.settings(processes=n)` for parallel trials, with
+  one compiled graph per study.
 - Variables `<role>.<parameter>` for `minimize`; `report["services"]`; `InjectionPump.nominal_flow`
   and `nominal_head`, priced as `injection_pump`; cited prices in the hackathon case.
 - `gm.evaluate.capacities`, `report` and `compare`; `gm.study.size` and `sensitivity`;

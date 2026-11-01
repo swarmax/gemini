@@ -102,7 +102,7 @@ def test_the_report_lists_the_services_the_case_asks_for():
 
 
 def test_to_dict_shows_display_units_or_the_ones_given_and_the_report_stays_si():
-    """Energy in MWh, power in MW; units replace one metric; the printed form is the display dict."""
+    """Energy in MWh, power in MW; units replace one metric; the print is the display dict."""
     report = gm.evaluate.report(heating_plant(), case(), day())
     plain = report.to_dict()
     assert plain["heat_delivered"]["unit"] == "MWh"

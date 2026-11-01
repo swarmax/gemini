@@ -94,7 +94,8 @@ CPU of every thread of the process, so work a test hands to its own threads or t
 thread pool still counts (`thread_time` would miss it and let a heavy test pass), while sleeping
 and waiting do not count. The user and system time of child processes the test started and
 waited for (`os.times().children_*`, such as a process pool of parallel study trials) is added,
-so work handed to other processes counts too. A worker runs one test at a time, so the process clock belongs to the
+so work handed to other processes counts too (a test of parallel trials is charged all their
+CPU, so it uses a few short trials). A worker runs one test at a time, so the process clock belongs to the
 test. The budget stays one second; the failure message shows CPU and elapsed time. Never raise
 the budget, skip a test or mark it flaky to get under it.
 
@@ -323,8 +324,8 @@ build equipment from the original `.param` files: the subsurface, wells and exch
 
 `tests/e2e/test_examples.py` has one case per `.py` file under `examples/`. The cases run in both
 profiles (the development profile selects them when any file under `examples/` changes) and are
-exempt from the one-second budget; `TIMEOUT_S` is the time budget of one example, 120 s on the fast
-dataset and a 900 s hang guard on the slow one. Each example runs as a subprocess from an empty
+exempt from the one-second budget; `TIMEOUT_S` is a 900 s hang guard for one example (the hackathon
+flow, marked `slow`, runs for minutes and sets `processes` of `gm.runtime.settings`). Each example runs as a subprocess from an empty
 `tmp_path`, without `PYTHONPATH`, so it imports the installed `gemini`, not the files of the checkout: a
 worktree needs its own venv with its own code installed to test its own code, which proves it is standalone and keeps its output out of the
 repository; `GEMINI_EXAMPLE_DATASET` points it at the selected dataset. On the fast dataset what it
