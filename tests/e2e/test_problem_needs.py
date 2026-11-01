@@ -10,7 +10,9 @@ import pandas as pd
 import pytest
 
 import gemini as gm
-from tests.fixtures.sample_problems import sample_problem, template_dict
+from gemini.run._utils.apply import apply_case
+from gemini.units import Quantity
+from tests.fixtures.sample_problems import sample_case, template_dict
 
 pytestmark = pytest.mark.xdist_group("problem_needs")
 
@@ -18,13 +20,19 @@ HOURS = 12
 HEAT_MW = 12.0
 COLD_MW = 5.0
 LIMITS = [
-    gm.Constraint(
-        "d*.reservoir.liquid_flow",
-        min={"value": 60, "unit": "m3/h"},
-        max={"value": 320, "unit": "m3/h"},
-        when="running",
-    ),
-    gm.Constraint("d*.brine_cooling", max={"value": 45, "unit": "K"}, when="running"),
+    {
+        "on": "doublet",
+        "quantity": "production_flow",
+        "when": "running",
+        "min": {"value": 60, "unit": "m3/h"},
+        "max": {"value": 320, "unit": "m3/h"},
+    },
+    {
+        "on": "doublet",
+        "quantity": "brine_cooling",
+        "when": "running",
+        "max": {"value": 45, "unit": "K"},
+    },
 ]
 
 
@@ -36,9 +44,6 @@ def sized_dict(doublets):
     first = {name[3:]: item for name, item in data["params"].items() if name.startswith("d0.")}
     data["params"] = own | {
         f"d{index}.{name}": item for index in range(doublets) for name, item in first.items()
-    }
-    data["fluids"] = {name: item for name, item in data["fluids"].items() if name != "d1"} | {
-        f"d{index}": data["fluids"]["d0"] for index in range(doublets)
     }
     return data
 
@@ -54,27 +59,42 @@ def demand_file(folder):
     return path
 
 
-def read_demand(path):
-    """Return the demand of the file, as ``gm.schedule`` takes it."""
-    columns = {"heat_kw": "heating_demand", "cold_kw": "cooling_demand"}
-    return gm.data.from_csv(path, columns, "kW", time_column="stamp")
+def case_of(folder, *constraints):
+    """Return the case on the demand file of ``folder``, with the site and prices of the sample."""
+    data = sample_case().to_dict()
+    data["time"] = {
+        "start": "2031-02-03",
+        "end": "2031-02-03T12:00",
+        "step": {"value": 1, "unit": "h"},
+    }
+    heating, cooling = data["demand"]["heating"], data["demand"]["cooling"]
+    data["demand"] = {
+        "file": "demand.csv",
+        "time_column": "stamp",
+        "heating": heating | {"column": "heat_kw", "unit": "kW"},
+        "cooling": cooling | {"column": "cold_kw", "unit": "kW"},
+    }
+    data["constraints"] = [*LIMITS, *constraints]
+    return gm.Case.from_dict(data, folder)
 
 
-def problem_of(demand, *constraints):
-    """Return a problem on ``demand`` with the site and prices of the sample problem."""
-    sample = sample_problem()
-    return gm.Problem(demand, sample.site, [*LIMITS, *constraints], sample.assumptions)
-
-
-def run_on(plant, demand, *constraints):
-    """Return the results of ``demand`` on ``plant``; a failed step fails the test."""
-    return gm.simulate(plant, problem_of(demand, *constraints))
+def run_on(plant, case):
+    """Return the results of the case on ``plant``; a failed step fails the test."""
+    return gm.simulate(plant, case)
 
 
 @pytest.fixture(scope="module")
-def demand(tmp_path_factory):
-    """Return the demand of a file written for this module."""
-    return read_demand(demand_file(tmp_path_factory.mktemp("demand")))
+def folder(tmp_path_factory):
+    """Return a folder holding the demand file written for this module."""
+    folder = tmp_path_factory.mktemp("demand")
+    demand_file(folder)
+    return folder
+
+
+@pytest.fixture(scope="module")
+def case(folder):
+    """Return the case of the demand file."""
+    return case_of(folder)
 
 
 @pytest.fixture(scope="module")
@@ -84,20 +104,22 @@ def plant():
 
 
 @pytest.fixture(scope="module")
-def results(plant, demand):
-    """Return one run of the plant on the demand, read by the constraint tests."""
-    return run_on(plant, demand)
+def results(plant, case):
+    """Return one run of the plant on the case, read by the constraint tests."""
+    return run_on(plant, case)
 
 
-def worst(plant, demand, results, target, **bounds):
-    """Return the check of one constraint on the run, for each module it matches."""
-    constraint = gm.Constraint(target, when="running", **bounds)
-    problem = gm.Problem(demand, sample_problem().site, [constraint])
-    return gm.evaluate.constraints(plant, problem, results)
+def worst(plant, case, results, on, quantity, **bounds):
+    """Return the check of one constraint on the run, for each unit of the role."""
+    limit = gm.case.Constraint(on=on, quantity=quantity, when="running", **bounds)
+    return gm.evaluate.constraints(
+        plant, case.model_copy(update={"constraints": (limit,)}), results
+    )
 
 
-def test_heating_and_cooling_demand_come_from_a_file(demand):
+def test_heating_and_cooling_demand_come_from_a_file(case):
     """Any column names, any unit, a constant step: the demand is in W on a UTC index."""
+    demand = case.demand.frame
     assert list(demand) == ["heating_demand", "cooling_demand"]
     assert demand["heating_demand"].iloc[0] == pytest.approx(HEAT_MW * 1e6)
     assert demand["cooling_demand"].iloc[0] == pytest.approx(COLD_MW * 1e6)
@@ -106,15 +128,15 @@ def test_heating_and_cooling_demand_come_from_a_file(demand):
 
 
 @pytest.mark.parametrize("doublets", [1, 2, 3])
-def test_a_plant_runs_on_one_to_three_doublets(demand, doublets):
+def test_a_plant_runs_on_one_to_three_doublets(case, doublets):
     """Every step runs, and the first doublet carries flow."""
     plant = gm.Plant.from_dict(sized_dict(doublets))
-    results = run_on(plant, demand)
+    results = run_on(plant, case)
     assert results.errors() == []
     assert max(results.get("d0.reservoir", "liquid_flow")["value"]) > 0
 
 
-def test_a_chosen_depth_sets_the_reservoir():
+def test_a_chosen_depth_sets_the_reservoir(case):
     """The plant's ``depth`` reaches each doublet, whose geotherm gives its temperature."""
     shallow, deep = sized_dict(2), sized_dict(2)
     shallow["params"]["depth"], deep["params"]["depth"] = {"value": 2000, "unit": "m"}, {
@@ -122,102 +144,77 @@ def test_a_chosen_depth_sets_the_reservoir():
         "unit": "m",
     }
     gradient = gm.units.convert(1, "K/km", "K/m") * 30
-    sited = [sample_problem().apply_site(gm.Plant.from_dict(data)) for data in (deep, shallow)]
-    lift = sited[0].d1.reservoir.temperature - sited[1].d1.reservoir.temperature
+    applied = [apply_case(gm.Plant.from_dict(data), case) for data in (deep, shallow)]
+    lift = applied[0].d1.reservoir.temperature - applied[1].d1.reservoir.temperature
     assert lift == pytest.approx(gradient * 1000, rel=1e-9)
 
 
-def test_co_produced_gas_goes_to_the_boiler_before_the_grid(plant, demand, results):
+def test_co_produced_gas_goes_to_the_boiler_before_the_grid(plant, case, results):
     """The gas of the brine reaches the fuel of the boiler and burns or leaves by the flare."""
     produced = results.get("degasser", "gas_out.chemical_flow")["value"]
     assert min(produced) > 0
-    fuel = gm.evaluate.totals(plant, problem_of(demand), results)
+    fuel = gm.evaluate.totals(plant, case, results)
     assert fuel["gas_bought"].value == pytest.approx(0.0, abs=1e-6)
     assert max(results.get("gas_grid", "gas_out.chemical_flow")["value"]) < max(produced)
 
 
-def test_a_limit_on_the_flow_range_of_each_doublet(plant, demand, results):
+def test_a_limit_on_the_flow_range_of_each_doublet(plant, case, results):
     """One check per doublet; a range the run leaves fails."""
-    checks = worst(
-        plant,
-        demand,
-        results,
-        "d*.reservoir.liquid_flow",
-        min={"value": 60, "unit": "m3/h"},
-        max={"value": 320, "unit": "m3/h"},
-    )
+    bounds = {"min": Quantity(60, "m3/h"), "max": Quantity(320, "m3/h")}
+    checks = worst(plant, case, results, "doublet", "production_flow", **bounds)
     assert [item["passed"] for item in checks] == [True, True]
-    tight = worst(
-        plant, demand, results, "d*.reservoir.liquid_flow", max={"value": 10, "unit": "m3/h"}
-    )
+    tight = worst(plant, case, results, "doublet", "production_flow", max=Quantity(10, "m3/h"))
     assert not all(item["passed"] for item in tight)
 
 
-def test_a_limit_on_the_brine_cooling(plant, demand, results):
+def test_a_limit_on_the_brine_cooling(plant, case, results):
     """The cooling of the brine from producer to injector, each doublet."""
-    checks = worst(plant, demand, results, "d*.brine_cooling", max={"value": 45, "unit": "K"})
+    checks = worst(plant, case, results, "doublet", "brine_cooling", max=Quantity(45, "K"))
     assert [item["passed"] for item in checks] == [True, True]
 
 
-def test_a_limit_on_a_parameter(plant, demand, results):
+def test_a_limit_on_a_parameter(plant, case, results):
     """A limit may name a parameter of a design, judged without the run's outputs."""
-    checks = worst(plant, demand, results, "d*.pump_efficiency", min=0.6, max=0.8)
+    checks = worst(plant, case, results, "doublet", "pump_efficiency", min=0.6, max=0.8)
     assert [item["passed"] for item in checks] == [True, True]
-    assert not worst(plant, demand, results, "d*.pump_efficiency", min=0.9)[0]["passed"]
+    assert not worst(plant, case, results, "doublet", "pump_efficiency", min=0.9)[0]["passed"]
 
 
-def test_a_limit_on_the_volume_balance(plant, demand, results):
+def test_a_limit_on_the_volume_balance(plant, case, results):
     """What a doublet produces it injects again."""
-    checks = worst(
-        plant,
-        demand,
-        results,
-        "d*.volume_imbalance",
-        min={"value": -1e-6, "unit": "m3/s"},
-        max={"value": 1e-6, "unit": "m3/s"},
-    )
+    bounds = {"min": Quantity(-1e-6, "m3/s"), "max": Quantity(1e-6, "m3/s")}
+    checks = worst(plant, case, results, "doublet", "volume_imbalance", **bounds)
     assert [item["passed"] for item in checks] == [True, True]
 
 
-def test_limits_on_the_supply_temperatures(plant, demand, results):
+def test_limits_on_the_supply_temperatures(plant, case, results):
     """The supply at the heat users and at the cold users."""
-    heat = worst(
-        plant,
-        demand,
-        results,
-        "heating_consumer.supply_in.temperature",
-        min={"value": 95, "unit": "degC"},
-    )
-    cold = worst(
-        plant,
-        demand,
-        results,
-        "cooling_consumer.supply_in.temperature",
-        max={"value": 21, "unit": "degC"},
-    )
+    heat = worst(plant, case, results, "heating_supply", "temperature", min=Quantity(95, "degC"))
+    cold = worst(plant, case, results, "cooling_supply", "temperature", max=Quantity(21, "degC"))
     assert heat[0]["passed"] and cold[0]["passed"]
 
 
 def duration(**bound):
     """Return a constraint on the time each doublet carries flow."""
-    return gm.Constraint("d*.reservoir.liquid_flow", over="duration", when="running", **bound)
+    return {
+        "on": "doublet",
+        "quantity": "production_flow",
+        "over": "duration",
+        "when": "running",
+    } | bound
 
 
-def test_a_limit_on_the_operating_time(demand):
+def test_a_limit_on_the_operating_time(folder):
     """Each doublet runs the time of the rule, with its outages at whole steps."""
     plant = gm.Plant.from_dict(sized_dict(2))
-    results = run_on(plant, demand, duration(max={"value": 11, "unit": "h"}))
-    problem = gm.Problem(
-        demand, sample_problem().site, [duration(equals={"value": 11, "unit": "h"})]
-    )
-    checks = gm.evaluate.constraints(plant, problem, results)
-    assert [item["passed"] for item in checks] == [True, True]
-    problem = gm.Problem(
-        demand, sample_problem().site, [duration(equals={"value": 5, "unit": "h"})]
-    )
-    assert not gm.evaluate.constraints(plant, problem, results)[0]["passed"]
+    results = run_on(plant, case_of(folder, duration(max={"value": 11, "unit": "h"})))
+    for hours, passes in ((11, True), (5, False)):
+        bound = gm.case.Constraint(**duration(equals=Quantity(hours, "h")))
+        case = case_of(folder).model_copy(update={"constraints": (bound,)})
+        checks = gm.evaluate.constraints(plant, case, results)
+        assert all(item["passed"] for item in checks) is passes
 
 
-def test_a_levelised_cost_of_heat_and_cold_together(plant, demand, results):
+def test_a_levelised_cost_of_heat_and_cold_together(plant, case, results):
     """LCTS of the run on stated prices."""
-    assert gm.evaluate.lcts(plant, problem_of(demand), results).value > 0
+    assert gm.evaluate.lcts(plant, case, results).value > 0

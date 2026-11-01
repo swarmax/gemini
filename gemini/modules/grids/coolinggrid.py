@@ -6,6 +6,7 @@ from gemini.modules.declarations import Boundary, Control, Inlet, Outlet, Output
 from gemini.modules.module import Module
 from gemini.physics import heat_transfer, psychrometrics
 from gemini.types import (
+    WATER,
     Fraction,
     MassFlow,
     Power,
@@ -61,11 +62,20 @@ class CoolingGrid(Module):
     def __init__(self):
         """Declare the consumer's limits, indoor conditions, loads and absorbed heat."""
         super().__init__()
+        self.fluid = WATER
 
         # Parameters
         self.maximum_return_temperature = Parameter(Temperature | None, default=None)
         self.dew_point_margin = Parameter(TemperatureDifference, ge=0)
-        self.return_temperature = Parameter(Temperature | None, default=None, structural=True)
+        self.return_temperature = Parameter(
+            Temperature | None,
+            default=None,
+            structural=True,
+            case="demand.cooling.return_temperature",
+        )
+        self.maximum_supply_temperature = Parameter(
+            Temperature | None, default=None, case="demand.cooling.supply_temperature"
+        )
         self.return_pressure = Parameter(Pressure | None, default=None)
 
         # Inlets

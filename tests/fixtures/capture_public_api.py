@@ -137,22 +137,6 @@ def capture():
         "namespaces": {name: _namespace(getattr(gm, name)) for name in NAMESPACES},
         "modules": _package_api(gm.modules),
         "classes": {
-            "Problem": _methods(
-                gm.Problem,
-                (
-                    "__init__",
-                    "apply_site",
-                    "to_dict",
-                    "from_dict",
-                    "schema",
-                    "to_json",
-                    "from_json",
-                ),
-            ),
-            "Constraint": _methods(gm.Constraint, ("__init__", "to_dict", "from_dict", "schema")),
-            "Assumptions": _methods(
-                gm.Assumptions, ("price", "co2_cost", "to_dict", "from_dict", "schema")
-            ),
             "Case": _methods(gm.Case, METHODS["Case"]),
             "Module": _methods(gm.modules.Module, METHODS["Module"]),
             "Plant": _methods(gm.Plant, METHODS["Plant"]),

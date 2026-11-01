@@ -8,18 +8,6 @@
   "units"
  ],
  "classes": {
-  "Assumptions": {
-   "co2_cost": [],
-   "from_dict": [
-    "data"
-   ],
-   "price": [
-    "carrier",
-    "required"
-   ],
-   "schema": [],
-   "to_dict": []
-  },
   "Case": {
    "__init__": [
     "data"
@@ -36,21 +24,6 @@
    "to_json": [
     "path"
    ]
-  },
-  "Constraint": {
-   "__init__": [
-    "path",
-    "min",
-    "max",
-    "equals",
-    "over",
-    "when"
-   ],
-   "from_dict": [
-    "data"
-   ],
-   "schema": [],
-   "to_dict": []
   },
   "Engine": {
    "__init__": [
@@ -179,28 +152,6 @@
    ],
    "validate": [
     "on_error"
-   ]
-  },
-  "Problem": {
-   "__init__": [
-    "demand",
-    "site",
-    "constraints",
-    "assumptions"
-   ],
-   "apply_site": [
-    "plant"
-   ],
-   "from_dict": [
-    "data"
-   ],
-   "from_json": [
-    "path"
-   ],
-   "schema": [],
-   "to_dict": [],
-   "to_json": [
-    "path"
    ]
   },
   "Results": {
@@ -958,7 +909,7 @@
   ],
   "simulate": [
    "plant",
-   "problem",
+   "case",
    "plan",
    "clock",
    "checkpoint",
@@ -991,10 +942,8 @@
   "chemical"
  ],
  "top_level": [
-  "Assumptions",
   "BRINE",
   "Case",
-  "Constraint",
   "Dataset",
   "Engine",
   "Fluid",
@@ -1004,7 +953,6 @@
   "Output",
   "Parameter",
   "Plant",
-  "Problem",
   "Results",
   "Stream",
   "WATER",

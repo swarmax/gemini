@@ -32,7 +32,10 @@ def test_a_spec_with_unit_strings_and_sections_round_trips_exactly():
         "modules": {
             "pipe": {
                 "type": "Pipe",
-                "params": {"length": {"value": 100, "unit": "ft"}, "inner_diameter": 0.1},
+                "params": {
+                    "length": {"value": 100, "unit": "ft"},
+                    "inner_diameter": {"value": 0.1, "unit": "m"},
+                },
             },
             "valve": {"type": "Valve", "params": {}},
         },
@@ -56,7 +59,7 @@ def test_a_spec_with_unit_strings_and_sections_round_trips_exactly():
     written = plant.to_dict()
     assert written["modules"]["pipe"]["params"] == {
         "length": {"value": 100, "unit": "ft"},
-        "inner_diameter": 0.1,
+        "inner_diameter": {"value": 0.1, "unit": "m"},
     }
     assert written == {key: complete[key] for key in written}
     assert set(written) - set(complete) == set()
@@ -172,13 +175,12 @@ def test_a_broken_module_does_not_hide_the_other_end_of_a_connection():
 
 @pytest.mark.parametrize("name", gm.plants.names())
 def test_every_plant_rebuilds_from_its_dict_with_the_same_values(name):
-    """The class form and the structure form both give the same plant."""
+    """The class form and the structure form give the same plant dict, without the case's values."""
     plant = filled_plant(name)
     data, structure = plant.to_dict(), plant.to_dict(structure=True)
     assert "modules" not in data and data["type"] == name
     rebuilt = gm.Plant.from_dict(data)
     assert type(rebuilt) is type(plant) and rebuilt.to_dict() == data
-    assert rebuilt.state_dict() == plant.state_dict()
     assert gm.Plant.from_dict(structure).to_dict(structure=True) == structure
 
 

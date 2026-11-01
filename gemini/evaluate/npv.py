@@ -2,8 +2,8 @@
 
 from gemini.evaluate._utils.cashflow import net_cash_flow
 from gemini.evaluate._utils.cost import annuity
+from gemini.evaluate._utils.discounting import discounting
 from gemini.evaluate._utils.outcome import reported, unavailable
-from gemini.run.assumptions import discounting
 from gemini.types.shapes import measure
 
 

@@ -6,6 +6,7 @@ from gemini._utils import registry
 from gemini._utils.strings import close_matches, did_you_mean, join_path
 from gemini.errors import GeminiError, ValidationError
 from gemini.errors.base import problem, reported
+from gemini.modules._utils import design
 from gemini.modules._utils.serialization import (
     SECTIONS,
     Report,
@@ -14,7 +15,7 @@ from gemini.modules._utils.serialization import (
     from_sections,
     located,
 )
-from gemini.plants._utils import outputs
+from gemini.plants._utils import inputs, outputs
 from gemini.plants._utils.factory import built, make_module
 from gemini.plants._utils.plan import is_group, unconnected_port
 from gemini.plants._utils.writer import baseline_of
@@ -37,6 +38,32 @@ TYPES = {
     "inputs": dict,
 }
 KEYS = ("format", *TYPES)
+
+
+def _checked_params(module, params, report, prefix):
+    """Return the ``params`` that fit, reporting each other as ``invalid_value``.
+
+    A value the case holds is refused, naming where it lives, and so is a number with a unit that
+    is no ``{"value", "unit"}``.
+    """
+    kept = {}
+    for name, value in params.items():
+        with report.guard(prefix):
+            try:
+                declaration = design.parameter(module, name)
+            except GeminiError:
+                kept[name] = value
+                continue
+            if declaration.case is not None:
+                raise ValidationError(
+                    f"{name} is not a design value of the plant; give it in the case, at "
+                    f"{declaration.case}",
+                    path=name,
+                    code="invalid_value",
+                )
+            design.refuse_bare(declaration, value, name)
+            kept[name] = value
+    return kept
 
 
 def _shape(data, report):
@@ -81,7 +108,8 @@ def _entry(plant, prefix, name, entry, report, path):
                 _entry(plant, key, child, item, report, f"{path}.modules.{child}")
             return
         baseline = baseline_of(module)
-        from_params(module, entry.get("params", {}), report, f"{path}.params")
+        params = _checked_params(module, entry.get("params", {}), report, f"{path}.params")
+        from_params(module, params, report, f"{path}.params")
         plant._attach(key, module, deepcopy(entry.get("params")), baseline)
 
 
@@ -169,6 +197,7 @@ def _from_inputs(plant, data, report):
         if report.skips(path):
             continue
         with report.guard("inputs"):
+            inputs.refuse_bare(plant, path, value)
             plant.set_inputs({path: value})
 
 
@@ -204,7 +233,8 @@ def _of_class(cls, data, report):
                 code="invalid_value",
             )
         plant = built(found, data.get("size"))
-        from_params(plant, data.get("params", {}), report)
+        params = _checked_params(plant, data.get("params", {}), report, "params")
+        from_params(plant, params, report)
         from_sections(plant, data, report)
         _from_inputs(plant, data, report)
         plant._sections = {key: deepcopy(data.get(key, {})) for key in SECTIONS}

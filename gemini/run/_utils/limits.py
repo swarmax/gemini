@@ -1,32 +1,33 @@
-"""The constraints a schedule enforces, found by their general form against the doublets.
+"""The constraints a schedule enforces, found by their role and quantity.
 
-A constraint is read by its path, with ``*`` matching one name, and by its ``over`` and ``when``:
+A constraint of the case applies to every unit of its role on its own. The schedule reads three
+forms of the role ``doublet``:
 
-- flow range: ``<doublet>.reservoir.liquid_flow``, ``over="each"``, ``when="running"``, ``min`` and
-  ``max``;
-- maximum brine cooling: ``<doublet>.brine_cooling``, ``over="each"``, ``max``;
-- operating duration: ``<doublet>.reservoir.liquid_flow``, ``over="duration"``,
-  ``when="running"``, ``max`` or ``equals`` a duration.
+- flow range: ``production_flow``, ``over="each"``, ``when="running"``, ``min`` and ``max``;
+- maximum brine cooling: ``brine_cooling``, ``over="each"``, ``max``;
+- operating duration: ``production_flow``, ``over="duration"``, ``when="running"``, ``max`` or
+  ``equals`` a duration.
 
 Every other constraint, a duration with only ``min``, and a bound of a constraint that the form
 does not read are left to the check of a run.
 """
 
 from dataclasses import dataclass
-from fnmatch import fnmatchcase
 
 import pandas as pd
 
-from gemini import units
 from gemini._utils.strings import join_path
 from gemini._utils.time import to_timedelta
 from gemini.errors import ValidationError
-from gemini.run.constraint import BOUNDS
 
-FLOW = "reservoir.liquid_flow"
-"""The path below a doublet of its flow."""
+BOUNDS = ("min", "max", "equals")
+"""The bounds of a constraint."""
+ROLE = "doublet"
+"""The role whose units the schedule limits."""
+FLOW = "production_flow"
+"""The quantity of the flow of a doublet."""
 COOLING = "brine_cooling"
-"""The path below a doublet of the cooling of its brine."""
+"""The quantity of the cooling of its brine."""
 
 
 @dataclass(frozen=True)
@@ -39,58 +40,47 @@ class DoubletLimits:
     operating_time: pd.Timedelta | None
 
 
-def _fits(pattern, path):
-    """Return whether ``path`` fits ``pattern``, name by name."""
-    wanted, given = pattern.split("."), path.split(".")
-    return len(wanted) == len(given) and all(map(fnmatchcase, given, wanted))
+def _has(constraint, *names):
+    """Return whether ``constraint`` has one of the bounds ``names``."""
+    return any(getattr(constraint, name) is not None for name in names)
 
 
 def _forms(constraint):
-    """Return the forms ``constraint`` has, each with the path below a doublet it reads."""
+    """Return the forms ``constraint`` has."""
+    if constraint.on != ROLE:
+        return []
     forms = []
-    if constraint.over == "each" and constraint.when == "running":
+    if constraint.quantity == FLOW and constraint.over == "each" and constraint.when == "running":
         if constraint.min is not None and constraint.max is not None:
-            forms.append(("range", FLOW))
-    if constraint.over == "each" and constraint.max is not None:
-        forms.append(("cooling", COOLING))
-    if constraint.over == "duration" and constraint.when == "running":
-        if constraint.max is not None or constraint.equals is not None:
-            forms.append(("duration", FLOW))
+            forms.append("range")
+    if constraint.quantity == COOLING and constraint.over == "each" and constraint.max is not None:
+        forms.append("cooling")
+    if constraint.quantity == FLOW and constraint.over == "duration":
+        if constraint.when == "running" and _has(constraint, "max", "equals"):
+            forms.append("duration")
     return forms
-
-
-def _si(constraint, bound, unit, quantity=None):
-    """Return a bound of ``constraint`` in the SI ``unit``; a plain number raises."""
-    if not isinstance(bound, units.Quantity):
-        raise ValidationError(
-            f"schedule: constraint {constraint.path} bound = {bound!r}; expected "
-            f"{units.QUANTITY_FORM}",
-            path=constraint.path,
-            code="invalid_value",
-        )
-    return units.value_in_si(bound, unit, constraint.path, quantity)
 
 
 def _duration(constraint):
     """Return the duration of a duration constraint as a ``Timedelta``."""
     bound = constraint.equals if constraint.equals is not None else constraint.max
-    seconds = _si(constraint, bound, "s")
     try:
-        return to_timedelta(seconds)
+        return to_timedelta(bound)
     except ValueError as error:
         raise ValidationError(
-            f"schedule: constraint {constraint.path} duration = {bound!r}; expected a duration",
-            path=constraint.path,
+            f"schedule: constraint on {constraint.on} {constraint.quantity} duration = {bound}; "
+            "expected a duration",
+            path="constraints",
             code="invalid_value",
         ) from error
 
 
 def _missing(doublet, name, form):
     """Return the ``missing_value`` error of a limit that no constraint gives for ``doublet``."""
-    path = join_path(doublet, name)
     return ValidationError(
-        f"schedule: no constraint gives {form} of {path}; expected one, a limit has no default",
-        path=f"constraints.{path}",
+        f"schedule: no constraint on {ROLE} gives {form} of {join_path(doublet, name)}; "
+        "expected one, a limit has no default",
+        path="constraints",
         code="missing_value",
     )
 
@@ -106,28 +96,28 @@ def _enforced(form, constraint):
 
 def _left_over(constraint, enforced):
     """Return ``to_dict()`` of ``constraint`` without ``enforced``; ``None`` if no bound is left."""
-    data = constraint.to_dict() | dict.fromkeys(enforced)
-    return data if any(data[name] is not None for name in BOUNDS) else None
+    rest = constraint.model_copy(update=dict.fromkeys(enforced))
+    if all(getattr(rest, name) is None for name in BOUNDS):
+        return None
+    return rest.to_dict()
 
 
-def _found(constraints, doublet):
-    """Return ``{form: (index, constraint)}``, the first constraint of each form that fits."""
+def _found(constraints):
+    """Return ``{form: (index, constraint)}``, the first constraint of each form."""
     found = {}
     for index, constraint in enumerate(constraints):
-        for form, name in _forms(constraint):
-            if _fits(constraint.path, join_path(doublet, name)):
-                found.setdefault(form, (index, constraint))
+        for form in _forms(constraint):
+            found.setdefault(form, (index, constraint))
     return found
 
 
-def of_doublet(constraints, doublet):
+def of_doublet(found, doublet):
     """Return ``(DoubletLimits, used)`` of the doublet at path ``doublet``.
 
     ``used`` maps the index of each constraint that gave a limit to the bounds the schedule
     enforces of it. A flow range or a brine cooling that no constraint gives raises
     ``ValidationError`` (code ``missing_value``).
     """
-    found = _found(constraints, doublet)
     if "range" not in found:
         raise _missing(doublet, FLOW, "a flow range (over='each', when='running', min and max)")
     if "cooling" not in found:
@@ -135,10 +125,7 @@ def of_doublet(constraints, doublet):
     flow, cooling = found["range"][1], found["cooling"][1]
     duration = found.get("duration")
     limits = DoubletLimits(
-        _si(flow, flow.min, "m3/s"),
-        _si(flow, flow.max, "m3/s"),
-        _si(cooling, cooling.max, "K", "temperature_difference"),
-        None if duration is None else _duration(duration[1]),
+        flow.min, flow.max, cooling.max, None if duration is None else _duration(duration[1])
     )
     return limits, {
         index: _enforced(form, constraint) for form, (index, constraint) in found.items()
@@ -152,9 +139,11 @@ def split(constraints, doublets):
     one it enforced in part with only the bounds left: a duration of ``min`` and ``max`` runs to
     the maximum, so its entry keeps the minimum.
     """
+    constraints = constraints or ()
+    found = _found(constraints)
     limits, used = {}, {}
     for doublet in doublets:
-        limits[doublet], taken = of_doublet(constraints, doublet)
+        limits[doublet], taken = of_doublet(found, doublet)
         used |= taken
     left = [_left_over(item, used.get(index, ())) for index, item in enumerate(constraints)]
     return limits, [item for item in left if item is not None]

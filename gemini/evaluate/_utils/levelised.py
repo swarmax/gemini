@@ -1,9 +1,9 @@
 """The levelised cost of a product and the annualised cost of a plant."""
 
 from gemini.evaluate._utils.cost import annuity, investment, lifetime_cost, yearly_cost
+from gemini.evaluate._utils.discounting import discounting
 from gemini.evaluate._utils.flows import Flows
 from gemini.evaluate._utils.outcome import reported, unavailable
-from gemini.run.assumptions import discounting
 from gemini.types.shapes import measure
 
 

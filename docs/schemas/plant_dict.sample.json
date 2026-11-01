@@ -322,8 +322,14 @@
     "return_in": "heat_exchanger.cold_in"
   },
   "inputs": {
-    "injection_pump.pressure_setpoint": 5150000.0,
-    "return_in.T": 293.15,
+    "injection_pump.pressure_setpoint": {
+      "unit": "Pa",
+      "value": 5150000.0
+    },
+    "return_in.T": {
+      "unit": "K",
+      "value": 293.15
+    },
     "return_in.fluid": {
       "co2_mass_fraction": 0.0,
       "density": 1068.0,
@@ -339,8 +345,14 @@
       "thermal_conductivity": null,
       "viscosity": 0.00065
     },
-    "return_in.m_dot": 40,
-    "return_in.p": 500000.0
+    "return_in.m_dot": {
+      "unit": "kg/s",
+      "value": 40
+    },
+    "return_in.p": {
+      "unit": "Pa",
+      "value": 500000.0
+    }
   },
   "modules": {
     "degasser": {
@@ -351,7 +363,10 @@
     },
     "doublet": {
       "params": {
-        "esp.best_efficiency_flow": 0.03610555555555555,
+        "esp.best_efficiency_flow": {
+          "unit": "m3/s",
+          "value": 0.03610555555555555
+        },
         "esp.head_coefficients": [
           125.518426,
           -0.0020852856,
@@ -360,8 +375,14 @@
           2.37859645e-16,
           -1.18258356e-21
         ],
-        "esp.maximum_flow": 0.049444444444444444,
-        "esp.minimum_flow": 0.02277777777777778,
+        "esp.maximum_flow": {
+          "unit": "m3/s",
+          "value": 0.049444444444444444
+        },
+        "esp.minimum_flow": {
+          "unit": "m3/s",
+          "value": 0.02277777777777778
+        },
         "esp.power_coefficients": [
           0.0,
           0.0,
@@ -371,9 +392,15 @@
           0.0
         ],
         "esp.pump_type": "DEFAULT-PUMP",
-        "esp.setting_depth": 600.0,
+        "esp.setting_depth": {
+          "unit": "m",
+          "value": 600.0
+        },
         "esp.stage_count": 15,
-        "esp.tubing": 0.1778,
+        "esp.tubing": {
+          "unit": "m",
+          "value": 0.1778
+        },
         "injector.pipe_path": {
           "sections": [
             {
@@ -396,16 +423,46 @@
             }
           ]
         },
-        "injector.soil_temperature": 288.15,
-        "reservoir.aquifer_thickness": 45.0,
-        "reservoir.drainage_radius": 1000.0,
-        "reservoir.permeability": 9.869233e-12,
-        "reservoir.pressure": 22000000.0,
-        "reservoir.productivity_index": 5.833333333333333e-08,
-        "reservoir.temperature": 353.15,
-        "reservoir.top_depth": 1800.0,
-        "reservoir.wellbore_radius": 0.0765,
-        "riser.esp_depth": 600.0,
+        "injector.soil_temperature": {
+          "unit": "K",
+          "value": 288.15
+        },
+        "reservoir.aquifer_thickness": {
+          "unit": "m",
+          "value": 45.0
+        },
+        "reservoir.drainage_radius": {
+          "unit": "m",
+          "value": 1000.0
+        },
+        "reservoir.permeability": {
+          "unit": "m2",
+          "value": 9.869233e-12
+        },
+        "reservoir.pressure": {
+          "unit": "Pa",
+          "value": 22000000.0
+        },
+        "reservoir.productivity_index": {
+          "unit": "m3/s/Pa",
+          "value": 5.833333333333333e-08
+        },
+        "reservoir.temperature": {
+          "unit": "K",
+          "value": 353.15
+        },
+        "reservoir.top_depth": {
+          "unit": "m",
+          "value": 1800.0
+        },
+        "reservoir.wellbore_radius": {
+          "unit": "m",
+          "value": 0.0765
+        },
+        "riser.esp_depth": {
+          "unit": "m",
+          "value": 600.0
+        },
         "riser.pipe_path": {
           "sections": [
             {
@@ -477,16 +534,46 @@
           ]
         },
         "riser.segment": "above_esp",
-        "riser.soil_temperature": 288.15,
-        "sink.aquifer_thickness": 45.0,
-        "sink.drainage_radius": 0.0,
-        "sink.injectivity_index": 5.5555555555555555e-08,
-        "sink.permeability": 9.869233e-12,
-        "sink.pressure": 22000000.0,
-        "sink.temperature": 353.15,
-        "sink.top_depth": 0.0,
-        "sink.wellbore_radius": 0.0765,
-        "well.esp_depth": 600.0,
+        "riser.soil_temperature": {
+          "unit": "K",
+          "value": 288.15
+        },
+        "sink.aquifer_thickness": {
+          "unit": "m",
+          "value": 45.0
+        },
+        "sink.drainage_radius": {
+          "unit": "m",
+          "value": 0.0
+        },
+        "sink.injectivity_index": {
+          "unit": "m3/s/Pa",
+          "value": 5.5555555555555555e-08
+        },
+        "sink.permeability": {
+          "unit": "m2",
+          "value": 9.869233e-12
+        },
+        "sink.pressure": {
+          "unit": "Pa",
+          "value": 22000000.0
+        },
+        "sink.temperature": {
+          "unit": "K",
+          "value": 353.15
+        },
+        "sink.top_depth": {
+          "unit": "m",
+          "value": 0.0
+        },
+        "sink.wellbore_radius": {
+          "unit": "m",
+          "value": 0.0765
+        },
+        "well.esp_depth": {
+          "unit": "m",
+          "value": 600.0
+        },
         "well.pipe_path": {
           "sections": [
             {
@@ -558,7 +645,10 @@
           ]
         },
         "well.segment": "below_esp",
-        "well.soil_temperature": 288.15
+        "well.soil_temperature": {
+          "unit": "K",
+          "value": 288.15
+        }
       },
       "type": "Doublet"
     },
@@ -577,11 +667,26 @@
     },
     "heat_exchanger": {
       "params": {
-        "cold_nominal_mass_flow": 1.0,
-        "cold_nominal_pressure_drop": 0.0,
-        "hot_nominal_mass_flow": 1.0,
-        "hot_nominal_pressure_drop": 0.0,
-        "thermal_conductance": 100000.0
+        "cold_nominal_mass_flow": {
+          "unit": "kg/s",
+          "value": 1.0
+        },
+        "cold_nominal_pressure_drop": {
+          "unit": "Pa",
+          "value": 0.0
+        },
+        "hot_nominal_mass_flow": {
+          "unit": "kg/s",
+          "value": 1.0
+        },
+        "hot_nominal_pressure_drop": {
+          "unit": "Pa",
+          "value": 0.0
+        },
+        "thermal_conductance": {
+          "unit": "W/K",
+          "value": 100000.0
+        }
       },
       "type": "HeatExchanger"
     },

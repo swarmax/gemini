@@ -9,9 +9,7 @@ import gemini as gm
 from gemini import units
 from gemini.units import Quantity
 from tests.fixtures import ROOT
-from tests.fixtures.costed_plants import heating_plant
 from tests.fixtures.errors import raises
-from tests.fixtures.result_tables import make_problem, make_results
 
 TEXT = re.compile(r"\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s+(\S+)\s*")
 QUOTED = re.compile(r"[\"'][+-]?[.\d][^\"'\n]* \S+[\"']")
@@ -53,25 +51,23 @@ def test_no_package_code_reads_or_holds_unit_text():
     assert found == []
 
 
-def _assumptions(**fields):
-    return lambda: gm.Assumptions(**fields)
+def _plant_dict(**params):
+    return lambda: gm.Plant.from_dict(
+        {"format": 2, "type": "HeatingPlant", "params": params, "bindings": {}, "param_history": {}}
+    )
 
 
-def _site(value):
-    def call():
-        problem = make_problem(site={"heat.return_temperature": value})
-        return problem.apply_site(heating_plant())
-
-    return call
-
-
-def _constraint(**bounds):
-    def call():
-        problem = make_problem(count=4, constraints=[gm.Constraint("heat.unmet_demand", **bounds)])
-        results = make_results({"heat": {"unmet_demand": [1.0, 2.0, 3.0, 4.0]}})
-        return gm.evaluate.constraints(heating_plant(), problem, results)
-
-    return call
+def _plant_input(value):
+    return lambda: gm.Plant.from_dict(
+        {
+            "format": 2,
+            "type": "HeatingPlant",
+            "params": {},
+            "inputs": {"peak_boiler.temperature_setpoint": value},
+            "bindings": {},
+            "param_history": {},
+        }
+    )
 
 
 def _minimize(bound):
@@ -85,21 +81,25 @@ def _minimize(bound):
 
 
 RAW_NUMBERS = {
-    "price": _assumptions(prices={"electricity": 2e-8}),
-    "co2 price": _assumptions(co2_price=80.0),
-    "cost factor": _assumptions(pump_cost=0.5),
-    "emission factor": _assumptions(electricity_emission_factor=1e-7),
-    "site": _site(300.0),
-    "constraint bound": _constraint(max=3.0),
+    "price": lambda: gm.case.Opex(electricity=2e-8),
+    "co2 price": lambda: gm.case.Opex(co2=80.0),
+    "cost factor": lambda: gm.case.Capex(boiler=0.5),
+    "emission factor": lambda: gm.case.Emissions(CO2=gm.case.CO2(electricity=1e-7)),
+    "constraint bound": lambda: gm.case.Constraint(
+        on="doublet", quantity="production_flow", max=3.0
+    ),
+    "plant parameter": _plant_dict(depth=2500.0),
+    "plant input": _plant_input(373.15),
     "study bound": _minimize(2e5),
 }
 """Public inputs with a dimension, each called with a bare number."""
 
 TEXTS = {
-    "price": _assumptions(prices={"electricity": "100 EUR/MWh"}),
-    "cost factor": _assumptions(pump_cost="0.5 EUR/W"),
-    "site": _site("300 K"),
-    "constraint bound": lambda: gm.Constraint("heat.unmet_demand", max="3 W"),
+    "price": lambda: gm.case.Opex(electricity="100 EUR/MWh"),
+    "cost factor": lambda: gm.case.Capex(boiler="0.5 EUR/W"),
+    "constraint bound": lambda: gm.case.Constraint(
+        on="doublet", quantity="production_flow", max="3 m3/s"
+    ),
     "set_params": lambda: gm.modules.Pipe().set_params("", {"length": "10 m"}),
     "stream": lambda: gm.Stream(flow="150 m3/h", T=300, p=1e5),
     "fluid": lambda: gm.Fluid(density="1000 kg/m3"),
@@ -126,12 +126,13 @@ def test_a_quantity_of_another_dimension_is_refused_naming_the_field():
     """A length where a flow is wanted lists the units of a flow."""
     with raises(gm.errors.ValidationError, "invalid_unit", match="m3/h"):
         gm.modules.Pipe().set_params("", {"length": Quantity(5, "m3/h")})
-    with raises(gm.errors.ValidationError, "invalid_unit", match="currency/W"):
-        gm.Assumptions(pump_cost=Quantity(5, "EUR"))
+    with raises(gm.errors.ValidationError, "invalid_unit", match="EUR/W"):
+        gm.case.Capex(boiler=Quantity(5, "EUR"))
 
 
 def test_a_dimensionless_value_stays_a_number():
     """An efficiency, a fraction or a rate needs no unit."""
-    values = gm.Assumptions(discount_rate=0.05, heat_cost_share=0.8)
+    values = gm.case.Finance(discount_rate=0.05)
     assert values.discount_rate == 0.05
-    assert gm.Constraint("heat.efficiency", min=0.6).min == 0.6
+    bound = gm.case.Constraint(on="doublet", quantity="pump_efficiency", min=0.6)
+    assert bound.min == 0.6

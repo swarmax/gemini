@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 
+from gemini import units
 from gemini._utils.jsonable import to_plain
 from gemini._utils.strings import join_path
 from gemini.errors import GeminiError
@@ -13,6 +14,7 @@ from gemini.modules._utils.serialization import (
     to_sections,
     tree_params,
 )
+from gemini.plants._utils import inputs
 from gemini.plants._utils.plan import is_group, is_plant
 
 
@@ -37,19 +39,36 @@ def _plain(module, name, value):
     return plain_value(design.parameter(module, name).validate(value))
 
 
+def in_quantity_form(module, name, value):
+    """Return a value of a parameter with a unit as ``{"value", "unit"}``, else as it is."""
+    if isinstance(value, units.Quantity):
+        return value.to_dict()
+    unit = design.parameter(module, name).unit
+    if unit in (None, "-") or value is None or isinstance(value, (dict, str, bool)):
+        return value
+    return {"value": value, "unit": unit}
+
+
 def params_entry(plant, key, module):
-    """Return the ``params`` of one module: stated values while true, others that changed."""
+    """Return the ``params`` of one module: stated values while true, others that changed.
+
+    A value the case holds is never written: a run sets it on a copy. A value with a unit is
+    written as ``{"value", "unit"}``.
+    """
     stated = plant._stated.get(key) or {}
     baseline = plant._baselines.get(key, {})
     derived = design.derived_names(module)
+    owned = {name for name, parameter in module.named_parameters() if parameter.case}
     result = {}
     for name, value in tree_params(module).items():
+        if name in owned:
+            continue
         if name in stated:
             kept = _same(module, name, stated[name], value)
             result[name] = kept if kept is not None else value
         elif name not in derived and (name not in baseline or baseline[name] != value):
             result[name] = value
-    return result
+    return {name: in_quantity_form(module, name, value) for name, value in result.items()}
 
 
 def modules_entry(plant, container, prefix=""):
@@ -80,7 +99,7 @@ def _port_text(ends):
 def _inputs_section(plant):
     """Return the ``inputs`` key of the plant dict, empty when nothing below ``plant`` set one."""
     stated = {
-        join_path(path, name): value
+        join_path(path, name): inputs.in_quantity_form(module, name, value)
         for path, module in plant.named_modules()
         if is_plant(module)
         for name, value in module._inputs.items()

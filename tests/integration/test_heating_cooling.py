@@ -3,25 +3,10 @@
 import pytest
 
 import gemini as gm
-from tests.fixtures.heating_cooling import HEAT, filled_dict, two_days
+from tests.fixtures.heating_cooling import HEAT, filled_dict, two_days_case
 
 pytestmark = pytest.mark.slow
 
-LIMITS = [
-    gm.Constraint(
-        "d*.reservoir.liquid_flow",
-        min={"value": 50, "unit": "m3/h"},
-        max={"value": 300, "unit": "m3/h"},
-        when="running",
-    ),
-    gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}),
-]
-ASSUMPTIONS = gm.Assumptions(
-    prices={
-        "electricity": {"value": 100, "unit": "EUR/MWh"},
-        "gas": {"value": 40, "unit": "EUR/MWh"},
-    }
-)
 PLANTS = (
     "HeatingPlant",
     "HeatingAbsorptionCoolingPlant",
@@ -30,13 +15,9 @@ PLANTS = (
 )
 
 
-def _problem():
-    return gm.Problem(two_days(), constraints=LIMITS, assumptions=ASSUMPTIONS)
-
-
 def _run(data):
     plant = gm.Plant.from_dict(data)
-    return plant, gm.simulate(plant, _problem(), on_error="raise")
+    return plant, gm.simulate(plant, two_days_case(), on_error="raise")
 
 
 @pytest.mark.parametrize("name", PLANTS)

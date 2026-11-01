@@ -1,12 +1,12 @@
 """The inputs of a plant: set by path, stored in both dict forms, read by the schedule."""
 
-import pandas as pd
 import pytest
 
 import gemini as gm
 from gemini.errors import ValidationError
 from gemini.plants._utils.schema import schema
 from tests.fixtures.errors import raises
+from tests.fixtures.heating_cooling import days_case
 from tests.fixtures.json_schema import check as check_schema
 
 SETPOINT = {"pump_heater.temperature_setpoint": {"value": 100, "unit": "degC"}}
@@ -25,7 +25,6 @@ def boiler_plant():
         "HeatingGrid",
         name="users",
         params={
-            "return_temperature": {"value": 60, "unit": "degC"},
             "return_pressure": {"value": 6, "unit": "bar"},
         },
     )
@@ -96,27 +95,10 @@ def test_from_dict_then_schedule_needs_no_extra_call():
     """A stored design with a setpoint schedules and runs as it is read."""
     plant = boiler_plant().set_inputs(SETPOINT)
     built = gm.Plant.from_dict(plant.to_dict())
-    index = pd.date_range("2027-01-01", periods=2, freq="D", tz="UTC", name="time")
-    demand = pd.DataFrame({"heating_demand": [1e5, 2e5]}, index=index)
-    limits = [
-        gm.Constraint(
-            "d*.reservoir.liquid_flow",
-            min={"value": 50, "unit": "m3/h"},
-            max={"value": 300, "unit": "m3/h"},
-            when="running",
-        ),
-        gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}),
-    ]
-    prices = gm.Assumptions(
-        prices={
-            "electricity": {"value": 100, "unit": "EUR/MWh"},
-            "gas": {"value": 40, "unit": "EUR/MWh"},
-        }
-    )
-    problem = gm.Problem(demand, constraints=limits, assumptions=prices)
-    plan = gm.schedule(built, problem)
+    case = days_case([1e5, 2e5], start="2027-01-01")
+    plan = gm.schedule(built, case)
     assert plan["pump_heater.temperature_setpoint"].iloc[0] == pytest.approx(373.15)
-    results = gm.simulate(built, plan=plan)
+    results = gm.simulate(built, case, plan=plan)
     assert results.get("pump_heater", "fluid_out.temperature")["value"][0] == pytest.approx(373.15)
 
 

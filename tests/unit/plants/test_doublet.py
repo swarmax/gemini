@@ -7,7 +7,8 @@ import pytest
 
 import gemini as gm
 from gemini import units
-from gemini.physics import constants
+from gemini.physics import constants, hydraulics
+from gemini.run._utils.apply import apply_case
 from gemini.types import Stream
 from tests.fixtures.balance import assert_plant_closes
 from tests.fixtures.reading import reading
@@ -45,6 +46,8 @@ DESIGN = {
     "thickness": {"value": 100, "unit": "m"},
     "well_diameter": {"value": 0.244, "unit": "m"},
 }
+OWNED = ("gradient", "surface_temperature", "permeability", "thickness")
+STORED = {name: value for name, value in DESIGN.items() if name not in OWNED}
 PUMP = {
     "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
@@ -53,6 +56,24 @@ PUMP = {
 BRINE = gm.Fluid(
     density={"value": 1030, "unit": "kg/m3"}, viscosity={"value": 0.4, "unit": "mPa*s"}
 )
+
+
+def design_case():
+    """Return a case whose environment is the ground, reservoir and brine of ``DESIGN``."""
+    Q = units.Quantity
+    return gm.Case(
+        time=gm.case.Time(start="2027-01-01", end="2027-01-02", step=Q(1, "d")),
+        environment=gm.case.Environment(
+            ground=gm.case.Ground(surface_temperature=Q(12, "degC"), gradient=Q(30, "K/km")),
+            reservoir=gm.case.Reservoir(
+                reference_depth=Q(2500, "m"),
+                thickness=Q(100, "m"),
+                permeability=Q(200, "mD"),
+                pressure=Q(hydraulics.hydrostatic_pressure(1030.0, 2500.0), "Pa"),
+            ),
+            fluid=gm.case.Fluid(density=Q(1030, "kg/m3"), viscosity=Q(0.4, "mPa.s")),
+        ),
+    )
 
 
 def designed(**extra):
@@ -154,8 +175,8 @@ def test_the_file_holds_the_design_and_rebuilds_the_same_numbers():
     plant, doublet = designed(**PUMP | {"reservoir.skin": 2.0})
     spec = plant.to_dict()
     params = spec["modules"]["d0"]["params"]
-    assert params == DESIGN | PUMP | {"reservoir.skin": 2.0}
-    rebuilt = gm.Plant.from_dict(json.loads(json.dumps(spec))).d0
+    assert params == STORED | PUMP | {"reservoir.skin": 2.0}
+    rebuilt = apply_case(gm.Plant.from_dict(json.loads(json.dumps(spec))), design_case()).d0
     assert rebuilt.reservoir.productivity_index == doublet.reservoir.productivity_index
     assert rebuilt.reservoir.pressure == doublet.reservoir.pressure
     assert rebuilt.esp.head_coefficients == doublet.esp.head_coefficients
@@ -168,8 +189,9 @@ def test_a_designed_doublet_as_the_root_round_trips():
     assert doublet.to_dict()["params"] == {} and "modules" not in doublet.to_dict()
     doublet.set_params("", DESIGN)
     spec = doublet.to_dict()
-    assert spec["type"] == "Doublet" and spec["params"] == DESIGN
-    assert gm.Plant.from_dict(spec).reservoir.temperature == pytest.approx(360.15)
+    assert spec["type"] == "Doublet" and spec["params"] == STORED
+    rebuilt = apply_case(gm.Plant.from_dict(spec), design_case())
+    assert rebuilt.reservoir.temperature == pytest.approx(360.15)
 
 
 def test_a_dated_design_derives_at_its_date():
@@ -188,7 +210,7 @@ def test_a_waiting_depth_is_a_missing_parameter():
 
 
 def test_a_depth_waits_for_its_geotherm():
-    """A plant may hold the design and a problem the site: nothing is derived until both exist."""
+    """A plant holds the design and a case the environment: nothing is derived until both exist."""
     doublet = gm.plants.Doublet().set_params(
         "", {"depth": {"value": 2500, "unit": "m"}, "gradient": {"value": 30, "unit": "K/km"}}
     )
@@ -203,9 +225,11 @@ def test_the_values_of_a_stored_doublet_rebuild_in_any_order():
     spec = plant.to_dict()
     params = spec["modules"]["d0"]["params"]
     spec["modules"]["d0"]["params"] = dict(reversed(list(params.items())))
-    assert gm.Plant.from_dict(spec).d0.reservoir.temperature == pytest.approx(360.15)
+    rebuilt = apply_case(gm.Plant.from_dict(spec), design_case())
+    assert rebuilt.d0.reservoir.temperature == pytest.approx(360.15)
     spec["modules"]["d0"]["params"] = params
-    assert gm.Plant.from_dict(spec).d0.reservoir.temperature == pytest.approx(360.15)
+    rebuilt = apply_case(gm.Plant.from_dict(spec), design_case())
+    assert rebuilt.d0.reservoir.temperature == pytest.approx(360.15)
 
 
 def test_the_old_way_keeps_working(fresh_plant):

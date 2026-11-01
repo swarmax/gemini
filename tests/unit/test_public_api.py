@@ -10,7 +10,7 @@ from tests.fixtures.capture_public_api import SNAPSHOT, capture, fingerprint
 
 SNAPSHOTS = {
     "0.1.0": "f19ae90f18bb5a5a85e1b1f730276c9a50fdba0d46108c4bcd56488b48178a8b",
-    "0.2.0": "c6fa73afe75606e51ef711040413b35894a4fa9b066bf936aea6798963fd1cb1",
+    "0.2.0": "e75c6951007bd9174f069689d09df972ed1cc304eea66567774506b03acdc9bd",
 }
 """Hash of the snapshot per ``gm.__version__``: a released entry never changes."""
 
@@ -27,9 +27,6 @@ EXPECTED = {
     "BRINE",
     "WATER",
     "Case",
-    "Problem",
-    "Constraint",
-    "Assumptions",
     "schedule",
     "simulate",
     "replay",

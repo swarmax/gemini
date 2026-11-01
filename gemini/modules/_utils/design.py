@@ -300,3 +300,19 @@ def set_bindings(module, path, bindings):
     else:
         module.bindings[path] = parsed
     return module
+
+
+def refuse_bare(declaration, value, path):
+    """Raise ``invalid_value`` for a plain number given to a declaration with a unit.
+
+    A public input with a dimension is a ``Quantity`` or its dict: a number alone does not say
+    its unit.
+    """
+    bare = isinstance(value, (int, float, list, tuple)) and not isinstance(value, bool)
+    if bare and declaration.unit not in (None, "-"):
+        raise ValidationError(
+            f"{path} = {value!r}; expected {units.QUANTITY_FORM}, because it has the unit "
+            f"{declaration.unit!r}",
+            path=path,
+            code="invalid_value",
+        )

@@ -5,12 +5,14 @@ from gemini.plants._utils import writer
 
 
 def test_a_stated_unit_string_stays_while_the_value_is_unchanged():
-    """The unit string is kept; a changed value is written in SI; unstated defaults stay out."""
+    """The stated unit is kept; a changed value is a quantity in SI; unstated defaults stay out."""
     plant = gm.Plant("Units")
     plant.add("Pipe", "pipe", params={"length": {"value": 100, "unit": "ft"}})
     assert plant.to_dict()["modules"]["pipe"]["params"] == {"length": {"value": 100, "unit": "ft"}}
     plant.set_params("pipe", {"length": 1500.0})
-    assert plant.to_dict()["modules"]["pipe"]["params"] == {"length": 1500.0}
+    assert plant.to_dict()["modules"]["pipe"]["params"] == {
+        "length": {"value": 1500.0, "unit": "m"}
+    }
 
 
 def test_a_value_set_since_is_added():
@@ -19,7 +21,9 @@ def test_a_value_set_since_is_added():
     plant.add("Pipe", "pipe")
     assert plant.to_dict()["modules"]["pipe"] == {"type": "Pipe", "params": {}}
     plant.set_params("pipe", {"inner_diameter": 0.3})
-    assert plant.to_dict()["modules"]["pipe"]["params"] == {"inner_diameter": 0.3}
+    assert plant.to_dict()["modules"]["pipe"]["params"] == {
+        "inner_diameter": {"value": 0.3, "unit": "m"}
+    }
 
 
 def test_a_group_writes_its_children_and_a_plant_its_registered_name():

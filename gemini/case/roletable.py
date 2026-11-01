@@ -26,26 +26,22 @@ TABLE = {
         "brine_cooling": Reads("temperature_difference", "brine_cooling", "result"),
         "production_temperature": Reads("temperature", "riser.wellhead_out.temperature", "result"),
         "injection_temperature": Reads("temperature", "injector.wellhead_in.temperature", "result"),
-        "pump_power": Reads("power", "power_in", "result"),
+        "pump_power": Reads("power", "esp.power_in", "result"),
         "pump_efficiency": Reads("efficiency", "pump_efficiency", "parameter"),
         "volume_imbalance": Reads("volume_flow", "volume_imbalance", "result"),
         "wellhead_pressure": Reads("pressure", "riser.wellhead_out.pressure", "result"),
     },
     "heat_pump": {
-        "heat_output": Reads("power", "heat_output", "result"),
         "cop": Reads("ratio", "cop", "result"),
         "lift": Reads("temperature_difference", "temperature_lift", "result"),
     },
     "boiler": {
-        "heat_output": Reads("power", "heat_output", "result"),
         "fuel_input": Reads("power", "fuel", "result"),
     },
     "chp": {
-        "heat_output": Reads("power", "heat_output", "result"),
         "power_output": Reads("power", "power_out", "result"),
     },
     "chiller": {
-        "cold_output": Reads("power", "cold_output", "result"),
         "cop": Reads("ratio", "cop", "result"),
     },
     "heat_exchanger": {
@@ -60,13 +56,6 @@ TABLE = {
         "temperature": Reads("temperature", "supply_in.temperature", "result"),
         "unmet": Reads("power", "unmet_sensible", "result"),
     },
-    "plant": {
-        "electricity_bought": Reads("power", "electricity_bought", "result"),
-        "gas_bought": Reads("power", "gas_bought", "result"),
-        "co2": Reads("mass_flow", "co2", "result"),
-        "heat_surplus": Reads("power", "heat_surplus", "result"),
-        "cold_surplus": Reads("power", "cold_surplus", "result"),
-    },
 }
 """``{role: {quantity: Reads}}``: the one table of roles."""
 
@@ -76,7 +65,7 @@ def roles():
 
     A constraint is on a role and a quantity of it. The roles are ``doublet``, ``heat_pump``,
     ``boiler``, ``chp``, ``chiller`` (absorption, adsorption and compression), ``heat_exchanger``,
-    ``heating_supply``, ``cooling_supply`` and ``plant``.
+    ``heating_supply`` and ``cooling_supply``.
     """
     return {role: list(quantities) for role, quantities in TABLE.items()}
 
@@ -109,13 +98,12 @@ def reads(role, quantity):
 def units_of(plant, role):
     """Return the paths of the units of ``role`` in ``plant``, found by class and wiring.
 
-    The root plant is the path ``""`` and is the only unit of the role ``plant``. A heat pump is
+    A heat pump is
     a ``heat_pump`` when its ``sink_out`` reaches a ``HeatingGrid`` and a ``chiller`` when its
     ``source_out`` reaches a ``CoolingGrid``; an absorption or adsorption unit is a ``chiller``
     when its ``chilled_out`` reaches a ``CoolingGrid``. A plant without such a unit gives ``[]``.
     """
-    if check_role(role) == "plant":
-        return [""]
+    check_role(role)
     return [path for path, module in plant.named_modules() if _is(plant, path, module, role)]
 
 

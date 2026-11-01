@@ -5,7 +5,7 @@ from gemini.errors import PhysicsError, ValidationError
 from gemini.modules.declarations import Boundary, Control, Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.physics import heat_transfer
-from gemini.types import MassFlow, Power, Pressure, Stream, Temperature
+from gemini.types import WATER, MassFlow, Power, Pressure, Stream, Temperature
 
 
 class HeatingGrid(Module):
@@ -47,10 +47,19 @@ class HeatingGrid(Module):
     def __init__(self):
         """Declare the consumer's return limit, demand boundary and delivered heat."""
         super().__init__()
+        self.fluid = WATER
 
         # Parameters
         self.minimum_return_temperature = Parameter(Temperature | None, default=None)
-        self.return_temperature = Parameter(Temperature | None, default=None, structural=True)
+        self.return_temperature = Parameter(
+            Temperature | None,
+            default=None,
+            structural=True,
+            case="demand.heating.return_temperature",
+        )
+        self.minimum_supply_temperature = Parameter(
+            Temperature | None, default=None, case="demand.heating.supply_temperature"
+        )
         self.return_pressure = Parameter(Pressure | None, default=None)
 
         # Inlets

@@ -8,6 +8,7 @@ from gemini.modules.declarations import Control, Inlet, Outlet, Output, Paramete
 from gemini.modules.module import Module
 from gemini.physics import dispatch, heat_transfer, psychrometrics
 from gemini.types import (
+    WATER,
     MassFlow,
     Power,
     Pressure,
@@ -48,6 +49,7 @@ class Cooler(Module):
     def __init__(self):
         """Declare cooler design data, the cooled stream, ambient air and energy flows."""
         super().__init__()
+        self.fluid = WATER
 
         # Parameters
         self.cooler_type = Parameter(Literal["dry", "wet"])

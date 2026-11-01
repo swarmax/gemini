@@ -78,7 +78,7 @@ def test_every_problem_is_reported_at_once_with_its_path(spec):
 
 def test_an_out_of_bounds_value_has_its_own_code(spec):
     """A value below its minimum is ``out_of_bounds``."""
-    spec["modules"]["pipe"]["params"] = {"length": -5.0}
+    spec["modules"]["pipe"]["params"] = {"length": {"value": -5.0, "unit": "m"}}
     (item,) = gm.plants.validate(spec, on_error="record")
     assert item["code"] == "out_of_bounds" and item["path"] == "modules.pipe.params.length"
 
@@ -155,3 +155,13 @@ def test_read_raises_one_error_that_lists_every_problem(spec):
         reader.from_dict(gm.Plant, spec)
     assert caught.value.path == "modules.degasser.type"
     assert "modules.pipe.params.lenght" in str(caught.value)
+
+
+def test_a_value_the_case_holds_is_refused_naming_where_it_lives(spec):
+    """A ground value and a bare number with a unit are ``invalid_value``."""
+    spec["modules"]["pipe"]["params"] = {"length": 5.0}
+    (item,) = problems_of(spec)
+    assert (item["path"], item["code"]) == ("modules.pipe.params.length", "invalid_value")
+    plant = {"format": 2, "type": "Doublet", "params": {"gradient": {"value": 30, "unit": "K/km"}}}
+    (item,) = gm.plants.validate(plant, on_error="record")
+    assert item["code"] == "invalid_value" and "environment.ground.gradient" in item["message"]

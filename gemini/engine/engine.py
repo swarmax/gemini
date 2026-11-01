@@ -42,14 +42,20 @@ def _live_ticks(position, start, end, step):
 
 
 def _plant_dict(plant):
-    """Return what a checkpoint stores of ``plant``; a root that is no plant has its tree."""
-    return plant.to_dict() if isinstance(plant, Plant) else serialization.tree_dict(plant)
+    """Return what a checkpoint stores of ``plant``; a root that is no plant has its tree.
+
+    A plant stores its plant dict and the state of every module, which holds what the case set
+    for the run.
+    """
+    if isinstance(plant, Plant):
+        return {"plant": plant.to_dict(), "state": plant.state_dict()}
+    return serialization.tree_dict(plant)
 
 
 def _rebuilt(cls, data):
     """Return the root ``_plant_dict`` stored, of class ``cls``."""
     if issubclass(cls, Plant):
-        return cls.from_dict(data)
+        return cls.from_dict(data["plant"]).set_state_dict(data["state"])
     return serialization.tree_from_dict(cls, data)
 
 

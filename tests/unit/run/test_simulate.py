@@ -278,21 +278,21 @@ def test_a_structural_change_retraces():
     assert graph_cache(module).traces > traces
 
 
-def test_a_call_without_a_problem_or_a_plan_is_refused():
+def test_a_call_without_a_case_or_a_plan_is_refused():
     """A building block has no demand: it needs a plan."""
     with raises(ValidationError, "missing_value") as refused:
         gm.simulate(tank())
-    assert refused.value.path == "problem"
+    assert refused.value.path == "case"
 
 
-def test_a_problem_schedules_when_there_is_no_plan():
-    """The run input is the plan of the problem, and a plan given runs the same."""
-    from tests.unit.run.test_schedule import FULL, demand, plant_of_two, problem_of
+def test_a_case_schedules_when_there_is_no_plan():
+    """The run input is the plan of the case, and a plan given runs the same."""
+    from tests.unit.run.test_schedule import FULL, case_of, demand, plant_of_two
 
     plant = plant_of_two()
-    problem = problem_of(demand(FULL, 0.5 * FULL))
-    scheduled = gm.simulate(plant, problem)
-    given = gm.simulate(plant, problem, gm.schedule(plant, problem))
+    case = case_of(demand(FULL, 0.5 * FULL))
+    scheduled = gm.simulate(plant, case)
+    given = gm.simulate(plant, case, gm.schedule(plant, case))
     pd.testing.assert_frame_equal(scheduled.to_frame(), given.to_frame())
 
 
@@ -338,3 +338,15 @@ def test_a_gradient_alone_leaves_the_surface_temperature_missing():
     with raises(ValidationError, "missing_value") as caught:
         gm.Engine(plant).simulate(pd.DataFrame(index=index))
     assert caught.value.path == "d0.surface_temperature"
+
+
+def test_a_checkpoint_of_a_run_with_a_case_keeps_what_the_case_set(tmp_path):
+    """The plant dict never holds the case's values, so the checkpoint stores the module state."""
+    from tests.unit.run.test_schedule import FULL, case_of, demand, plant_of_two
+
+    path = tmp_path / "run.ckpt"
+    gm.simulate(plant_of_two(), case_of(demand(FULL, 0.5 * FULL)), checkpoint=path)
+    restored = gm.Engine.from_checkpoint(path).plant
+    assert restored.d0.gradient == pytest.approx(0.03)
+    assert restored.users.return_temperature == pytest.approx(333.15)
+    assert restored.d0.reservoir.fluid.density == 1030.0

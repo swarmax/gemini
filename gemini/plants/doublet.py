@@ -31,14 +31,15 @@ class Doublet(Plant):
     thickness and ``well_diameter`` the inner diameter of both vertical wells. ``set_params``
     derives, through ``gemini/physics/doublet.py``:
 
-    - from ``depth``, ``gradient`` and ``surface_temperature``, which have no default: a depth
-      waits for them, which a ``gm.Problem`` may give as site values, and a run that starts
-      without them raises ``missing_value`` naming the path. They give the reservoir
-      temperature at the midpoint, the hydrostatic reservoir pressure from the fluid density, the
-      top depth and the soil temperature of the wells, the geotherm at half the depth;
-    - with ``permeability``, ``thickness`` and ``well_diameter``: the productivity and injectivity
-      indices of radial Darcy flow, with the fluid viscosity, ``drainage_radius``, the wellbore
-      radius and the ``skin`` of each reservoir, and the vertical pipe paths of the wells;
+    - from ``depth``, ``gradient`` and ``surface_temperature``: a depth waits for the other two,
+      which the case holds (``environment.ground``) and sets for a run on a copy; a run that
+      starts without them raises ``missing_value`` naming the path. They give the reservoir
+      temperature at the midpoint, the reservoir pressure of the case at that depth, the top
+      depth and the soil temperature of the wells, the geotherm at half the depth;
+    - with ``permeability``, ``thickness`` (both of the case) and ``well_diameter``: the
+      productivity and injectivity indices of radial Darcy flow, with the fluid viscosity,
+      ``drainage_radius``, the wellbore radius and the ``skin`` of each reservoir, and the vertical
+      pipe paths of the wells;
     - with ``nominal_flow``, ``pump_efficiency`` and ``nominal_wellhead_pressure``: the pump setting
       depth, the shallowest that keeps that pressure at the intake, and a one-stage ESP of constant
       head that reaches the wellhead pressure at the nominal flow, with that hydraulic efficiency.
@@ -46,6 +47,9 @@ class Doublet(Plant):
     ``volume_imbalance`` is the produced less the injected liquid volume flow. Both sides are the
     liquid at the density of the brine, which is constant, so it reads the same at standard and at
     reservoir conditions: the gas a stream carries, or a degasser takes out, does not count.
+
+    ``gradient``, ``surface_temperature``, ``permeability`` and ``thickness`` are not design values:
+    a plant dict refuses them, and a run takes them from the case.
 
     A group of values that is not complete derives nothing, and the old way, setting every child
     value directly, works as it did. A child value in the same call wins over the derived one and
@@ -70,10 +74,18 @@ class Doublet(Plant):
 
         # Parameters
         self.depth = Parameter(Length | None, default=None)
-        self.gradient = Parameter(TemperatureGradient | None, default=None)
-        self.surface_temperature = Parameter(Temperature | None, default=None)
-        self.permeability = Parameter(Permeability | None, default=None)
-        self.thickness = Parameter(Length | None, default=None)
+        self.gradient = Parameter(
+            TemperatureGradient | None, default=None, case="environment.ground.gradient"
+        )
+        self.surface_temperature = Parameter(
+            Temperature | None, default=None, case="environment.ground.surface_temperature"
+        )
+        self.permeability = Parameter(
+            Permeability | None, default=None, case="environment.reservoir.permeability"
+        )
+        self.thickness = Parameter(
+            Length | None, default=None, case="environment.reservoir.thickness"
+        )
         self.well_diameter = Parameter(Length | None, default=None)
         self.drainage_radius = Parameter(Length, default=ground.DOUBLET_WELL_SPACING, gt=0)
         self.nominal_flow = Parameter(VolumeFlow | None, default=None)
@@ -121,7 +133,7 @@ class Doublet(Plant):
         return super().set_params("", self._keep_derived(derived, params) | params, valid_from)
 
     def _lacking(self, values):
-        """Return the names of the geotherm a ``depth`` waits for, which a site may give."""
+        """Return the names of the geotherm a ``depth`` waits for, which the case gives."""
         if values["depth"] is None:
             return []
         return [name for name in doublet.COLUMN[1:] if values[name] is None]

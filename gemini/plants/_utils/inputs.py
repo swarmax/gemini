@@ -2,8 +2,10 @@
 
 from pydantic import ValidationError as PydanticError
 
+from gemini import units
 from gemini._utils.strings import close_matches, did_you_mean, join_names, split_path
 from gemini.errors import ValidationError
+from gemini.modules._utils import design
 from gemini.modules._utils.description import check_value
 from gemini.modules.declarations import Boundary
 from gemini.types import Fluid
@@ -103,3 +105,27 @@ def root_streams(plant):
             port, field = found
             streams.setdefault(port, {})[field] = _checked_value(plant, path, stated)
     return streams
+
+
+def refuse_bare(plant, path, value):
+    """Raise ``invalid_value`` for a number with a unit that is no ``{"value", "unit"}``."""
+    declaration = plant.inputs().get(path)
+    found = _port_field(plant, path)
+    if declaration is None and found is not None and found[1] != FLUID:
+        declaration = FIELDS[found[1]]
+    if declaration is not None:
+        design.refuse_bare(declaration, value, path)
+
+
+def in_quantity_form(plant, path, value):
+    """Return the input ``value`` at ``path`` as ``{"value", "unit"}`` when it has a unit."""
+    if isinstance(value, units.Quantity):
+        return value.to_dict()
+    declaration = plant.inputs().get(path)
+    found = _port_field(plant, path)
+    if declaration is None and found is not None and found[1] != FLUID:
+        declaration = FIELDS[found[1]]
+    bare = isinstance(value, (int, float)) and not isinstance(value, bool)
+    if declaration is None or declaration.unit in (None, "-") or not bare:
+        return value
+    return {"value": value, "unit": declaration.unit}

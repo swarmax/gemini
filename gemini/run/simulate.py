@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from gemini.engine.callbacks import AutoCheckpoint
 from gemini.engine.engine import Engine
 from gemini.errors import RunError, ValidationError
+from gemini.run._utils.apply import apply_case
 from gemini.run.schedule import scheduled
 
 
@@ -41,7 +42,7 @@ def _saved_after(engine, checkpoint):
 
 def simulate(
     plant,
-    problem=None,
+    case=None,
     plan=None,
     clock=None,
     checkpoint=None,
@@ -53,11 +54,13 @@ def simulate(
 ):
     """Run ``Engine.simulate`` once and return its ``Results``.
 
-    ``problem`` is a ``gm.Problem``: its site is applied to a copy of ``plant`` for the run, which
-    never changes ``plant``, and without ``plan`` the run input is ``gm.schedule``'s plan. ``plan``
-    is the run input, a DataFrame or a ``gm.Dataset``, run on the same copy. A building block has
-    no demand, so ``problem`` may be ``None`` only with a ``plan``; with neither the call raises
-    ``ValidationError`` (code ``missing_value``).
+    ``case`` is a ``gm.Case``: its values are set on a copy of ``plant`` for the run, which never
+    changes ``plant`` (a plant without the environment it needs raises ``missing_value``), and
+    without ``plan`` the run input is ``gm.schedule``'s plan. ``plan`` is the run input, a
+    DataFrame or a ``gm.Dataset``, run on the same copy; a ``plan`` that is not from
+    ``gm.schedule`` carries the air profile of the case only if it has the column. A building
+    block has no demand, so ``case`` may be ``None`` only with a ``plan``; with neither the call
+    raises ``ValidationError`` (code ``missing_value``).
 
     ``checkpoint`` is a path written at the end of the run, also when it stops early (a
     ``gm.errors.Cancelled`` or a failure under ``on_error="raise"``), so ``gm.resume`` can always
@@ -65,25 +68,25 @@ def simulate(
     such as ``"1h"``, also writes it during the run and needs ``checkpoint``. ``compile=False``
     forces the eager run. The other arguments are those of ``Engine`` and ``Engine.simulate``.
     """
-    if problem is None and plan is None:
+    if case is None and plan is None:
         raise ValidationError(
-            "gemini.simulate: problem = None and plan = None; expected a problem, a plan or both",
-            path="problem",
+            "gemini.simulate: case = None and plan = None; expected a case, a plan or both",
+            path="case",
             code="missing_value",
         )
-    run_plant, run_input = _planned(plant, problem, plan)
+    run_plant, run_input = _planned(plant, case, plan)
     callbacks = _with_autosave(callbacks, checkpoint, checkpoint_every)
     engine = Engine(run_plant, backend, callbacks, on_error, compile)
     with _saved_after(engine, checkpoint):
         return engine.simulate(run_input, clock)
 
 
-def _planned(plant, problem, plan):
-    """Return the plant of the run, with the site of ``problem``, and its run input."""
-    if problem is None:
+def _planned(plant, case, plan):
+    """Return the plant of the run, with the values of ``case``, and its run input."""
+    if case is None:
         return plant, plan
-    sited = problem.apply_site(plant)
-    return sited, scheduled(sited, problem) if plan is None else plan
+    applied = apply_case(plant, case)
+    return applied, scheduled(applied, case) if plan is None else plan
 
 
 def replay(

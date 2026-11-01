@@ -1,12 +1,12 @@
-"""The controls of a plant from its problem at each step: an energy balance on design values.
+"""The controls of a plant from its case at each step: an energy balance on design values.
 
 ``gm.schedule`` runs no simulation. It returns run input whose columns are named after what they
 drive, the dotted path of a control or boundary or ``port.field`` of a plant inlet, in the SI units
-``attrs["units"]`` states, so ``gm.simulate(plant, problem, plan)`` binds them by the rule of a
+``attrs["units"]`` states, so ``gm.simulate(plant, case, plan)`` binds them by the rule of a
 run: nothing is stored on the plant and no caller writes a binding. The demand may have any
 constant time step, hourly or daily; the plan has one row per step. The role of each unit comes
 from the wiring, ``gemini/run/_utils/roles.py``, and the limits from the constraints of the
-problem, ``gemini/run/_utils/limits.py``. Sources load from the cheapest to the dearest marginal
+case, ``gemini/run/_utils/limits.py``. Sources load from the cheapest to the dearest marginal
 cost, ``gemini/run/_utils/sources.py``.
 """
 
@@ -18,7 +18,9 @@ import pandas as pd
 from gemini import runtime
 from gemini._utils.strings import join_path
 from gemini._utils.time import to_utc_index
+from gemini.case import roletable
 from gemini.errors import ValidationError
+from gemini.modules.environment import Atmosphere
 from gemini.modules.grids import CoolingGrid, HeatingGrid
 from gemini.modules.heating import Boiler, ElectricBoiler
 from gemini.modules.piping import Splitter
@@ -28,6 +30,7 @@ from gemini.plants._utils.plan import members, split_end
 from gemini.plants.doublet import Doublet
 from gemini.run._utils import limits as limit_forms
 from gemini.run._utils import roles, sources
+from gemini.run._utils.apply import apply_case
 
 ARRAY_BACKEND = "numpy"
 """A plan is a balance over the steps, on arrays whatever backend the run takes after it."""
@@ -57,23 +60,10 @@ def _single(plant, kind):
     return found[0] if found else (None, None)
 
 
-def _step(demand):
-    """Return the constant time step of ``demand``, or raise when it has none."""
-    steps = np.diff(to_utc_index(demand.index).as_unit("ns").asi8)
-    if len(steps) == 0 or (steps != steps[0]).any():
-        raise ValidationError(
-            "schedule: an operating duration needs a demand of at least two rows at a constant "
-            "step",
-            path="constraints",
-            code="invalid_value",
-        )
-    return pd.Timedelta(int(steps[0]), unit="ns")
-
-
-def _outage_count(demand, duration, path):
+def _outage_count(demand, step, duration, path):
     """Return the number of outage steps of a doublet that runs ``duration`` of the demand."""
     steps = len(demand)
-    running = int(np.floor(duration / _step(demand) + 0.5))
+    running = int(np.floor(duration / step + 0.5))
     if not 0 <= running <= steps:
         raise ValidationError(
             f"schedule: {path} duration = {duration}; expected 0 to {steps} steps of the demand",
@@ -83,7 +73,7 @@ def _outage_count(demand, duration, path):
     return steps - running
 
 
-def _lowest_demand_outages(demand, limits):
+def _lowest_demand_outages(demand, step, limits):
     """Return the outage steps of each doublet that has a duration, ``{path: DatetimeIndex}``.
 
     The steps of lowest total demand go to the first doublet, the lowest of the rest to the next,
@@ -93,7 +83,11 @@ def _lowest_demand_outages(demand, limits):
     """
     index = to_utc_index(demand.index)
     counts = {
-        path: 0 if item.operating_time is None else _outage_count(demand, item.operating_time, path)
+        path: (
+            0
+            if item.operating_time is None
+            else _outage_count(demand, step, item.operating_time, path)
+        )
         for path, item in limits.items()
     }
     if sum(counts.values()) > len(demand):
@@ -405,19 +399,20 @@ def _cooling_columns(plant, cool, taken):
     return columns | _return_flow(path, grid, cool, supply)
 
 
-def schedule(plant, problem):
-    """Return the run input of ``plant`` for each step of the demand of ``problem``.
+def schedule(plant, case):
+    """Return the run input of ``plant`` for each step of the demand of ``case``.
 
-    An energy balance of each step on the design values, with no simulation inside. The site of
-    the problem is applied for the plan on a copy (``Problem.apply_site``), ``plant`` itself never
-    changes. Roles come from the wiring (``gemini/run/_utils/roles.py``): a unit that feeds the
+    An energy balance of each step on the design values, with no simulation inside. The values of
+    the case are set for the plan on a copy (``apply_case``), ``plant`` itself never changes.
+    Roles come from the wiring (``gemini/run/_utils/roles.py``): a unit that feeds the
     ``CoolingGrid`` is a cooling unit, a ``HeatPump`` included, which is then the compression
     chiller.
 
     Every heat and cold source gets a marginal cost at each step, ``price / efficiency +
-    co2_price * emission``, from ``problem.assumptions`` and the efficiency of its module (the COP
-    of a heat pump or chiller, the efficiency of a boiler, the pump electricity of a doublet, the
-    ``thermal_cop`` of a heat-driven chiller on the cheapest heat). Sources load from the cheapest
+    co2_price * emission``, from ``case.assumptions`` (``finance.opex``, ``emissions``) and the
+    efficiency of its module (the COP of a heat pump or chiller, the efficiency of a boiler, the
+    pump electricity of a doublet, the ``thermal_cop`` of a heat-driven chiller on the cheapest
+    heat). Sources load from the cheapest
     to the dearest up to their capacity, ties in plant order. Unmet demand is no error: the run
     reports it. A heat-driven unit needs its cold over its ``thermal_cop`` of heat, which adds to
     the heat need, and the compression chiller adds electricity, its condenser heat going to its
@@ -425,14 +420,14 @@ def schedule(plant, problem):
     the maximum brine cooling, clipped to the flow range, and below the minimum at the minimum
     with less cooling.
 
-    The schedule enforces the constraints it knows by their form (``_utils/limits.py``): per
-    doublet a flow range (``<doublet>.reservoir.liquid_flow``, ``over="each"``, ``when="running"``,
-    ``min`` and ``max``), a maximum brine cooling (``<doublet>.brine_cooling``, ``max``) and
-    optionally an operating duration (``over="duration"``, ``when="running"``, ``max`` or
-    ``equals``, such as ``"330 d"``). The outage steps are the steps of lowest total demand, heating
-    plus cooling, the first doublet taking the lowest, the next the lowest left, so at most one
-    doublet is off on a step; it needs a demand of at least two rows at a constant step, and a
-    duration rounds to the nearest whole step. On an outage step a doublet has no flow and its heat
+    The schedule enforces the constraints it knows by role and quantity (``_utils/limits.py``),
+    each applying to every ``doublet``: a flow range (``production_flow``, ``over="each"``,
+    ``when="running"``, ``min`` and ``max``), a maximum brine cooling (``brine_cooling``, ``max``)
+    and optionally an operating duration (``production_flow``, ``over="duration"``,
+    ``when="running"``, ``max`` or ``equals``, such as 330 d). The outage steps are the steps of
+    lowest total demand, heating plus cooling, the first doublet taking the lowest, the next the
+    lowest left, so at most one doublet is off on a step; a duration rounds to the nearest whole
+    step of ``case.time``. On an outage step a doublet has no flow and its heat
     goes to the next sources, and a heat pump fed only by doublets that are off stops. Every other
     step a doublet with a duration runs, at the minimum flow when no heat is left for it. Every
     other constraint is listed in ``attrs["check_only"]``.
@@ -448,9 +443,9 @@ def schedule(plant, problem):
         ``ATESPlant`` is not scheduled: its three seasonal commands are inputs of a run. Plant
         ports named ``heating_return`` and ``cooling_return`` take their temperature from the
         inputs (``heating_return.T``) and get their flow from the plan.
-    problem : Problem
-        The demand (UTC index at any step, columns ``heating_demand`` and, optionally,
-        ``cooling_demand`` in W), the site, the constraints and the assumptions with the prices.
+    case : Case
+        The time, environment, demand (``case.demand.frame``, in W on ``case.time.index``),
+        constraints and the assumptions with the prices.
 
     Returns
     -------
@@ -460,32 +455,46 @@ def schedule(plant, problem):
         ``<doublet>.flow``, ``<doublet>.is_running`` and ``<heat pump>.is_running`` for reading,
         in SI with units in ``attrs["units"]``. ``attrs["outages"]`` is
         ``{doublet path: [time]}``, the ISO time of each outage step and ``attrs["check_only"]``
-        the ``to_dict()`` of each constraint left to the check. ``gm.simulate(plant, plan=plan)``
-        needs no bindings: a run binds a control to a column of that name.
+        the ``to_dict()`` of each constraint left to the check. ``gm.simulate(plant, case,
+        plan=plan)`` needs no bindings: a run binds a control to a column of that name.
 
     Raises
     ------
     ValidationError
         ``missing_value`` for a flow range or brine cooling constraint of a doublet that the
-        problem lacks, or a price a source of the plant needs; ``conflicting_value`` for a site
-        path the plant states too; ``invalid_value`` for a duration that needs more outage steps
-        than the demand has or a constant step the demand lacks; ``invalid_design`` for a missing
-        setpoint or a role that breaks the wiring.
+        case lacks, or a value of the environment the plant needs; ``missing_assumption`` for a
+        price a source of the plant needs; ``invalid_value`` for a duration that needs more outage
+        steps than the demand has; ``invalid_design`` for a missing setpoint or a role that breaks
+        the wiring.
     """
-    return scheduled(problem.apply_site(plant), problem)
+    return scheduled(apply_case(plant, case), case)
 
 
-def scheduled(plant, problem):
-    """Return the plan of ``schedule`` for a ``plant`` that already has the site of ``problem``."""
+def scheduled(plant, case):
+    """Return the plan of ``schedule`` for a ``plant`` that already has the values of ``case``."""
     plant._check_design()
-    demand = problem.demand
-    doublets = [path for path, _ in _of_type(plant, Doublet)]
-    limits, check_only = limit_forms.split(problem.constraints, doublets)
-    outages = _lowest_demand_outages(demand, limits)
-    costs = sources.Costs(problem.assumptions, len(demand))
+    demand = case.demand.frame
+    doublets = roletable.units_of(plant, "doublet")
+    limits, check_only = limit_forms.split(case.constraints, doublets)
+    step = pd.Timedelta(seconds=case.time.step)
+    outages = _lowest_demand_outages(demand, step, limits)
+    costs = sources.Costs(case)
     with runtime.settings(backend=ARRAY_BACKEND):
         columns = _plan_columns(plant, demand, limits, outages, costs)
+        columns |= _air_columns(plant, case)
         return _frame(plant, demand, columns, outages, check_only)
+
+
+def _air_columns(plant, case):
+    """Return the air temperature of each step as a column of each ``Atmosphere``, for a profile."""
+    air = case.environment.air.temperature if case.environment and case.environment.air else None
+    if not isinstance(air, np.ndarray):
+        return {}
+    return {
+        f"{path}.temperature": air
+        for path, module in members(plant)
+        if isinstance(module, Atmosphere)
+    }
 
 
 def _plan_columns(plant, demand, limits, outages, costs):

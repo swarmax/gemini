@@ -1,11 +1,11 @@
 """The plants on a chosen number of doublets: size, wiring and depth."""
 
-import pandas as pd
 import pytest
 
 import gemini as gm
 from gemini.errors import ValidationError
 from tests.fixtures.errors import raises
+from tests.fixtures.heating_cooling import days_case
 
 BRINE = gm.Fluid(
     density=1030,
@@ -21,10 +21,6 @@ TEMPLATES = (
     "HeatingHeatPumpCoolingPlant",
 )
 WELL_DESIGN = {
-    "gradient": {"value": 30, "unit": "K/km"},
-    "surface_temperature": {"value": 12, "unit": "degC"},
-    "permeability": {"value": 200, "unit": "mD"},
-    "thickness": {"value": 100, "unit": "m"},
     "well_diameter": {"value": 0.244, "unit": "m"},
     "nominal_flow": {"value": 300, "unit": "m3/h"},
     "pump_efficiency": 0.7,
@@ -40,14 +36,17 @@ SIZES = {
     "heat_exchanger.cold_nominal_mass_flow": {"value": 100, "unit": "kg/s"},
     "peak_boiler.capacity": {"value": 30, "unit": "MW"},
     "peak_boiler.efficiency": 0.9,
-    "heating_consumer.return_temperature": {"value": 60, "unit": "degC"},
     "heating_consumer.return_pressure": {"value": 6, "unit": "bar"},
 }
-PIPE = {"length": 100, "inner_diameter": 0.3, "elevation_change": 0, "heat_transfer_coefficient": 1}
+PIPE = {
+    "length": {"value": 100, "unit": "m"},
+    "inner_diameter": {"value": 0.3, "unit": "m"},
+    "elevation_change": {"value": 0, "unit": "m"},
+    "heat_transfer_coefficient": 1,
+}
 INPUTS = {
     "peak_boiler.temperature_setpoint": {"value": 100, "unit": "degC"},
     "injection_pump.pressure_setpoint": {"value": 60, "unit": "bar"},
-    "atmosphere.temperature": {"value": 10, "unit": "degC"},
 }
 GEOTHERM = {
     f"d{index}.{name}": value
@@ -57,21 +56,6 @@ GEOTHERM = {
         ("surface_temperature", {"value": 12, "unit": "degC"}),
     )
 }
-LIMITS = [
-    gm.Constraint(
-        "d*.reservoir.liquid_flow",
-        min={"value": 50, "unit": "m3/h"},
-        max={"value": 300, "unit": "m3/h"},
-        when="running",
-    ),
-    gm.Constraint("d*.brine_cooling", max={"value": 40, "unit": "K"}),
-]
-ASSUMPTIONS = gm.Assumptions(
-    prices={
-        "electricity": {"value": 100, "unit": "EUR/MWh"},
-        "gas": {"value": 40, "unit": "EUR/MWh"},
-    }
-)
 
 
 def brine_side(plant):
@@ -89,15 +73,12 @@ def brine_side(plant):
 def designed(count):
     """Return a heating plant on ``count`` doublets with the sample problem's values."""
     plant = gm.plants.HeatingPlant(doublets=count)
-    for module in brine_side(plant):
-        module.fluid = BRINE
     values = {"depth": {"value": 2500, "unit": "m"}} | SIZES
     for index in range(count):
         values |= {f"d{index}.{name}": value for name, value in WELL_DESIGN.items()}
     for pipe in ("heating_return_pipe", "heating_supply_pipe"):
         values |= {f"{pipe}.{name}": value for name, value in PIPE.items()}
     plant.set_params("", values)
-    plant.heating_consumer.fluid = gm.WATER
     return plant.set_inputs(INPUTS)
 
 
@@ -137,12 +118,10 @@ def test_a_plant_round_trips(stored):
 def test_a_plant_runs_one_day(stored):
     """A stored plant of each size plans a day and delivers it."""
     count, _, built = stored
-    index = pd.date_range("2027-01-28", periods=1, freq="D", tz="UTC", name="time")
-    demand = pd.DataFrame({"heating_demand": 8e6 * count}, index=index)
+    case = days_case([8e6 * count], start="2027-01-28")
     clock = gm.engine.Clock.days(2027, 1, 28, step="24h")
-    problem = gm.Problem(demand, constraints=LIMITS, assumptions=ASSUMPTIONS)
-    results = gm.simulate(built, problem, clock=clock)
-    delivered = gm.evaluate.totals(built, problem, results)["heat_delivered"].value
+    results = gm.simulate(built, case, clock=clock)
+    delivered = gm.evaluate.totals(built, case, results)["heat_delivered"].value
     assert delivered == pytest.approx(8e6 * count * 86400, rel=2e-3)
 
 
@@ -175,10 +154,10 @@ def test_an_explicit_temperature_wins_and_stays_stated():
 
 
 def test_the_stored_plant_keeps_the_depth_and_no_derived_value():
-    """Only what was given is stored: the depth, not the depth of each doublet."""
+    """Only what was given is stored: the depth, not that of each doublet, nor the geotherm."""
     plant = gm.plants.HeatingPlant(doublets=2)
     plant.set_params("", {"depth": {"value": 3000, "unit": "m"}} | GEOTHERM)
-    assert plant.to_dict()["params"] == {"depth": {"value": 3000, "unit": "m"}} | GEOTHERM
+    assert plant.to_dict()["params"] == {"depth": {"value": 3000, "unit": "m"}}
 
 
 def test_a_depth_on_a_plant_waits_for_the_geotherm_of_each_doublet():

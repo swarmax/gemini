@@ -18,8 +18,12 @@ class Formation(Module):
         super().__init__()
 
         # Parameters
-        self.geothermal_gradient = Parameter(TemperatureGradient | None, default=None)
-        self.surface_temperature = Parameter(Temperature | None, default=None)
+        self.geothermal_gradient = Parameter(
+            TemperatureGradient | None, default=None, case="environment.ground.gradient"
+        )
+        self.surface_temperature = Parameter(
+            Temperature | None, default=None, case="environment.ground.surface_temperature"
+        )
 
         # Inlets
         self.heat_in = Inlet(Power, kind="heat", many=True)

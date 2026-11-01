@@ -17,7 +17,6 @@ def test_the_table_lists_every_role_with_its_quantities():
         "heat_exchanger",
         "heating_supply",
         "cooling_supply",
-        "plant",
     ]
     assert table["doublet"][:2] == ["production_flow", "brine_cooling"]
     table["doublet"].clear()
@@ -43,7 +42,6 @@ def test_units_are_found_by_class_whatever_their_name():
     assert roles_module.units_of(plant, "doublet") == ["d0"]
     assert roles_module.units_of(plant, "boiler") == ["peak_boiler"]
     assert roles_module.units_of(plant, "heating_supply") == ["heating_consumer"]
-    assert roles_module.units_of(plant, "plant") == [""]
     assert roles_module.units_of(plant, "chiller") == []
 
 
