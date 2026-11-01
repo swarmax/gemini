@@ -3,8 +3,10 @@
 ``gm.Case`` and the classes of its sections, in the order of ``case.json``: ``Time``,
 ``Environment`` (``Ground``, ``Reservoir``, ``Fluid``, ``Air``), ``Demand`` (``Service``),
 ``Choices`` (``Range``), ``Constraint`` and ``Assumptions`` (``Finance`` with ``Capex``, ``Opex``,
-``Revenue`` and ``Allocation``; ``Emissions`` with ``CO2`` and ``CH4``). ``roles()`` lists the roles
-and quantities a ``Constraint`` may name. The case sits above ``gm.plants`` and below ``gm.run``.
+``Revenue`` and ``Allocation``; ``Emissions`` with ``CO2`` and ``CH4``) and the
+``Uncertainty`` a number of ``environment`` or ``assumptions`` may declare. ``roles()`` lists the
+roles and quantities a ``Constraint`` may name. The case sits above ``gm.plants`` and below
+``gm.run``.
 """
 
 from .assumptions import CH4, CO2, Allocation, Assumptions, Capex, Emissions, Finance, Opex, Revenue
@@ -15,6 +17,7 @@ from .demand import Demand, Service
 from .environment import Air, Environment, Fluid, Ground, Reservoir
 from .roletable import roles
 from .time import Time
+from .uncertainty import Uncertainty
 
 __all__ = [
     "Case",
@@ -38,5 +41,6 @@ __all__ = [
     "Emissions",
     "CO2",
     "CH4",
+    "Uncertainty",
     "roles",
 ]

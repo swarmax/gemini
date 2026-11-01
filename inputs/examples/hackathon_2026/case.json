@@ -15,7 +15,13 @@
       },
       "gradient": {
         "value": 30,
-        "unit": "K/km"
+        "unit": "K/km",
+        "uncertainty": {
+          "kind": "normal",
+          "std": 2,
+          "min": 25,
+          "max": 35
+        }
       }
     },
     "reservoir": {
@@ -29,7 +35,12 @@
       },
       "permeability": {
         "value": 200,
-        "unit": "mD"
+        "unit": "mD",
+        "uncertainty": {
+          "kind": "triangular",
+          "min": 100,
+          "max": 400
+        }
       },
       "pressure": {
         "value": 250,
@@ -163,7 +174,15 @@
   "assumptions": {
     "finance": {
       "currency": "EUR",
-      "discount_rate": 0.05,
+      "discount_rate": {
+        "value": 0.05,
+        "uncertainty": {
+          "kind": "normal",
+          "std": 0.01,
+          "min": 0.02,
+          "max": 0.08
+        }
+      },
       "lifetime": {
         "value": 25,
         "unit": "yr"
@@ -296,11 +315,21 @@
         },
         "electricity": {
           "value": 105.75,
-          "unit": "EUR/MWh"
+          "unit": "EUR/MWh",
+          "uncertainty": {
+            "kind": "uniform",
+            "min": 80,
+            "max": 140
+          }
         },
         "gas": {
           "value": 39.92,
-          "unit": "EUR/MWh"
+          "unit": "EUR/MWh",
+          "uncertainty": {
+            "kind": "triangular",
+            "min": 25,
+            "max": 70
+          }
         },
         "chemical": {
           "value": 3,
@@ -312,7 +341,12 @@
         },
         "co2": {
           "value": 57.03,
-          "unit": "EUR/t"
+          "unit": "EUR/t",
+          "uncertainty": {
+            "kind": "triangular",
+            "min": 30,
+            "max": 110
+          }
         }
       },
       "revenue": {
