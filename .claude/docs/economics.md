@@ -243,7 +243,7 @@ the pressure. A rate the column of brine injects alone has no pressure to give: 
 
 `gm.study.size(plant, case, backup)` returns a new plant with first sizes from the case, by gemini
 physics only. `backup` is a design policy with no default (`missing_value` naming `backup` when
-absent, `invalid_value` for another word): `"peak"` rates a boiler for the whole heating peak with
+absent, `invalid_value` for another word): `"peak"` rates a boiler for the whole heating peak (and drive heat) with
 the doublets off, so it carries the peak when a doublet is out; `"none"` rates it for the heat the
 doublets cannot reach, the larger of the peak less the heat of the doublets at their limits and the
 part of the peak the reservoir temperature cannot reach. The sizes: the number of doublets (the
@@ -259,8 +259,10 @@ note) when the reservoir is hotter than the supply. A chiller gets the cooling p
 the chiller that closes the chilled-water series, which gets the whole peak: a sorption unit
 delivers less than its rating when its characteristic map says so at the peak conditions (an
 adsorption chiller 6 kW short at the peak, which the chillers in series pass on as 3 mK), and the
-last chiller makes up the difference. The boiler is not rated for the drive heat of sorption
-chillers: a plant with them needs a heating peak that includes it. The sized plant is then
+last chiller makes up the difference. A boiler is rated for the step where the heating demand and the drive heat of the
+sorption chillers it feeds (their duty over `thermal_cop`, found from the wiring) peak together:
+the whole of it for `"peak"`, and for `"none"` that less the heat of the doublets, at least its
+lift share (the ideal-exchanger assumption may leave the supply short, which `broken` lists). The sized plant is then
 simulated once on the case. The plant is not changed; the notes are `plant.sizing`: `{"sized":
 [{path, value, reason}], "unchanged": [{path, reason}], "broken": [{unit_path, role, quantity,
 value, limit, worst_step}], "simulation": str}`, where `broken` lists each constraint the sized

@@ -301,16 +301,18 @@ def test_a_broken_constraint_is_listed_with_its_role_quantity_value_limit_and_st
         assert {"role", "quantity", "value", "limit", "worst_step", "unit_path"} <= set(item)
 
 
-def cooling_peak_case(folder, days=1):
+def cooling_peak_case(folder, days=1, winter=True):
     """Return the competition-sample case cut to the ``days`` from its cooling peak.
 
-    The heating demand is the year's peak every day: the boiler also drives the sorption chillers.
+    With ``winter`` the heating demand is the year's peak every day.
     """
     data = from_json(HACKATHON / "case.json")
     frame = pd.read_csv(HACKATHON / data["demand"]["file"])
     at = int(frame["cooling_demand_MWcool"].idxmax())
-    winter = frame["heating_demand_MWth"].max()
-    frame = frame.iloc[at : at + days].assign(heating_demand_MWth=winter)
+    winter_peak = frame["heating_demand_MWth"].max()
+    frame = frame.iloc[at : at + days]
+    if winter:
+        frame = frame.assign(heating_demand_MWth=winter_peak)
     frame.to_csv(folder / data["demand"]["file"], index=False)
     data["time"]["start"] = str(frame["date"].iloc[0])
     data["time"]["end"] = str(pd.Timestamp(frame["date"].iloc[-1]) + pd.Timedelta(days=1))[:10]
@@ -333,3 +335,23 @@ def test_chillers_in_series_deliver_the_cooling_supply_at_the_peak(series):
     chiller that closes the series is rated for the whole peak and makes up the difference."""
     assert [item for item in series.sizing["broken"] if item["quantity"] == "temperature"] == []
     assert series.get_submodule("compression_chiller").capacity == pytest.approx(10e6)
+
+
+@pytest.fixture(scope="module", params=["none", "peak"])
+def driven(request, tmp_path_factory):
+    """The sample plant on the cooling-peak day with its own, small heating demand."""
+    case = cooling_peak_case(tmp_path_factory.mktemp("driven"), winter=False)
+    plant = gm.Plant.from_json(HACKATHON / "plants/HeatingFullCoolingPlant.json")
+    return request.param, case, gm.study.size(plant, case, backup=request.param)
+
+
+def test_the_boiler_is_rated_for_the_heating_and_the_drive_heat_of_the_sorption_chillers(driven):
+    """The sorption units draw their generator heat from the boiler: it adds to the heating.
+
+    ``none`` assumes an ideal exchanger, so it may break the supply, which the notes then list."""
+    backup, case, design = driven
+    heating = case.demand.frame["heating_demand"].max()
+    assert design.sizing["simulation"] == "simulated"
+    if backup == "peak":
+        assert design.get_submodule("peak_boiler").capacity > heating
+        assert [i for i in design.sizing["broken"] if i["role"] == "heating_supply"] == []

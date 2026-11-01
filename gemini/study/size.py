@@ -2,6 +2,8 @@
 
 from copy import deepcopy
 
+import numpy as np
+
 from gemini import units
 from gemini.analysis import solves
 from gemini.analysis.wells import WELLHEAD_PRESSURES
@@ -98,16 +100,55 @@ def _closes_series(design, path):
     return not chillers.intersection(design.feeds(f"{path}.{port}"))
 
 
-def _boiler_peak(design, case, peak, backup, cover):
-    """Return the heat [W] the boilers of the plant are rated for under the policy ``backup``."""
+def _drive_heat(design, case):
+    """Return the drive heat [W] each step of the demand asks of the boilers for sorption chillers.
+
+    A sorption chiller (a unit with a ``thermal_cop``) whose generator is fed by a boiler turns
+    the cooling demand into evaporator duty, upstream units first, each up to its capacity, and
+    draws that duty over its ``thermal_cop`` from the heating side. The chillers must be sized.
+    """
+    applied = apply_case(design, case)
+    chillers = units_of(design, "chiller")
+    fed = set()
+    for boiler in units_of(design, "boiler"):
+        fed.update(design.feeds(f"{boiler}.fluid_out"))
+    drive = [
+        path
+        for path in chillers
+        if path in fed and getattr(applied.get_submodule(path), "thermal_cop", None) is not None
+    ]
+
+    def downstream(path):
+        return len(set(chillers) & set(design.feeds(f"{path}.chilled_out")))
+
+    left = case.demand.frame["cooling_demand"].to_numpy(dtype=float).copy()
+    heat = np.zeros_like(left)
+    for path in sorted(drive, key=downstream, reverse=True):
+        module = applied.get_submodule(path)
+        duty = np.minimum(left, module.capacity)
+        left -= duty
+        heat += duty / module.thermal_cop
+    return heat
+
+
+def _boiler_peak(design, case, backup, cover):
+    """Return the heat [W] the boilers are rated for under the policy ``backup``.
+
+    The step where the heating demand and the drive heat of the sorption chillers peak together
+    sets it. ``"peak"`` rates for all of it; ``"none"`` for what the doublets cannot reach: that
+    step less the heat of the doublets, at least the part of it the reservoir temperature
+    cannot reach.
+    """
+    heating = case.demand.frame["heating_demand"].to_numpy(dtype=float)
+    total = float((heating + _drive_heat(design, case)).max())
     if backup == "peak" or not units_of(design, "doublet"):
-        return peak
-    return max(peak - cover, _lift_share(design, case) * peak)
+        return total
+    return max(total - cover, _lift_share(design, case) * total)
 
 
 def _capacities(design, case, notes, backup, cover):
     """Set the capacity of each heat pump, boiler and chiller from the demand peaks."""
-    for role, service in (("boiler", "heating"), ("heat_pump", "heating"), ("chiller", "cooling")):
+    for role, service in (("chiller", "cooling"), ("boiler", "heating"), ("heat_pump", "heating")):
         paths = units_of(design, role)
         if not paths:
             continue
@@ -116,7 +157,7 @@ def _capacities(design, case, notes, backup, cover):
             part = _lift_share(design, case)
             duty = part * peak
         elif role == "boiler":
-            duty = _boiler_peak(design, case, peak, backup, cover)
+            duty = _boiler_peak(design, case, backup, cover)
             part = duty / peak
         else:
             part, duty = 1.0, peak
@@ -300,9 +341,11 @@ def size(plant, case, backup=None):
         The design policy of the top-up units, required (it has no default):
 
         - ``"none"``: a boiler covers only the heat the doublets cannot reach, the larger of the
-          heating peak less the heat of the doublets at their limits and the part of the peak
-          that the reservoir temperature cannot reach; a plant without doublets gets the peak;
-        - ``"peak"``: a boiler covers the whole heating peak with the doublets off, so that it
+          step of the heating plus the drive heat of the sorption chillers less the heat of the
+          doublets at their limits and the part of it that the reservoir temperature cannot reach; a plant without doublets gets the peak;
+        - ``"peak"``: a boiler covers the whole heating plus drive heat of the sorption chillers (the
+          unit that draws heat from the boiler) at the step where they peak together, with the
+          doublets off, so that it
           carries the peak when a doublet is out.
 
     Returns
