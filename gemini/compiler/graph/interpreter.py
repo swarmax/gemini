@@ -15,17 +15,11 @@ import math
 import numpy as np
 
 from gemini.compiler.graph.breaks import evaluate_break
+from gemini.compiler.graph.codes import NONE
+from gemini.compiler.graph.fixedpoint import evaluate_loop
 from gemini.compiler.graph.node import Node
 from gemini.errors import ValidationError
 from gemini.ops import kernels
-
-NONE = np.uint32(np.iinfo(np.uint32).max)
-"""The error code of a row without an error while the error pass runs.
-
-NOTE(refactor): the pass keeps each code one less than the code of its check, as an unsigned
-integer, so that no error is the largest value and "the lowest code wins" is one ``np.minimum``;
-the public codes (``reached``, ``0`` for no error) are the checks' own.
-"""
 
 
 class Interpreter:
@@ -36,6 +30,8 @@ class Interpreter:
         self.graph = graph
         self.backend = backend
         self.module = module
+        self.outer = [node for node in graph.nodes if node.body is None]
+        self.seeds = {}
 
     def execute(self, feeds):
         """Run the value pass, then the error pass; return the node values and error codes."""
@@ -46,9 +42,13 @@ class Interpreter:
                 code="invalid_call",
             )
         values = {}
-        for node in self.graph.nodes:
+        self.run_nodes(self.outer, values, feeds)
+        return values, self.errors_before(None, values)
+
+    def run_nodes(self, nodes, values, feeds):
+        """Evaluate ``nodes`` in order into ``values``; the carries of a body are already set."""
+        for node in nodes:
             values[node] = self._evaluate(node, values, feeds)
-        return values, self._errors(values)
 
     def reached(self, errors):
         """Return the error code reaching an output on each row, or ``None`` if none does.
@@ -69,6 +69,10 @@ class Interpreter:
             operands = [math.nan if operand is None else operand for operand in operands]
         if node.kind == "break":
             return _break_value(node, operands, self.module)
+        if node.op == "fixed_point":
+            return evaluate_loop(self, node, operands, values, feeds)
+        if node.op == "loop_output":
+            return operands[0].column(node.attributes["key"])
         method = kernels.implementation(self.backend, node.op)
         if node.op == "check":
             return method(operands[0], node.code)
@@ -76,21 +80,32 @@ class Interpreter:
             return method(*operands, **node.attributes)
         return method(*operands)
 
-    def _errors(self, values):
-        """Return the error codes of every node that some check reaches.
+    def errors_before(self, node, values):
+        """Return the error codes of the nodes of the level of ``node`` that precede it.
 
-        Errors start at the checks, so no failing row anywhere means no codes at all.
+        ``node`` is a node of the outer graph or of a body; ``None`` stands for the end of the
+        outer graph. Errors start at the checks, so no failing row anywhere means no codes at all.
         """
-        if not any(np.any(values[check]) for check in self.graph.checks):
+        body = None if node is None else node.body
+        nodes = self.outer if body is None else body.nodes
+        checks = [check for check in self.graph.checks if check.body is body]
+        if node is not None:
+            nodes = [other for other in nodes if other.index < node.index]
+            checks = [check for check in checks if check.index < node.index]
+        return self.propagate(nodes, checks, values, self.seeds.get(body, {}))
+
+    def propagate(self, nodes, checks, values, seed):
+        """Return the codes of ``nodes`` given those of ``seed`` and the failing ``checks``."""
+        if not seed and not any(np.any(values[check]) for check in checks):
             return {}
-        raised = {check: _raised(values[check]) for check in self.graph.checks}
-        errors = {}
-        for node in self.graph.nodes:
+        raised = {check: _raised(values[check]) for check in checks}
+        errors = dict(seed)
+        for node in nodes:
             if node.op == "where":
                 code = _where_code(node, values, errors)
             else:
                 code = _first(errors.get(operand) for operand in node.operands)
-            code = _first([code] + [raised[check] for check in node.guards])
+            code = _first([code] + [raised[check] for check in node.guards if check in raised])
             if code is not None and np.any(code != NONE):
                 errors[node] = code
         return errors

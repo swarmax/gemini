@@ -61,6 +61,11 @@ def tracing(graph):
     return ContextSetting(_traced, lambda current: graph)
 
 
+def traced_graph():
+    """Return the graph the running trace records into, ``None`` outside a trace."""
+    return _traced.get()
+
+
 def _scalar(value):
     """Return an exact ``float`` or ``int`` as its NumPy scalar; an int beyond 64 bits stays."""
     kind = type(value)

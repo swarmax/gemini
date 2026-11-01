@@ -277,7 +277,23 @@ Where the implementation differs from sections 1 to 11, and why:
 - **Units** are recorded on graph inputs only; the unit-check pass is not implemented.
 - **Graph breaks** are stateful modules (no `scan` yet), modules with pre-hooks, float32 precision
   and any `TraceError` from Python control flow or conversions; section 13 says at which level.
-  A plant with a loop or a constraint breaks its whole root.
+  A plant with a constraint breaks its whole root; a plant with loops is traced (next item).
+- **Loops.** `loops.close` in a trace records one `fixed_point` node (`compiler/graph/body.py`,
+  `fixedpoint.py`). One pass around the loop is traced as its **body**, in the same graph:
+  `carry` nodes stand for the tear stream fields, the body nodes refer freely to outer nodes (inputs,
+  limits, upstream values), and `Node.body` marks them so outer passes and CSE skip or separate
+  them. The `fixed_point` node takes the first guess of every carry and the two temperature limits;
+  its interpreter step runs `loops.iterate`, the same Wegstein iteration, clamp and settling rule a
+  plain call runs, with the body as the pass, on arrays or on floats row by row. A row with an error
+  in an outlet of a step (`Body.watch`, `ops.require` included) or a failed check of no physics
+  function (`Body.unframed`) stops iterating, seeded with the error codes of everything before
+  the node; the checks of a body never reach a graph output. `loop_output` nodes give the
+  converged iterates and `active`, the rows that did not converge, which get one check
+  (`loop_not_converged`, with their own T) that guards every output. The last pass is traced
+  as an ordinary call on the converged iterates, so the result tree, outputs and errors are those
+  of a plain call. The tolerance and passes are part of the cache key. A body records no
+  call (no records, no outputs). `Graph.describe` marks body nodes `[loop n]`. A constraint
+  (`Solve`) is still a root break.
 - **Common-subexpression elimination** (`gemini/compiler/graph/passes/cse.py`,
   `eliminate_common_subexpressions(graph)`, in place) runs once per trace in `GraphCache`;
   `GraphCache(optimize=False)` turns it off. It merges `elementwise`, `index` and `check` nodes
@@ -323,7 +339,7 @@ Where the implementation differs from sections 1 to 11, and why:
   exact exception (`failures.row_error`: `failure()` for a check, `declaration.validate` for a
   declared limit, the module's own exception for a break); and `states` of a stepped root break.
 - **Root break.** `Tracer.trace` never raises for a root. A root that cannot be traced
-  (a plant with a loop or a constraint, float32), or a stepped root with a stateful module, is a graph with
+  (a plant with a constraint, float32), or a stepped root with a stateful module, is a graph with
   one root break that runs the real module per row (`module(streams)` or `module.step`). Its rows are
   real `ModuleResult` trees, so children and combinations stay exact. `GraphCache` stores
   graphs only, by a structure key (the guards: the root path, every module's class, declarations,

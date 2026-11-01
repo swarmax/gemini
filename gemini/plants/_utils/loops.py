@@ -3,7 +3,8 @@
 A plant whose connections form a cycle cuts it at one connection, the tear stream, chosen by the
 plan. ``close`` finds the stream that one pass around the loop maps to itself. Each pass calls the
 modules of the loop without recording them; when the streams have converged every module is
-called once with them, so outputs and balances see exactly one call of each.
+called once with them, so outputs and balances see exactly one call of each. In a trace the
+iteration is one ``fixed_point`` node of the graph, whose interpreter runs ``iterate``.
 """
 
 import dataclasses
@@ -24,7 +25,7 @@ MAX_PASSES = 50
 """Default number of passes around a loop before it raises ``PhysicsError``."""
 
 
-class _Field:
+class Field:
     """The iteration on one field of a tear stream: a float, or one value per row."""
 
     def __init__(self, current, lower=None, upper=None):
@@ -58,25 +59,28 @@ class _Field:
         self.tried = ops.where(active, self.current, self.tried)
 
 
-class _Tear:
+class Tear:
     """The iteration on one tear stream: its mass flow, temperature and pressure."""
 
     def __init__(self, start, lower, upper):
         """Start from the stream ``start``, the temperature within ``[lower, upper]``."""
         self.fluid = start.fluid
-        self.fields = {name: _Field(getattr(start, name)) for name in STREAM_FIELDS}
-        self.fields["T"] = _Field(start.T, lower, upper)
+        self.fields = {name: Field(getattr(start, name)) for name in STREAM_FIELDS}
+        self.fields["T"] = Field(start.T, lower, upper)
 
-    def stream(self, trial):
-        """Return the stream a trial pass starts from, or the converged one for the last call.
+    def values(self, trial):
+        """Return the fields a trial pass starts from, or the converged ones for the last call.
 
         A row that has stopped iterating keeps the iterate of its last trial, so that the passes
         that wait for the other rows repeat what it computed and raise nothing new.
         """
-        values = {
+        return {
             name: field.tried if trial else field.current for name, field in self.fields.items()
         }
-        return Stream(fluid=self.fluid, **values)
+
+    def stream(self, trial):
+        """Return the stream of ``values``."""
+        return Stream(fluid=self.fluid, **self.values(trial))
 
     def advance(self, image, tolerance, active):
         """Move every field of the rows of ``active``; return the rows where all have converged.
@@ -129,7 +133,7 @@ def _start(run, loop, tear, lower, upper):
     for other in pressures[1:]:
         pressure = ops.where(other > pressure, other, pressure)
     fluid = entering[0].fluid if entering else module.fluid
-    return _Tear(Stream(m_dot=0.0, T=temperature, p=pressure, fluid=fluid), lower, upper)
+    return Tear(Stream(m_dot=0.0, T=temperature, p=pressure, fluid=fluid), lower, upper)
 
 
 def _limits(run, loop):
@@ -169,18 +173,22 @@ def _around(run, loop, streams, trial):
     return [run.outlet(tear.source) for tear in loop.tears]
 
 
-def _failed(run, loop):
-    """Return the rows that got a failed value into any outlet of the last pass, else ``False``.
+def _outlet_values(run, loop):
+    """Return the values of every outlet of every step of the last pass.
 
     A row alone fails as soon as one step of a pass fails, whether or not that step feeds the tear.
     """
     outlets = (value for step in loop.steps for value in run.results[step.path].outlets.values())
-    values = [
+    return [
         getattr(outlet, field.name)
         for outlet in outlets
         for field in (dataclasses.fields(outlet) if dataclasses.is_dataclass(outlet) else ())
     ]
-    failures = merge(values)
+
+
+def _failed(run, loop):
+    """Return the rows that got a failed value into any outlet of the last pass, else ``False``."""
+    failures = merge(_outlet_values(run, loop))
     return False if failures is None else failures.mask
 
 
@@ -222,22 +230,91 @@ def _unconverged(run, loop, tear, active):
     ops.require(tear.fields["T"].current)
 
 
+def iterate(tears, tolerance, passes, around):
+    """Pass around the loop until every row stops or ``passes`` passes; return the active rows.
+
+    ``around(tears)`` runs one trial pass from the iterates of ``tears`` and returns the images of
+    the tears and the rows that failed in the pass. The iteration is that of a call on floats and
+    on arrays, and the one a graph runs for a compiled plant.
+    """
+    active = True
+    for _ in range(passes):
+        images, failed = around(tears)
+        active = _advance(tears, images, tolerance, active, failed)
+        if not np.any(active):
+            break
+    return active
+
+
+def _close_traced(run, loop, graph, tears, lower, upper):
+    """Record the iteration as a ``fixed_point`` of the graph and take its converged tears.
+
+    One pass is traced as the body of the node, from carries that stand for the tear fields; the
+    node gives the converged iterates. A row that did not converge fails whatever it reads, as a
+    call does that raises for it.
+    """
+    plant = run.plant
+    names = list(tears[0].fields)
+
+    def around(carries):
+        streams = []
+        for index, tear in enumerate(tears):
+            fields = dict(zip(names, carries[index * len(names) :]))
+            streams.append(Stream(fluid=tear.fluid, **fields))
+        images = _around(run, loop, streams, False)
+        return [getattr(image, name) for image in images for name in names], _outlet_values(
+            run, loop
+        )
+
+    fields = [field for tear in tears for field in tear.fields.values()]
+    settings = {
+        "fluids": tuple(tear.fluid for tear in tears),
+        "tolerance": plant.loop_tolerance,
+        "passes": plant.loop_passes,
+    }
+    found = graph.fixed_point([field.current for field in fields], [lower, upper], settings, around)
+    ops.check(
+        ops.logical_not(found["active"]),
+        PhysicsError,
+        "{path}: loop temperature at {name} = {temperature} K after {passes} passes; expected "
+        "a change of at most {tolerance} K (the loop did not converge)",
+        code="loop_not_converged",
+        path=plant.path,
+        name=join_path(*loop.tears[0].source),
+        temperature=found[names.index("T")],
+        passes=plant.loop_passes,
+        tolerance=plant.loop_tolerance,
+    )
+    for index, field in enumerate(fields):
+        field.current = found[index]
+
+
+def _converge(run, loop, tears):
+    """Iterate the tears of a call on floats or arrays, then fail the rows that did not close."""
+    plant = run.plant
+
+    def around(tears):
+        images = _around(run, loop, [tear.stream(True) for tear in tears], True)
+        return images, _failed(run, loop)
+
+    active = iterate(tears, plant.loop_tolerance, plant.loop_passes, around)
+    if np.any(active):
+        _unconverged(run, loop, tears[0], active)
+
+
 def close(run, loop):
     """Iterate ``loop`` of the running plant until its tear streams converge, then run it once.
 
     The same iteration serves a call on floats and on arrays: each row has the iterates it has
     alone, stops when its tears have converged and waits (still computed, unchanged) for the other
-    rows. The loop ends when every row has stopped, or at ``loop_passes`` passes.
+    rows. The loop ends when every row has stopped, or at ``loop_passes`` passes. In a trace the
+    iteration is one ``fixed_point`` node of the graph, which runs this iteration on arrays.
     """
-    plant = run.plant
     lower, upper = _limits(run, loop)
     tears = [_start(run, loop, tear, lower, upper) for tear in loop.tears]
-    active = True
-    for _ in range(plant.loop_passes):
-        images = _around(run, loop, [tear.stream(True) for tear in tears], True)
-        active = _advance(tears, images, plant.loop_tolerance, active, _failed(run, loop))
-        if not np.any(active):
-            _around(run, loop, [tear.stream(False) for tear in tears], False)
-            return
-    _unconverged(run, loop, tears[0], active)
+    graph = ops.scope.traced_graph()
+    if graph is None:
+        _converge(run, loop, tears)
+    else:
+        _close_traced(run, loop, graph, tears, lower, upper)
     _around(run, loop, [tear.stream(False) for tear in tears], False)

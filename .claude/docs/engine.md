@@ -313,10 +313,12 @@ equipment twins of a replay; the plant in simulate) evaluated over **chunks** of
   the Python backend, or when the call on arrays raises, which finds the rows whose health fails:
   they are errors), and the columns are spread over the chunk (`PathColumns.spread`).
 - **Breaks.** A leaf that is stateful, pre-hooked, untraceable or has a hook that only reads is a
-  break node. A root that cannot be traced as a whole (a plant with a loop or a constraint, float32
+  break node. A root that cannot be traced as a whole (a plant with a constraint, float32
   precision, or a stateful module in a stepped run) is one **root break**: the real module, called
   row by row with its states, so its results are real `ModuleResult` trees (children and
-  combinations exact). There is one implementation of a break, used by every mode.
+  combinations exact). There is one implementation of a break, used by every mode. A loop is no
+  break: compiled, it is one `fixed_point` node whose interpreter runs the same iteration
+  (`loops.iterate`) on arrays, masked per row (native-engine.md, Loops).
 - **Skips and errors.** A twin is skipped for the first missing column in this order: controls,
   boundaries, inlet fields (each inlet's stream is checked once its fields are read), observations,
   measured states. In simulate the plant is the one twin: root inlets, then the leaf inputs; a skip

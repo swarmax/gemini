@@ -177,10 +177,10 @@ def test_a_trial_keeps_the_runtime_settings_and_is_not_recorded():
 
 
 def test_a_loop_runs_the_same_on_every_backend():
-    """A plant that iterates is a root break: the same calls row by row on every backend."""
+    """A plant that iterates is traced with its loop; every backend gives the plain numbers."""
     plant = circuit()
     graph = Tracer().trace(plant, {})
-    assert graph.root_break and "closes a loop" in graph.breaks[0][1]
+    assert not graph.root_break and graph.breaks == []
     results = {}
     for backend in BACKENDS:
         with runtime.settings(backend=backend):
@@ -190,14 +190,14 @@ def test_a_loop_runs_the_same_on_every_backend():
 
 def test_a_tear_stream_without_flow_has_no_temperature_to_converge():
     """A limit may hold the iterate away from the image: at no flow that carries no energy."""
-    tear = loops._Tear(gm.Stream(m_dot=0.0, T=350.0, p=1e5, fluid=gm.WATER), None, 360.0)
+    tear = loops.Tear(gm.Stream(m_dot=0.0, T=350.0, p=1e5, fluid=gm.WATER), None, 360.0)
     image = gm.Stream(m_dot=0.0, T=373.15, p=2e5, fluid=gm.WATER)
     assert tear.advance(image, 1e-9, True)
 
 
 def test_a_tear_stream_with_flow_still_converges_on_every_field():
     """Only a stream that stands still gives up its temperature."""
-    tear = loops._Tear(gm.Stream(m_dot=1.0, T=350.0, p=1e5, fluid=gm.WATER), None, 360.0)
+    tear = loops.Tear(gm.Stream(m_dot=1.0, T=350.0, p=1e5, fluid=gm.WATER), None, 360.0)
     assert not tear.advance(gm.Stream(m_dot=1.0, T=373.15, p=1e5, fluid=gm.WATER), 1e-9, True)
 
 

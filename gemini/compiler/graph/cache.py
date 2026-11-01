@@ -3,7 +3,8 @@
 The key of a graph is what the trace bakes in, for every module of the tree (a change anywhere
 below the root retraces): the root's path, the module class and its declaration names and output
 formulas, the connections, constraints and ports of a plant, the values of non-numeric and
-structural parameters and the shapes of numeric ones, the registered hooks and the module's own
+structural parameters and the shapes of numeric ones, the tolerance and passes of a plant's
+loops, the registered hooks and the module's own
 fluid; and, once, whether outputs are enabled, the runtime precision, the inlet fluids and
 whether the graph is ``stepped``. Numeric parameter values, constants and inputs are graph
 inputs, so changing them never retraces, and a graph holds no module (see ``Graph``): every
@@ -130,4 +131,5 @@ def _plant_guards(module):
         tuple(tuple(item.items()) for item in connections),
         tuple(module._constraints),
         repr(module._listed),
+        (module.loop_tolerance, module.loop_passes),
     )

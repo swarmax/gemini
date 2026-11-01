@@ -26,6 +26,7 @@ from gemini.compiler.graph.limits import certain, check_declared_limits
 from gemini.compiler.graph.node import STREAM_FIELDS
 from gemini.compiler.graph.rootbreak import root_break_graph
 from gemini.modules.module import _Call, _current_call, outputs_enabled
+from gemini.plants._utils.plan import Solve
 from gemini.types.flows import Stream
 from gemini.types.ports import Ports
 from gemini.types.results import ModuleResult
@@ -139,13 +140,18 @@ class Trace:
                 self._prefix(module),
                 inlets,
                 supplied,
-                outputs_enabled(),
+                self._records(),
                 str(error),
             )
             records = []
         result = ModuleResult.of(module, outputs, outlets, settled, inputs, records)
-        parent.call_records.append((module._relative_path(parent.module), result))
+        if self._records():
+            parent.call_records.append((module._relative_path(parent.module), result))
         return result
+
+    def _records(self):
+        """Return whether calls are recorded: those of the passes of a loop body are not."""
+        return outputs_enabled() and self.graph.body is None
 
     def offer(self, module, inlets, parent):
         """Return the offered outlets of ``module`` on traced values; no call is recorded."""
@@ -177,7 +183,7 @@ class Trace:
             module=module,
             inputs=self._call_inputs(module, supplied),
             outputs={},
-            recording=outputs_enabled(),
+            recording=self._records(),
             parent=parent,
             parameters=self._call_parameters(module),
             trace=self,
@@ -241,11 +247,19 @@ def _untraceable(module, stepped):
         reasons.append("stateful (needs scan)")
     if module._pre_hooks:
         reasons.append("has forward pre-hooks")
-    if module._iterates():
-        reasons.append("closes a loop or solves a constraint (needs scan)")
+    if _solves(module):
+        reasons.append("solves a constraint (needs scan)")
     if runtime.get_precision() != "float64":
         reasons.append("runtime precision is not float64")
     return reasons
+
+
+def _solves(module):
+    """Return whether a call of ``module`` solves a constraint; a loop alone is traced."""
+    if not module._iterates():
+        return False
+    plan = getattr(module, "_compiled", None)
+    return plan is None or any(isinstance(item, Solve) for item in plan().items)
 
 
 def _record_outlet(graph, port, value):
