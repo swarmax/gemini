@@ -3,9 +3,9 @@
 import numpy as np
 import pandas as pd
 
+from gemini._utils.jsonable import to_plain
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import ValidationError
-from gemini._utils.jsonable import to_plain
 from gemini.evaluate._utils.display import display_units, in_unit
 from gemini.units import Quantity, si_unit
 

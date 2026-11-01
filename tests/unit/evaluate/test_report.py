@@ -5,12 +5,12 @@ import json
 import pytest
 
 import gemini as gm
-from gemini.units import SECONDS_PER_YEAR, Quantity
 from gemini.evaluate.report import Report
-from tests.unit.evaluate.test_capacities import boiler_plant, boiler_run
+from gemini.units import SECONDS_PER_YEAR, Quantity
 from tests.fixtures.cases import costed_finance, make_case
 from tests.fixtures.costed_plants import day, heating_plant
 from tests.fixtures.result_tables import make_results
+from tests.unit.evaluate.test_capacities import boiler_plant, boiler_run
 
 KEYS = {
     "heat_delivered",

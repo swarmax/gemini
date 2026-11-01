@@ -305,7 +305,12 @@ the best feasible plant, or with none the least violating trial that ran, then `
 `gm.study.sample(plant, case, distributions, metrics, count, seed=0, *, plan=None)` draws `normal`,
 `uniform` and `triangular` values (a plant parameter or `case.<path>`, each field a `Quantity`) with
 `numpy.random.default_rng(seed)`, one simulation each, and summarises each metric as `mean`, `p5`,
-`p50`, `p95`; a draw whose run failed has its `reason` and stays out of the summary.
+`p50`, `p95`, with `failed`, the number of draws left out. A run with failed steps is no valid
+design: its metrics are `None` with a `reason` (the count of failed steps and the most frequent
+failure group of `gm.evaluate.failures`), it stays out of the summary, and in `sensitivity` its
+end and the effect are `None` with that reason. `minimize` calls such a trial infeasible with the
+same reason, never the best, and `compare` calls a report with `failed_steps > 0` infeasible
+(`failed_steps`). The evaluate cost functions still report what was delivered.
 `gm.study.sensitivity(plant, case, parameters, metrics, *, plan=None)` runs each value at its `low`
 and its `high` with the others as they are, and returns a list of `{parameter, metric, low, high,
 at_low, at_high, effect}`, the largest effect first, with `to_frame(units=None)`: the metric columns

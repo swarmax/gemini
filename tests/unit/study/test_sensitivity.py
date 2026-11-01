@@ -135,3 +135,16 @@ def test_the_bounds_are_shown_in_readable_units_but_kept_in_si(runs):
     shown = next(r for r in found.to_dict()["rows"] if r["parameter"] == PRICE)
     assert shown["low"] == {"value": pytest.approx(100), "unit": "EUR/MWh"}
     assert shown["effect"]["unit"] == "EUR/MWh"
+
+
+def test_a_bound_whose_run_failed_has_no_value_and_no_effect(failing_runs):
+    """The high price of 300 EUR/MWh fails: its end and the effect are None with the reason."""
+    declared = {
+        "assumptions.finance.opex.electricity": DECLARED["assumptions.finance.opex.electricity"]
+    }
+    found = gm.study.sensitivity(shallow_plant(), shallow_case(uncertain=declared), ["lcts"])
+    row = found[0]
+    assert row["at_low"].value is not None and row["at_high"].value is None
+    assert "2 steps failed" in row["at_high"].reason and "d0.esp" in row["at_high"].reason
+    assert row["effect"].value is None and row["effect"].reason == row["at_high"].reason
+    json.dumps(found.to_dict(), allow_nan=False)

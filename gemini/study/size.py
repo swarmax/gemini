@@ -171,7 +171,10 @@ def _capacities(design, case, notes, backup, cover):
             continue
         for path in paths:
             if role == "chiller" and _closes_series(design, path):
-                value, reason = peak, f"the whole {service} peak of {peak:.4g} W: it closes the series"
+                value, reason = (
+                    peak,
+                    f"the whole {service} peak of {peak:.4g} W: it closes the series",
+                )
             else:
                 value = duty / len(paths)
                 reason = (

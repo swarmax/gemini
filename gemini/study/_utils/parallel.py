@@ -40,5 +40,7 @@ def mapped(function, shared, items):
     context = get_context("forkserver")
     context.set_forkserver_preload(["gemini"])
     initargs = (shared, runtime.state(), forced_name())
-    with ProcessPoolExecutor(count, mp_context=context, initializer=_start, initargs=initargs) as pool:
+    with ProcessPoolExecutor(
+        count, mp_context=context, initializer=_start, initargs=initargs
+    ) as pool:
         return list(pool.map(_call, [(function, item) for item in items]))

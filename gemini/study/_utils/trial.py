@@ -6,10 +6,12 @@ from gemini import units
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import GeminiError, ValidationError
 from gemini.evaluate import annualised_cost, co2, constraints, lcoc, lcoh, lcts, totals
+from gemini.evaluate.failures import failures
 from gemini.evaluate.totals import KPI_NAMES
 from gemini.run._utils.apply import applied_in_place
 from gemini.run.simulate import simulate
 from gemini.study._utils.target import is_case_name, parameter_value, with_case_values
+from gemini.types.shapes import measure
 
 ECONOMICS = {
     "lcoh": lcoh,
@@ -74,14 +76,33 @@ def _run(plant, case, plan, values):
     return trial, changed, simulate(trial, changed, plan=plan)
 
 
+def failure_reason(results):
+    """Return the reason of a run with failed steps: their count and the most frequent failure.
+
+    The failure is the group of ``gm.evaluate.failures`` with the most failed rows, as
+    ``path code (rows): message``.
+    """
+    top = next(group for group in failures(results).groups if group["kind"] == "failed")
+    return (
+        f"{len(results.failures)} steps failed; most frequent: {top['path']} {top['code']} "
+        f"({top['count']} rows): {top['message']}"
+    )
+
+
 def run_trial(plant, case, plan, values, names):
     """Return ``(metrics, reason)`` of one run of a copy; a run that fails has its reason.
+
+    A run with a failed step is no valid design: every metric is ``None`` with the reason
+    ``failure_reason``.
 
     ``values`` are SI numbers by name: a parameter of the plant, or ``case.<path>`` for a number of
     the case, which the copy of the case takes.
     """
     try:
         trial, changed, results = _run(plant, case, plan, values)
+        if results.failures:
+            reason = failure_reason(results)
+            return {item: measure(None, "-", reason) for item in names}, reason
         return {item: metric(trial, changed, results, item) for item in names}, None
     except GeminiError as error:
         return {}, str(error)
@@ -103,8 +124,7 @@ def judged(plant, case, results):
     ``(None, 0.0)``; a check with nothing to judge does not fail.
     """
     if results.failures:
-        first = results.failures[0]
-        return f"{len(results.failures)} steps failed; first: {first}", LARGEST_VIOLATION
+        return failure_reason(results), LARGEST_VIOLATION
     failed = [item for item in constraints(plant, case, results) if item["passed"] is False]
     if not failed:
         return None, 0.0

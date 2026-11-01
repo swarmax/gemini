@@ -142,10 +142,12 @@ class PipePath(BaseModel):
 
 def path_of(lengths, inclinations, diameters, roughnesses) -> PipePath:
     """Return the validated path of sections given by parallel lists, surface to bottom [m, rad]."""
-    return PipePath(sections=[
-        PipeSection(length=length, inclination=angle, inner_diameter=diameter, roughness=rough)
-        for length, angle, diameter, rough in zip(lengths, inclinations, diameters, roughnesses)
-    ])
+    return PipePath(
+        sections=[
+            PipeSection(length=length, inclination=angle, inner_diameter=diameter, roughness=rough)
+            for length, angle, diameter, rough in zip(lengths, inclinations, diameters, roughnesses)
+        ]
+    )
 
 
 def section_values(path) -> dict:

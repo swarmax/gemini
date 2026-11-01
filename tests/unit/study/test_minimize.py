@@ -295,3 +295,21 @@ def test_the_plant_as_given_is_one_of_the_trials(runs):
         item for item in found["history"] if item.parts["parameters"]["depth"].value == 1234.0
     )
     assert found["best"].value <= start.value
+
+
+def test_a_trial_with_failed_steps_is_infeasible_and_never_the_best(failing_runs):
+    """Deep trials fail: the reason has the count and the top failure; the best ran clean."""
+    variables = [
+        {
+            "path": "",
+            "parameter": "depth",
+            "lower": gm.units.Quantity(1000, "m"),
+            "upper": gm.units.Quantity(2000, "m"),
+        }
+    ]
+    result = gm.study.minimize(shallow_plant(), shallow_case(), "lcts", variables, evaluations=10)
+    deep = [i for i in result["history"] if i.parts["parameters"]["depth"].value > 1700]
+    assert deep and all(
+        i.reason.startswith("2 steps failed; most frequent: d0.esp out_of_range") for i in deep
+    )
+    assert result["feasible"] and result["best"].parts["parameters"]["depth"].value <= 1700

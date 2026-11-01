@@ -10,8 +10,8 @@ from gemini.study._utils.parallel import mapped
 from gemini.study._utils.target import quantities
 from gemini.study._utils.trial import checked_metric, drawn_trial
 from gemini.study._utils.uncertain import declared
-from gemini.types.shapes import measure
 from gemini.study.sample import value_of
+from gemini.types.shapes import measure
 
 
 class Tornado(list):
