@@ -4,9 +4,9 @@ from copy import deepcopy
 
 from gemini import units
 from gemini.case._utils.access import require
-from gemini.case.roletable import units_of
 from gemini.errors import ValidationError
 from gemini.physics.fluid import FluidProperties, heat_capacity_rate
+from gemini.plants._utils.roles import units_of
 from gemini.study._utils.resize import resized
 
 

@@ -4,8 +4,7 @@ from gemini._utils import paths, registry
 from gemini._utils.files import from_json
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import NotImplementedYet, ValidationError
-from gemini.errors.base import reported
-from gemini.modules._utils.serialization import SECTIONS, Report, from_sections
+from gemini.modules._utils.serialization import Report, from_sections
 from gemini.plants._utils import reader
 from gemini.plants.plant import Plant
 
@@ -75,7 +74,7 @@ def example(name):
     plant = registry.get(name)(**values.get("size", {}))
     plant.set_params("", values["params"])
     from_sections(plant, values, Report(strict=True))
-    plant._sections = {key: values.get(key, {}) for key in SECTIONS}
+    reader.set_sections(plant, values)
     plant._stated[""] = {}
     return plant.set_inputs(values.get("inputs", {}))
 
@@ -87,4 +86,4 @@ def validate(data, on_error="raise"):
     ``{path, code, message, suggestions}``: the list the error carries in ``problems``. ``path``
     points into the dict, for example ``connections[1].target``.
     """
-    return reported(reader.problems(Plant, data) + reader.root_problems(data), on_error)
+    return reader.check(Plant, data, on_error)

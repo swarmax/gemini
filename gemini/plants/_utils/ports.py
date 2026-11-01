@@ -51,7 +51,7 @@ class PortResolver:
 
     def _join_port(self, side, name, candidate):
         """Add ``candidate`` to the plant port ``name``, which several ends share."""
-        path, port, declaration = candidate
+        path, port, _ = candidate
         kept = self._listed[side][name]
         self._listed[side][name] = [*port_ends(kept), (path, port)]
         self._refresh()

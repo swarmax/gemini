@@ -126,6 +126,50 @@ PROPERTIES = {
 }
 """Old properties each node kind converts; anything else is reported as unmapped."""
 
+_RESERVOIR_DEFAULTS = {"wellbore_radius": 0.0765, "skin": 0}
+
+
+def _well_defaults(prefix):
+    return {
+        f"{prefix}_friction_correlation": "darcy_weisbach",
+        f"{prefix}_friction_correlation_2p": "BeggsBrill",
+        f"{prefix}_friction_correction_factors": (1, 0),
+        "u_value": 10,
+    }
+
+
+DEFAULTS = {
+    "esp": {
+        "esp_correction_factor": "1;0",
+        "esp_depth": 0,
+        "esp_min_flow": 0,
+        "esp_max_flow": 1e6,
+        "esp_bep_flow": 1,
+    },
+    "production_reservoir": _RESERVOIR_DEFAULTS,
+    "injection_reservoir": _RESERVOIR_DEFAULTS,
+    "production_well": _well_defaults("productionwell"),
+    "injection_well": _well_defaults("injectionwell"),
+    "heat_exchanger": {
+        "arrangement": "counterflow",
+        "dp_hot_nominal": 0,
+        "dp_cold_nominal": 0,
+        "m_dot_hot_nominal": 1,
+        "m_dot_cold_nominal": 1,
+    },
+    "filter": {"clogging_dp": separation.FILTER_CLOGGING_BAR},
+}
+"""The value each converter takes for an old property that a project does not state.
+
+A project that lacks one gets it listed with the unmapped fields of the ``GeminiWarning``.
+"""
+
+
+def stated_or_default(properties, kind, key):
+    """Return ``properties[key]``, or the value of ``DEFAULTS`` for the node kind ``kind``."""
+    return properties.get(key, DEFAULTS[kind][key])
+
+
 TAGS = {
     "esp": {
         "esp_frequency": ("controls.frequency", "Hz"),
@@ -353,16 +397,16 @@ def from_property(path: str | Path, index: int = 0) -> dict:
 
 def esp_params_from_gemini(properties: dict) -> dict:
     """Convert ESP flow limits [m3/h] and VLP correction offset [bar] to SI parameters."""
-    correction = from_coefficients(properties.get("esp_correction_factor", "1;0"))
+    correction = from_coefficients(stated_or_default(properties, "esp", "esp_correction_factor"))
     return dict(
         stage_count=properties["esp_no_stage"],
         head_coefficients=from_coefficients(properties["esp_head_coeff"]),
         power_coefficients=from_coefficients(properties["esp_power_coeff"]),
         pump_type=properties.get("esp_type"),
-        setting_depth=properties.get("esp_depth", 0),
-        minimum_flow=units.m3h_to_m3s(properties.get("esp_min_flow", 0)),
-        maximum_flow=units.m3h_to_m3s(properties.get("esp_max_flow", 1e6)),
-        best_efficiency_flow=units.m3h_to_m3s(properties.get("esp_bep_flow", 1)),
+        setting_depth=stated_or_default(properties, "esp", "esp_depth"),
+        minimum_flow=units.m3h_to_m3s(stated_or_default(properties, "esp", "esp_min_flow")),
+        maximum_flow=units.m3h_to_m3s(stated_or_default(properties, "esp", "esp_max_flow")),
+        best_efficiency_flow=units.m3h_to_m3s(stated_or_default(properties, "esp", "esp_bep_flow")),
         correction_factors=(correction[0], units.bar_to_pa(correction[1])),
         tubing=properties.get("esp_tubing"),
     )
@@ -373,6 +417,7 @@ def reservoir_params_from_gemini(
 ) -> dict:
     """Combine reservoir and well data; convert bar, degC, mD and m3/h/bar to SI."""
     well = well_property or {}
+    kind = f"{role}_reservoir"
     result = dict(
         role=role,
         pressure=units.bar_to_pa(properties["reservoir_pressure"]),
@@ -381,8 +426,10 @@ def reservoir_params_from_gemini(
         aquifer_thickness=properties["reservoir_thickness"],
         drainage_radius=properties["reservoir_radius"],
         top_depth=properties["reservoir_top"],
-        wellbore_radius=well.get("wellbore_radius", properties.get("wellbore_radius", 0.0765)),
-        skin=properties.get("skin", 0),
+        wellbore_radius=well.get(
+            "wellbore_radius", stated_or_default(properties, kind, "wellbore_radius")
+        ),
+        skin=stated_or_default(properties, kind, "skin"),
     )
     for key, prefix in [
         ("productivity_index", "productionwell"),
@@ -400,16 +447,6 @@ def reservoir_fluid(properties: dict) -> Fluid:
     )
 
 
-def production_reservoir_params_from_gemini(properties: dict, well_property: dict) -> dict:
-    """Map production-side reservoir and well property blocks to SI."""
-    return reservoir_params_from_gemini(properties, well_property, "production")
-
-
-def injection_reservoir_params_from_gemini(properties: dict, well_property: dict) -> dict:
-    """Map injection-side reservoir and well property blocks to SI."""
-    return reservoir_params_from_gemini(properties, well_property, "injection")
-
-
 def _well_params(properties, prefix, base_path):
     """Map a well trajectory, tally and ambient temperature to SI.
 
@@ -425,19 +462,22 @@ def _well_params(properties, prefix, base_path):
             )
         text = (Path(base_path) / filename).read_text(encoding="utf-8-sig")
         table = from_trajectory_csv(text)
+    kind = f"{prefix.removesuffix('well')}_well"
     tally = [
         dict(row, ID=units.inch_to_m(float(row["ID"])))
         for row in properties.get(f"{prefix}_tally_table", [])
     ]
     return dict(
         pipe_path=geometry.build_path(table, tally),
-        friction_correlation=properties.get(f"{prefix}_friction_correlation", "darcy_weisbach"),
-        two_phase_friction_correlation=properties.get(
-            f"{prefix}_friction_correlation_2p", "BeggsBrill"
+        friction_correlation=stated_or_default(properties, kind, f"{prefix}_friction_correlation"),
+        two_phase_friction_correlation=stated_or_default(
+            properties, kind, f"{prefix}_friction_correlation_2p"
         ),
-        correction_factors=tuple(properties.get(f"{prefix}_friction_correction_factors", (1, 0))),
+        correction_factors=tuple(
+            stated_or_default(properties, kind, f"{prefix}_friction_correction_factors")
+        ),
         soil_temperature=units.c_to_k(properties[f"{prefix}_soil_temperature"]),
-        heat_transfer_coefficient=properties.get("u_value", 10),
+        heat_transfer_coefficient=stated_or_default(properties, kind, "u_value"),
     )
 
 
@@ -475,7 +515,7 @@ def filter_params_from_gemini(properties: dict) -> dict:
     """Map an optional filter clogging limit [bar] to [Pa]."""
     return dict(
         clogging_pressure_drop=units.bar_to_pa(
-            properties.get("clogging_dp", separation.FILTER_CLOGGING_BAR)
+            stated_or_default(properties, "filter", "clogging_dp")
         )
     )
 
@@ -488,11 +528,15 @@ def heatexchanger_params_from_gemini(properties: dict) -> dict:
     """
     return dict(
         thermal_conductance=properties.get("ua", properties.get("heat_transfer_coeff")),
-        arrangement=properties.get("arrangement", "counterflow"),
-        hot_nominal_pressure_drop=properties.get("dp_hot_nominal", 0),
-        cold_nominal_pressure_drop=properties.get("dp_cold_nominal", 0),
-        hot_nominal_mass_flow=properties.get("m_dot_hot_nominal", 1),
-        cold_nominal_mass_flow=properties.get("m_dot_cold_nominal", 1),
+        arrangement=stated_or_default(properties, "heat_exchanger", "arrangement"),
+        hot_nominal_pressure_drop=stated_or_default(properties, "heat_exchanger", "dp_hot_nominal"),
+        cold_nominal_pressure_drop=stated_or_default(
+            properties, "heat_exchanger", "dp_cold_nominal"
+        ),
+        hot_nominal_mass_flow=stated_or_default(properties, "heat_exchanger", "m_dot_hot_nominal"),
+        cold_nominal_mass_flow=stated_or_default(
+            properties, "heat_exchanger", "m_dot_cold_nominal"
+        ),
     )
 
 

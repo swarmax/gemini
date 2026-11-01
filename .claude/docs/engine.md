@@ -17,8 +17,7 @@ no engine, and `run` re-exports it. The old project reader that builds a plant i
 `gemini/engine/__init__.py` imports `gemini.run` first and never `.engine`, which keeps one import
 order from either side of that cycle.
 
-`gemini/case/_utils/demand.py` holds the demand frame (`from_csv`, `from_values`, `from_frame`,
-`from_dict`, `to_dict`), because a `Case` reads it and `case` imports no `data`; `gm.data`
+`gemini/case/_utils/demand.py` holds the demand frame (`from_csv`, `from_values`), because a `Case` reads it and `case` imports no `data`; `gm.data`
 exports `from_csv` and `from_values` from it.
 
 **The compiler is optional.** `gemini/compiler/__init__.py` registers its executor

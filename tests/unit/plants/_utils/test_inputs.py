@@ -150,3 +150,12 @@ def test_the_schema_knows_the_key():
     )
     for structure in (False, True):
         assert check_schema(document.to_dict(structure=structure), schema(), schema()) == []
+
+
+def test_a_unit_string_is_refused_as_an_input_and_as_a_parameter():
+    """Values are numbers in SI or quantities; text with a unit is no value."""
+    plant = gm.plants.Doublet()
+    with raises(gm.errors.ValidationError, "invalid_value"):
+        plant.set_inputs({"esp.frequency": "50 Hz"})
+    with raises(gm.errors.ValidationError, "invalid_value"):
+        plant.set_params("", {"nominal_flow": "100 m3/h"})

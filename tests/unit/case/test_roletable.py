@@ -2,6 +2,7 @@
 
 import gemini as gm
 from gemini.case import roletable as roles_module
+from gemini.plants._utils.roles import units_of
 from tests.fixtures.errors import raises
 
 
@@ -30,26 +31,20 @@ def test_reading_a_quantity_the_role_lacks_lists_the_role_quantities():
     assert "production_flow" in str(caught.value)
 
 
-def test_an_unknown_role_is_unknown_name():
-    """The roles are closed."""
-    with raises(gm.errors.ValidationError, "unknown_name"):
-        roles_module.units_of(gm.plants.HeatingPlant(), "dublet")
-
-
 def test_units_are_found_by_class_whatever_their_name():
     """A plant of a class holds its doublets, boiler and consumer under any name."""
     plant = gm.plants.HeatingPlant()
-    assert roles_module.units_of(plant, "doublet") == ["d0"]
-    assert roles_module.units_of(plant, "boiler") == ["peak_boiler"]
-    assert roles_module.units_of(plant, "heating_supply") == ["heating_consumer"]
-    assert roles_module.units_of(plant, "chiller") == []
+    assert units_of(plant, "doublet") == ["d0"]
+    assert units_of(plant, "boiler") == ["peak_boiler"]
+    assert units_of(plant, "heating_supply") == ["heating_consumer"]
+    assert units_of(plant, "chiller") == []
 
 
 def test_a_heat_pump_is_a_chiller_when_it_feeds_the_cooling_grid():
     """The same class is a heat pump or a compression chiller, by the grid it reaches."""
     plant = gm.plants.HeatingHeatPumpCoolingPlant()
-    assert roles_module.units_of(plant, "heat_pump") == ["heat_pump"]
-    assert roles_module.units_of(plant, "chiller") == ["compression_chiller"]
+    assert units_of(plant, "heat_pump") == ["heat_pump"]
+    assert units_of(plant, "chiller") == ["compression_chiller"]
 
 
 def test_doublets_are_found_under_any_name():
@@ -57,4 +52,4 @@ def test_doublets_are_found_under_any_name():
     plant = gm.Plant("site")
     plant.add(gm.plants.Doublet, "north")
     plant.add(gm.plants.Doublet, "south")
-    assert roles_module.units_of(plant, "doublet") == ["north", "south"]
+    assert units_of(plant, "doublet") == ["north", "south"]

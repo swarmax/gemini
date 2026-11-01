@@ -10,6 +10,7 @@ from gemini.modules.piping import GasMakeup, Mixer, Pipe, Splitter
 from gemini.modules.pumps import InjectionPump
 from gemini.modules.treatment import Degasser, Filter, Flare
 from gemini.plants._utils.doublets import DoubletsPlant
+from gemini.plants._utils.wiring import connect_cooler, connect_gas
 
 
 class HeatingAbsorptionCoolingPlant(DoubletsPlant):
@@ -44,10 +45,7 @@ class HeatingAbsorptionCoolingPlant(DoubletsPlant):
         self.absorption_cooler = Cooler()
 
         # Connections
-        self.connect("degasser.gas_out", "gas_makeup.gas_in")
-        self.connect("gas_grid.gas_out", "gas_makeup.grid_in")
-        self.connect("gas_makeup.fuel_out", "peak_boiler.fuel_in")
-        self.connect("gas_makeup.excess_out", "flare.gas_in")
+        connect_gas(self)
         self._connect_production("degasser.fluid_in")
         self.connect("degasser.liquid_out", "filters.hot.fluid_in")
         self.connect("filters.hot.fluid_out", "heat_exchanger.hot_in")
@@ -72,11 +70,12 @@ class HeatingAbsorptionCoolingPlant(DoubletsPlant):
         self.connect("peak_boiler.flue_out", "atmosphere.gas_in")
         self.connect("flare.flue_out", "atmosphere.gas_in")
         self.connect("flare.loss_out", "atmosphere.heat_in")
-        self.connect("absorption_chiller.cooling_out", "absorption_cooler.fluid_in")
-        self.connect("absorption_cooler.fluid_out", "absorption_chiller.cooling_in")
-        self.connect("atmosphere.air_out", "absorption_cooler.air_in")
-        self.connect("absorption_cooler.air_out", "atmosphere.air_in")
-        self.connect("electricity_grid.power_out", "absorption_cooler.power_in")
+        connect_cooler(
+            self,
+            "absorption_chiller.cooling_out",
+            "absorption_chiller.cooling_in",
+            "absorption_cooler",
+        )
         self.connect("heating_return_pipe.loss_out", "atmosphere.heat_in")
         self.connect("heating_supply_pipe.loss_out", "atmosphere.heat_in")
         self.connect("cooling_return_pipe.loss_out", "atmosphere.heat_in")

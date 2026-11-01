@@ -4,6 +4,7 @@ from gemini.errors import ValidationError
 from gemini.modules.container import ModuleList
 from gemini.modules.declarations import Parameter
 from gemini.modules.piping import Mixer, Splitter
+from gemini.plants._utils.wiring import mix_chain
 from gemini.plants.doublet import Doublet
 from gemini.plants.plant import Plant
 from gemini.types import Length
@@ -56,13 +57,8 @@ class DoubletsPlant(Plant):
 
     def _connect_production(self, target):
         """Join the supply of the doublets, in order, into the inlet ``target``."""
-        running = "d0.supply_out"
-        for index in self._indices()[1:]:
-            mixer = f"production_mixers.{index - 1}"
-            self.connect(running, f"{mixer}.branch1_in")
-            self.connect(f"d{index}.supply_out", f"{mixer}.branch2_in")
-            running = f"{mixer}.fluid_out"
-        self.connect(running, target)
+        ends = [f"d{index}.supply_out" for index in self._indices()]
+        mix_chain(self, ends, "production_mixers", target)
 
     def _connect_injection(self, source):
         """Divide the brine of the outlet ``source`` over the doublets, one splitter each."""

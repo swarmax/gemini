@@ -34,6 +34,7 @@ class LegacyDesign(ConfigModel):
     boundary: dict[str, Any] = Field(default_factory=dict)
     inputs: dict[str, Any] = Field(default_factory=dict)
     unmapped: list[str] = Field(default_factory=list)
+    defaulted: list[str] = Field(default_factory=list)
 
 
 def node_kinds(project):
@@ -192,6 +193,16 @@ def _unmapped_properties(project, node_id, kind):
     return [f"{name}.parameters.{key}" for key in project.params[node_id] if key not in known]
 
 
+def _defaulted_properties(project, node_id, kind):
+    name = project.nodes[node_id].name
+    stated = project.params[node_id]
+    return [
+        f"{name}.parameters.{key} (default {value!r})"
+        for key, value in tables.DEFAULTS.get(kind, {}).items()
+        if key not in stated
+    ]
+
+
 def _bind(bindings, target, column, unit):
     """Bind ``column`` to a dotted target such as ``inlets.fluid_in.p`` or ``measured.head``."""
     section, *keys = target.split(".")
@@ -308,10 +319,11 @@ def from_legacy_design(project) -> LegacyDesign:
     columns = _data_columns(project)
     paths = node_paths(project)
     kinds = node_kinds(project)
-    modules, bindings, unmapped = {}, {}, []
+    modules, bindings, unmapped, defaulted = {}, {}, [], []
     for node_id in project.params:
         path, kind = paths[node_id], kinds[node_id]
         unmapped += _unmapped_properties(project, node_id, kind)
+        defaulted += _defaulted_properties(project, node_id, kind)
         snapshots = _snapshots(project, node_id, kinds, columns)
         modules[path] = ModuleDesign(type=kind, params=snapshots)
         bound, unmapped_tags = _node_bindings(project, node_id, kind, columns)
@@ -329,4 +341,5 @@ def from_legacy_design(project) -> LegacyDesign:
         boundary=_boundary(paths, kinds, columns, fluid),
         inputs=_inputs(paths, kinds, fluid),
         unmapped=unmapped,
+        defaulted=defaulted,
     )

@@ -10,7 +10,6 @@ from collections import namedtuple
 
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import ValidationError
-from gemini.plants._utils import roles as by_class
 
 Reads = namedtuple("Reads", "dimension path source")
 """One quantity of a role: the dimension of its bounds, the path below the unit, ``result`` or
@@ -89,14 +88,3 @@ def reads(role, quantity):
             code="invalid_value",
         )
     return TABLE[role][quantity]
-
-
-def units_of(plant, role):
-    """Return the paths of the units of ``role`` in ``plant``, found by class and wiring.
-
-    The roles are decided by ``gemini.plants._utils.roles``: a heat pump is a ``heat_pump`` when
-    its ``sink_out`` reaches a ``HeatingGrid`` and a ``chiller`` when its ``source_out`` reaches a
-    ``CoolingGrid``; an absorption or adsorption unit is a ``chiller`` when its ``chilled_out``
-    reaches a ``CoolingGrid``. A plant without such a unit gives ``[]``.
-    """
-    return by_class.units_of(plant, check_role(role))

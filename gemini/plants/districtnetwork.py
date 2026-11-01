@@ -5,6 +5,7 @@ from gemini.modules.container import ModuleList
 from gemini.modules.declarations import Inlet, Outlet
 from gemini.modules.piping import Mixer, Pipe, Splitter
 from gemini.modules.pumps import CentrifugalPump
+from gemini.plants._utils.wiring import mix_chain, split_chain
 from gemini.plants.coolingsubstation import CoolingSubstation
 from gemini.plants.heatingsubstation import HeatingSubstation
 from gemini.plants.plant import Plant
@@ -74,22 +75,14 @@ class DistrictNetwork(Plant):
 
     def _connect_feed(self, consumers):
         """Divide the feed over the substations: each splitter serves one, the last what is left."""
-        count = consumers - 1
-        if count == 0:
-            self.connect("supply_pipe.fluid_out", "substations.0.supply_in")
+        targets = [f"substations.{index}.supply_in" for index in range(consumers)]
+        if consumers == 1:
+            self.connect("supply_pipe.fluid_out", targets[0])
             return
         self.connect("supply_pipe.fluid_out", "splitters.0.fluid_in")
-        for index in range(count - 1):
-            self.connect(f"splitters.{index}.branch1_out", f"splitters.{index + 1}.fluid_in")
-        for index in range(count):
-            self.connect(f"splitters.{index}.branch2_out", f"substations.{index}.supply_in")
-        self.connect(f"splitters.{count - 1}.branch1_out", f"substations.{count}.supply_in")
+        split_chain(self, "splitters", targets)
 
     def _connect_returns(self, consumers):
         """Mix the returns of the substations in order and feed the return pipe."""
-        running = "substations.0.return_out"
-        for index in range(consumers - 1):
-            self.connect(running, f"mixers.{index}.branch1_in")
-            self.connect(f"substations.{index + 1}.return_out", f"mixers.{index}.branch2_in")
-            running = f"mixers.{index}.fluid_out"
-        self.connect(running, "return_pipe.fluid_in")
+        ends = [f"substations.{index}.return_out" for index in range(consumers)]
+        mix_chain(self, ends, "mixers", "return_pipe.fluid_in")

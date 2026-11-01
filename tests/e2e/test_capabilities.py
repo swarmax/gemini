@@ -1,7 +1,7 @@
 """``gm.plants.capabilities`` against a real ``gm.schedule`` of every plant class."""
 
 import gemini as gm
-from gemini.case.roletable import units_of
+from gemini.plants._utils.roles import units_of
 from tests.fixtures.sample_cases import filled_plant, sample_case
 
 

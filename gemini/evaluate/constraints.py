@@ -5,7 +5,7 @@ import numpy as np
 from gemini._utils.strings import join_path
 from gemini.case import Constraint
 from gemini.case._utils.fields import si_unit_of
-from gemini.case.roletable import reads, units_of
+from gemini.case.roletable import reads
 from gemini.errors import ValidationError
 from gemini.evaluate._utils.columns import (
     field_of,
@@ -14,6 +14,7 @@ from gemini.evaluate._utils.columns import (
     parameter_values,
     series,
 )
+from gemini.plants._utils.roles import units_of
 from gemini.run._utils.apply import apply_case
 from gemini.types.shapes import check, measure
 from gemini.units import Quantity

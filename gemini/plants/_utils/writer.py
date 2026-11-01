@@ -2,7 +2,6 @@
 
 from copy import deepcopy
 
-from gemini import units
 from gemini._utils.jsonable import to_plain
 from gemini._utils.strings import join_path
 from gemini.errors import GeminiError
@@ -18,16 +17,6 @@ from gemini.plants._utils import inputs
 from gemini.plants._utils.plan import is_group, is_plant
 
 
-def baseline_of(module):
-    """Return the parameter values a module has before any value is stated, by dotted name."""
-    return tree_params(module)
-
-
-def type_name(module):
-    """Return the registry name that rebuilds ``module``."""
-    return type(module).__name__
-
-
 def _same(module, name, stated, current):
     try:
         return keep_stated(stated, current, lambda value: _plain(module, name, value))
@@ -37,16 +26,6 @@ def _same(module, name, stated, current):
 
 def _plain(module, name, value):
     return plain_value(design.parameter(module, name).validate(value))
-
-
-def in_quantity_form(module, name, value):
-    """Return a value of a parameter with a unit as ``{"value", "unit"}``, else as it is."""
-    if isinstance(value, units.Quantity):
-        return value.to_dict()
-    unit = design.parameter(module, name).unit
-    if unit in (None, "-") or value is None or isinstance(value, (dict, str, bool)):
-        return value
-    return {"value": value, "unit": unit}
 
 
 def params_entry(plant, key, module):
@@ -68,7 +47,10 @@ def params_entry(plant, key, module):
             result[name] = kept if kept is not None else value
         elif name not in derived and (name not in baseline or baseline[name] != value):
             result[name] = value
-    return {name: in_quantity_form(module, name, value) for name, value in result.items()}
+    return {
+        name: inputs.in_quantity_form(design.parameter(module, name), value)
+        for name, value in result.items()
+    }
 
 
 def modules_entry(plant, container, prefix=""):
@@ -76,7 +58,7 @@ def modules_entry(plant, container, prefix=""):
     result = {}
     for name, child in container.named_children():
         key = join_path(prefix, name)
-        entry = {"type": type_name(child)}
+        entry = {"type": type(child).__name__}
         if getattr(child, "_size", None):
             entry["size"] = deepcopy(child._size)
         if is_group(child):
@@ -99,7 +81,7 @@ def _port_text(ends):
 def _inputs_section(plant):
     """Return the ``inputs`` key of the plant dict, empty when nothing below ``plant`` set one."""
     stated = {
-        join_path(path, name): inputs.in_quantity_form(module, name, value)
+        join_path(path, name): inputs.in_quantity_form(inputs.declaration(module, name), value)
         for path, module in plant.named_modules()
         if is_plant(module)
         for name, value in module._inputs.items()
@@ -110,7 +92,7 @@ def _inputs_section(plant):
 def class_dict(plant, fresh):
     """Return the plant dict of a plant of a class: ``fresh`` is a new one, without values."""
     plant._baselines[""] = tree_params(fresh)
-    data = {"format": FORMAT, "type": type_name(plant)}
+    data = {"format": FORMAT, "type": type(plant).__name__}
     if plant._size:
         data["size"] = deepcopy(plant._size)
     data["params"] = params_entry(plant, "", plant)

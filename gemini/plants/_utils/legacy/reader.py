@@ -91,12 +91,16 @@ def _filled_module(plant, path, item):
 def to_plant(project, plant):
     """Fill an existing example plant with converted SI parameters, histories and bindings.
 
-    Old fields the bridge cannot map are listed in one ``GeminiWarning``.
+    Old fields the bridge cannot map, and the defaults it takes for fields a project lacks, are
+    listed in one ``GeminiWarning``.
     """
     design = from_legacy_design(project)
-    if design.unmapped:
+    fields = [*design.unmapped, *design.defaulted]
+    if fields:
         warnings.warn(
-            f"Unmapped GEMINI fields: {', '.join(design.unmapped)}", GeminiWarning, stacklevel=2
+            f"Unmapped or defaulted GEMINI fields: {', '.join(fields)}",
+            GeminiWarning,
+            stacklevel=2,
         )
     state = {path: _filled_module(plant, path, item) for path, item in design.modules.items()}
     state[""] = {"params": {}, "fluid": next(iter(design.modules.values())).fluid.model_dump()}

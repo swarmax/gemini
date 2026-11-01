@@ -57,7 +57,9 @@ def _historical_ipr_parameters(reservoir_property, well_property):
 
     NOTE(refactor): historical IPR interpreted the labelled m3/h/bar value as m3/s/bar.
     """
-    parameters = tables.production_reservoir_params_from_gemini(reservoir_property, well_property)
+    parameters = tables.reservoir_params_from_gemini(
+        reservoir_property, well_property, "production"
+    )
     parameters["productivity_index"] = units.pa_to_bar(
         well_property["productionwell_productivity_index"]
     )
@@ -121,7 +123,7 @@ def _injection_values(row):
     reservoir_property = _old_property("reservoir_28fc")
     reservoir = configured(
         InjectionReservoir,
-        tables.injection_reservoir_params_from_gemini(reservoir_property, well_property),
+        tables.reservoir_params_from_gemini(reservoir_property, well_property, "injection"),
     )
     reservoir.fluid = tables.reservoir_fluid(reservoir_property)
     well = configured(InjectionWell, tables.injectionwell_params_from_gemini(well_property))

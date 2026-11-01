@@ -174,7 +174,7 @@ def node_ends(root, end, side, nodes):
     if end[0] in nodes:
         return [end]
     inner = inner_ends(root.get_submodule(end[0]), end[0], side, end[1])
-    return [item for item in inner for item in node_ends(root, item, side, nodes)]
+    return [leaf for end in inner for leaf in node_ends(root, end, side, nodes)]
 
 
 def _node_ends(root, links, opened, nodes):
@@ -269,7 +269,7 @@ class Loop:
 
 
 @dataclass(frozen=True)
-class Constraint:
+class PlanConstraint:
     """The free control ``by`` that brings ``target`` to ``value`` within ``bounds``.
 
     With ``at_least`` a target that reaches its value at the lower bound keeps that bound.
@@ -296,7 +296,7 @@ class Constraint:
         else:
             bounds = tuple(join_path(owner, b) if isinstance(b, str) else b for b in bounds)
         target, value, by = (join_path(owner, end) for end in ends)
-        return Constraint(target, value, by, bounds, self.at_least)
+        return PlanConstraint(target, value, by, bounds, self.at_least)
 
 
 @dataclass
@@ -304,7 +304,7 @@ class Solve:
     """The steps a constraint runs, in order."""
 
     steps: list
-    constraint: Constraint
+    constraint: PlanConstraint
 
 
 @dataclass
@@ -586,7 +586,7 @@ class _Wiring:
             local = {step: names[step] for step in names if step in group}
             steps = [self._step(step, names[step]) for step in _topological(local, inner)]
             items.append(
-                Solve(steps, detail) if isinstance(detail, Constraint) else Loop(steps, detail)
+                Solve(steps, detail) if isinstance(detail, PlanConstraint) else Loop(steps, detail)
             )
         return items
 

@@ -6,7 +6,7 @@ import pytest
 import gemini as gm
 from gemini._utils.files import from_json
 from gemini.case._utils.kinds import EQUIPMENT_KINDS
-from gemini.case.roletable import units_of
+from gemini.plants._utils.roles import units_of
 from gemini.study._utils import trial
 from gemini.types.shapes import measure
 from tests.fixtures.result_tables import make_results

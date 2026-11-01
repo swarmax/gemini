@@ -6,12 +6,15 @@ from gemini.modules.exchangers import HeatExchanger
 from gemini.modules.grids import ElectricityGrid
 from gemini.modules.piping import Mixer, Splitter
 from gemini.modules.treatment import Degasser, Filter
+from gemini.plants._utils.wiring import mix_chain
 from gemini.plants.nodaldoublet import NodalDoublet
 from gemini.plants.plant import Plant
 from gemini.types import Stream
 
 SHARES = (0.5, 0.3, 0.2)
 """Shares of the primary and the secondary flow sent to each heat exchanger."""
+TEES = len(SHARES) - 1
+"""The splitters or mixers of one cascade."""
 
 
 class ParallelExchangerPlant(Plant):
@@ -31,17 +34,16 @@ class ParallelExchangerPlant(Plant):
     def __init__(self):
         """Build the plant; the tees are cascades of two-way splitters and mixers."""
         super().__init__()
-        tees = len(SHARES) - 1
 
         # Modules
         self.doublet = NodalDoublet()
         self.degasser = Degasser()
         self.inlet_filter = Filter()
-        self.primary_splitters = ModuleList(Splitter() for _ in range(tees))
-        self.secondary_splitters = ModuleList(Splitter() for _ in range(tees))
+        self.primary_splitters = ModuleList(Splitter() for _ in range(TEES))
+        self.secondary_splitters = ModuleList(Splitter() for _ in range(TEES))
         self.heat_exchangers = ModuleList(HeatExchanger() for _ in SHARES)
-        self.primary_mixers = ModuleList(Mixer() for _ in range(tees))
-        self.secondary_mixers = ModuleList(Mixer() for _ in range(tees))
+        self.primary_mixers = ModuleList(Mixer() for _ in range(TEES))
+        self.secondary_mixers = ModuleList(Mixer() for _ in range(TEES))
         self.outlet_filter = Filter()
         self.electricity_grid = ElectricityGrid()
 
@@ -61,25 +63,20 @@ class ParallelExchangerPlant(Plant):
         self._divide("secondary_splitters", "cold_in")
         self._combine("primary_mixers", "hot_out")
         self._combine("secondary_mixers", "cold_out")
-        self.connect(f"primary_mixers.{tees - 1}.fluid_out", "outlet_filter.fluid_in")
+        self.connect(f"primary_mixers.{TEES - 1}.fluid_out", "outlet_filter.fluid_in")
         self.connect("outlet_filter.fluid_out", "doublet.return_in")
         self.connect("electricity_grid.power_out", "doublet.power_in")
-        self.connect(f"secondary_mixers.{tees - 1}.fluid_out", "supply_out")
+        self.connect(f"secondary_mixers.{TEES - 1}.fluid_out", "supply_out")
         self.connect("degasser.gas_out", "gas_out")
 
     def _divide(self, cascade, port):
         """Connect a splitter cascade: each sends its share to an exchanger, the last the rest."""
-        tees = len(SHARES) - 1
-        for index in range(tees):
+        for index in range(TEES):
             self.connect(f"{cascade}.{index}.branch2_out", f"heat_exchangers.{index}.{port}")
-            if index < tees - 1:
+            if index < TEES - 1:
                 self.connect(f"{cascade}.{index}.branch1_out", f"{cascade}.{index + 1}.fluid_in")
-        self.connect(f"{cascade}.{tees - 1}.branch1_out", f"heat_exchangers.{tees}.{port}")
+        self.connect(f"{cascade}.{TEES - 1}.branch1_out", f"heat_exchangers.{TEES}.{port}")
 
     def _combine(self, cascade, port):
         """Connect a mixer cascade over the exchangers, the running mix entering first."""
-        running = f"heat_exchangers.0.{port}"
-        for index in range(len(SHARES) - 1):
-            self.connect(running, f"{cascade}.{index}.branch1_in")
-            self.connect(f"heat_exchangers.{index + 1}.{port}", f"{cascade}.{index}.branch2_in")
-            running = f"{cascade}.{index}.fluid_out"
+        mix_chain(self, [f"heat_exchangers.{index}.{port}" for index in range(TEES + 1)], cascade)

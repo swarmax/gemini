@@ -3,8 +3,8 @@
 from gemini._utils import files
 from gemini._utils.strings import join_path, snake_case
 from gemini.errors import ValidationError
-from gemini.errors.base import reported
 from gemini.modules._utils import design
+from gemini.modules._utils.serialization import tree_params
 from gemini.modules.container import ModuleList
 from gemini.modules.declarations import Inlet, Outlet, Output
 from gemini.modules.module import Module
@@ -12,7 +12,7 @@ from gemini.physics import energy
 from gemini.plants._utils import circuits, inputs, listing, loops, outputs, reader, writer
 from gemini.plants._utils.factory import make_module
 from gemini.plants._utils.legacy import reader as reader_of_legacy
-from gemini.plants._utils.plan import STATE, Constraint, compile_plan, is_group, port_ends
+from gemini.plants._utils.plan import STATE, PlanConstraint, compile_plan, is_group, port_ends
 from gemini.plants._utils.ports import PortResolver
 from gemini.plants._utils.run import Run
 
@@ -113,7 +113,7 @@ class Plant(PortResolver, Module):
     def set_inputs(self, values):
         """Set inputs of the plant by path and return it; ``to_dict`` stores them.
 
-        ``values`` maps a path to a number in SI or a unit string, as ``set_params`` does: the
+        ``values`` maps a path to a number in SI or a quantity: the
         dotted path of a control or boundary (``"heat_pump.temperature_setpoint"``), or
         ``port.field`` of a plant inlet (``"heating_return.T"``, the fields ``m_dot``, ``T``, ``p``
         and ``fluid``). One value that does not fit raises and changes nothing. A run overrides an
@@ -178,18 +178,18 @@ class Plant(PortResolver, Module):
                 self._note_child(join_path(key, name), child)
             return
         self._stated[key] = {}
-        self._baselines[key] = writer.baseline_of(module)
+        self._baselines[key] = tree_params(module)
 
     def add(self, type, name=None, params=None):
         """Add a module of registry name or class ``type`` and return it.
 
-        ``params`` is one dict of design values, the dict ``set_params`` takes: unit strings
-        accepted, dotted names for a composite. ``name`` defaults to the snake case type, numbered
-        when taken; a dotted name adds into a group such as ``filters.hot``.
+        ``params`` is one dict of design values, the dict ``set_params`` takes: numbers in SI
+        or quantities, dotted names for a composite. ``name`` defaults to the snake case type,
+        numbered when taken; a dotted name adds into a group such as ``filters.hot``.
         """
         module, type_name = make_module(type)
         key = self._free_name(name, type_name)
-        baseline = writer.baseline_of(module)
+        baseline = tree_params(module)
         stated = dict(params or {})
         module.set_params("", stated)
         self._attach(key, module, stated, baseline)
@@ -268,7 +268,7 @@ class Plant(PortResolver, Module):
             )
         limits = bounds if isinstance(bounds, str) else tuple(bounds)
         value = at_least if equals is None else equals
-        self._constraints.append(Constraint(target, value, by, limits, equals is None))
+        self._constraints.append(PlanConstraint(target, value, by, limits, equals is None))
         self._plan = None
 
     def _register_declaration(self, name, declaration):
@@ -379,7 +379,7 @@ class Plant(PortResolver, Module):
     def validate(self, on_error="raise"):
         """Check the plant's structure as ``gm.plants.validate`` does; the same ``on_error``."""
         data = self.to_dict(structure=True)
-        return reported(reader.problems(Plant, data) + reader.root_problems(data), on_error)
+        return reader.check(Plant, data, on_error)
 
     def _compiled(self):
         """Return the plan; which outlets are offered depends on how the modules are set."""
@@ -422,8 +422,6 @@ class Plant(PortResolver, Module):
 
     def forward(self, inlets):
         """Call the modules in connection order, close the loops and return the plant outlets."""
-
-        # Modules
         run = Run(self, inlets)
         for item in self._compiled().items:
             run.execute(item)

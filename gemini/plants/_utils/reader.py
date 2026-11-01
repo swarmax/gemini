@@ -14,11 +14,11 @@ from gemini.modules._utils.serialization import (
     from_params,
     from_sections,
     located,
+    tree_params,
 )
 from gemini.plants._utils import inputs, outputs
 from gemini.plants._utils.factory import built, make_module
 from gemini.plants._utils.plan import is_group, unconnected_port
-from gemini.plants._utils.writer import baseline_of
 
 TYPES = {
     "name": str,
@@ -107,7 +107,7 @@ def _entry(plant, prefix, name, entry, report, path):
             for child, item in entry.get("modules", {}).items():
                 _entry(plant, key, child, item, report, f"{path}.modules.{child}")
             return
-        baseline = baseline_of(module)
+        baseline = tree_params(module)
         params = _checked_params(module, entry.get("params", {}), report, f"{path}.params")
         from_params(module, params, report, f"{path}.params")
         plant._attach(key, module, deepcopy(entry.get("params")), baseline)
@@ -220,7 +220,7 @@ def populate(plant, data, report):
             plant.constrain(**item)
     from_sections(plant, data, report)
     _from_inputs(plant, data, report)
-    plant._sections = {key: deepcopy(data.get(key, {})) for key in SECTIONS}
+    set_sections(plant, data)
 
 
 def _of_class(cls, data, report):
@@ -237,7 +237,7 @@ def _of_class(cls, data, report):
         from_params(plant, params, report)
         from_sections(plant, data, report)
         _from_inputs(plant, data, report)
-        plant._sections = {key: deepcopy(data.get(key, {})) for key in SECTIONS}
+        set_sections(plant, data)
         return plant
     return None
 
@@ -256,6 +256,16 @@ def build(cls, data):
         plant = cls._empty(data.get("name", "plant"))
         populate(plant, data, report)
     return plant, report.items
+
+
+def set_sections(plant, data):
+    """Keep a copy of the sections of ``data`` on ``plant``, which stores them as stated."""
+    plant._sections = {key: deepcopy(data.get(key, {})) for key in SECTIONS}
+
+
+def check(cls, data, on_error):
+    """Return ``[]`` for a sound plant dict; else raise or return its problems per ``on_error``."""
+    return reported(problems(cls, data) + root_problems(data), on_error)
 
 
 def problems(cls, data):

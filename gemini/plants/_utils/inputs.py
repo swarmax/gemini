@@ -54,6 +54,16 @@ def _checked_fluid(path, value):
     return value
 
 
+def declaration(plant, path):
+    """Return the declaration of the input at ``path``; ``None`` for ``fluid`` and unknown paths."""
+    found = plant.inputs().get(path)
+    if found is None:
+        field = _port_field(plant, path)
+        if field is not None and field[1] != FLUID:
+            return FIELDS[field[1]]
+    return found
+
+
 def _checked_value(plant, path, value):
     """Return the value of one input in SI, or raise naming what does not fit."""
     declaration = plant.inputs().get(path)
@@ -109,23 +119,16 @@ def root_streams(plant):
 
 def refuse_bare(plant, path, value):
     """Raise ``invalid_value`` for a number with a unit that is no ``{"value", "unit"}``."""
-    declaration = plant.inputs().get(path)
-    found = _port_field(plant, path)
-    if declaration is None and found is not None and found[1] != FLUID:
-        declaration = FIELDS[found[1]]
-    if declaration is not None:
-        design.refuse_bare(declaration, value, path)
+    found = declaration(plant, path)
+    if found is not None:
+        design.refuse_bare(found, value, path)
 
 
-def in_quantity_form(plant, path, value):
-    """Return the input ``value`` at ``path`` as ``{"value", "unit"}`` when it has a unit."""
+def in_quantity_form(found, value):
+    """Return ``value`` as ``{"value", "unit"}`` when the declaration ``found`` has a unit."""
     if isinstance(value, units.Quantity):
         return value.to_dict()
-    declaration = plant.inputs().get(path)
-    found = _port_field(plant, path)
-    if declaration is None and found is not None and found[1] != FLUID:
-        declaration = FIELDS[found[1]]
-    bare = isinstance(value, (int, float)) and not isinstance(value, bool)
-    if declaration is None or declaration.unit in (None, "-") or not bare:
+    unit = None if found is None else found.unit
+    if unit in (None, "-") or value is None or isinstance(value, (dict, str, bool)):
         return value
-    return {"value": value, "unit": declaration.unit}
+    return {"value": value, "unit": unit}

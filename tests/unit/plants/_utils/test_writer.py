@@ -1,7 +1,7 @@
 """Writing a built plant: stated values stay as written while they are true."""
 
 import gemini as gm
-from gemini.plants._utils import writer
+from gemini.modules._utils.serialization import tree_params
 
 
 def test_a_stated_unit_string_stays_while_the_value_is_unchanged():
@@ -38,9 +38,8 @@ def test_a_group_writes_its_children_and_a_plant_its_registered_name():
         "modules": {"hot": {"type": "Filter", "params": {}}},
     }
     assert modules["doublet"]["type"] == "Doublet"
-    assert writer.type_name(plant.doublet) == "Doublet"
 
 
 def test_baseline_is_the_starting_values_of_the_tree():
     """A nested plant's baseline holds its dotted parameter names."""
-    assert "reservoir.skin" in writer.baseline_of(gm.plants.get("Doublet"))
+    assert "reservoir.skin" in tree_params(gm.plants.get("Doublet"))

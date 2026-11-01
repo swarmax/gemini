@@ -8,23 +8,9 @@ from gemini.modules.piping import Mixer, Splitter
 from gemini.modules.pumps import ESP
 from gemini.modules.subsurface import InjectionReservoir, ProductionReservoir
 from gemini.modules.wells import InjectionWell, ProductionWell
+from gemini.plants._utils.wiring import mix_chain, split_chain
 from gemini.plants.plant import Plant
 from gemini.types import Power, Stream
-
-
-def _production_limb():
-    return ModuleDict(
-        {
-            "reservoir": ProductionReservoir(),
-            "well": ProductionWell(),
-            "esp": ESP(),
-            "riser": ProductionWell(),
-        }
-    )
-
-
-def _injection_limb():
-    return ModuleDict({"well": InjectionWell(), "sink": InjectionReservoir()})
 
 
 class MultiWellPlant(Plant):
@@ -52,10 +38,23 @@ class MultiWellPlant(Plant):
         self._size = {"producers": producers, "injectors": injectors}
 
         # Modules
-        self.producers = ModuleList(_production_limb() for _ in range(producers))
+        self.producers = ModuleList(
+            ModuleDict(
+                {
+                    "reservoir": ProductionReservoir(),
+                    "well": ProductionWell(),
+                    "esp": ESP(),
+                    "riser": ProductionWell(),
+                }
+            )
+            for _ in range(producers)
+        )
         self.mixers = ModuleList(Mixer() for _ in range(producers - 1))
         self.splitters = ModuleList(Splitter() for _ in range(injectors - 1))
-        self.injectors = ModuleList(_injection_limb() for _ in range(injectors))
+        self.injectors = ModuleList(
+            ModuleDict({"well": InjectionWell(), "sink": InjectionReservoir()})
+            for _ in range(injectors)
+        )
         self.formation = Formation()
 
         # Inlets
@@ -82,12 +81,8 @@ class MultiWellPlant(Plant):
             self.connect(f"{limb}.reservoir.sandface_out", f"{limb}.well.bottom_in")
             self.connect(f"{limb}.well.wellhead_out", f"{limb}.esp.fluid_in")
             self.connect(f"{limb}.esp.fluid_out", f"{limb}.riser.bottom_in")
-        running = "producers.0.riser.wellhead_out"
-        for index in range(producers - 1):
-            self.connect(running, f"mixers.{index}.branch1_in")
-            self.connect(f"producers.{index + 1}.riser.wellhead_out", f"mixers.{index}.branch2_in")
-            running = f"mixers.{index}.fluid_out"
-        self.connect(running, "supply_out")
+        ends = [f"producers.{index}.riser.wellhead_out" for index in range(producers)]
+        mix_chain(self, ends, "mixers", "supply_out")
 
     def _connect_injection(self, injectors):
         """Connect every injection limb and divide the return over them, one splitter each."""
@@ -95,13 +90,9 @@ class MultiWellPlant(Plant):
             self.connect(
                 f"injectors.{index}.well.bottom_out", f"injectors.{index}.sink.sandface_in"
             )
-        count = injectors - 1
-        if count == 0:
-            self.connect("return_in", "injectors.0.well.wellhead_in")
+        targets = [f"injectors.{index}.well.wellhead_in" for index in range(injectors)]
+        if injectors == 1:
+            self.connect("return_in", targets[0])
             return
-        for index in range(count - 1):
-            self.connect(f"splitters.{index}.branch1_out", f"splitters.{index + 1}.fluid_in")
-        for index in range(count):
-            self.connect(f"splitters.{index}.branch2_out", f"injectors.{index}.well.wellhead_in")
-        self.connect(f"splitters.{count - 1}.branch1_out", f"injectors.{count}.well.wellhead_in")
+        split_chain(self, "splitters", targets)
         self.connect("return_in", "splitters.0.fluid_in")

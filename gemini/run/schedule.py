@@ -18,7 +18,6 @@ import pandas as pd
 from gemini import runtime
 from gemini._utils.strings import join_path
 from gemini._utils.time import to_utc_index
-from gemini.case import roletable
 from gemini.errors import ValidationError
 from gemini.modules.environment import Atmosphere
 from gemini.modules.grids import CoolingGrid, HeatingGrid
@@ -27,6 +26,7 @@ from gemini.modules.piping import Splitter
 from gemini.physics import constants, dispatch
 from gemini.physics.fluid import mixture_mass_flow
 from gemini.plants._utils.plan import members, split_end
+from gemini.plants._utils.roles import units_of
 from gemini.plants.doublet import Doublet
 from gemini.run._utils import limits as limit_forms
 from gemini.run._utils import roles, sources
@@ -474,7 +474,7 @@ def scheduled(plant, case):
     """Return the plan of ``schedule`` for a ``plant`` that already has the values of ``case``."""
     plant._check_design()
     demand = case.demand.frame
-    doublets = roletable.units_of(plant, "doublet")
+    doublets = units_of(plant, "doublet")
     limits, check_only = limit_forms.split(case.constraints, doublets)
     step = pd.Timedelta(seconds=case.time.step)
     outages = _lowest_demand_outages(demand, step, limits)

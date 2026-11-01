@@ -108,60 +108,6 @@ def from_values(values, unit, start, step, quantity):
     return _profile(index, {quantity: pd.Series(list(values))}, {quantity: unit})
 
 
-def from_frame(frame):
-    """Return ``frame``, a demand of ``from_csv`` or ``from_values`` or several joined, validated.
-
-    A column without a unit in ``attrs["units"]`` is in W, which is what these functions store;
-    joining frames drops ``attrs``.
-    """
-    if not isinstance(frame, pd.DataFrame) or not isinstance(frame.index, pd.DatetimeIndex):
-        raise ValidationError(
-            f"demand = {type(frame).__name__}; expected the frame of gm.data.from_csv or "
-            "from_values",
-            path="demand",
-            code="invalid_value",
-        )
-    if frame.index.tz is None:
-        raise ValidationError(
-            "demand: time has no zone; expected a UTC index", path="demand", code="invalid_value"
-        )
-    stated = frame.attrs.get("units", {})
-    values = {name: frame[name].reset_index(drop=True) for name in frame}
-    return _profile(frame.index, values, {name: stated.get(name, "W") for name in frame})
-
-
-def from_dict(data):
-    """Return the demand of a dictionary of ``to_dict``, the arguments of ``from_values``."""
-    missing = [name for name in ("start", "step", "units", "values") if name not in data]
-    if missing:
-        raise ValidationError(
-            f"demand: {join_names(missing)} missing; expected start, step, units and values",
-            path=f"demand.{missing[0]}",
-            code="missing_value",
-        )
-    frames = [
-        from_values(column, data["units"].get(name, "W"), data["start"], data["step"], name)
-        for name, column in data["values"].items()
-    ]
-    frame = pd.concat(frames, axis=1)
-    return from_frame(frame)
-
-
-def to_dict(frame):
-    """Return a demand as plain data: start, step, units, quantities and the values per column.
-
-    A demand of one row has no spacing, so it states a step of one second.
-    """
-    seconds = (frame.index[1] - frame.index[0]).total_seconds() if len(frame) > 1 else 1.0
-    return {
-        "start": frame.index[0].isoformat(),
-        "step": seconds,
-        "units": dict(frame.attrs["units"]),
-        "quantities": dict(frame.attrs["quantities"]),
-        "values": {name: frame[name].tolist() for name in frame},
-    }
-
-
 def _timestamps(column):
     """Return the UTC index of a column of timestamps."""
     try:

@@ -57,7 +57,7 @@ implementation or test.
   retain the well's `wellhead` port name; on the below-pump segment it denotes its local upper
   endpoint (pump intake).
 - Port mapping is explicit (`tables.PORTS`), including the HX hot/cold ports and both degasser
-  outlets. Every unmapped old property or tag is listed in one `GeminiWarning` from
+  outlets. Every unmapped old property or tag, and every default taken for a property a project lacks (`tables.DEFAULTS`), is listed in one `GeminiWarning` from
   `legacy.to_plant`. Redundant observations and absent measured sandface conditions are left
   unbound with an individual reason in `tables.IGNORED_TAGS`; empty tags are skipped.
 - Supplemental CSV bindings supply filter pressure differences, HX duty and hot-side pressure

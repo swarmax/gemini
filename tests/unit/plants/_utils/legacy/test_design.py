@@ -96,6 +96,7 @@ def test_unmapped_fields_warn_once(tmp_path):
         legacy.to_plant(project, gm.plants.get("DoubletHeatPlant"))
     assert len(caught) == 1 and issubclass(caught[0].category, GeminiWarning)
     assert "esp_colour" in str(caught[0].message) and "esp_noise" in str(caught[0].message)
+    assert "clogging_dp (default 0.5)" in str(caught[0].message)
 
 
 def test_unknown_nodes_are_rejected(tmp_path, project):
