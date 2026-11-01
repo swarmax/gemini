@@ -132,9 +132,7 @@ def test_an_explicit_child_value_wins_over_the_derived_one():
         "well.section_diameter": [0.2],
         "well.section_roughness": [1e-5],
     }
-    _, doublet = designed(
-        **{"reservoir.pressure": {"value": 250, "unit": "bar(g)"}} | path | PUMP
-    )
+    _, doublet = designed(**{"reservoir.pressure": {"value": 250, "unit": "bar(g)"}} | path | PUMP)
     assert doublet.reservoir.pressure == pytest.approx(250e5 + 101325)
     assert doublet.well.pipe_path.total_length == 2600
     assert doublet.riser.pipe_path.total_length == 2500

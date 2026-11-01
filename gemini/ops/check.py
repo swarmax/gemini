@@ -105,8 +105,15 @@ def check_numbers(function, **values):
 
 
 def failure(error, message, values, row, code=None):
-    """Return the ``error`` of one failing ``row``, its message filled from ``values``."""
+    """Return the ``error`` of one failing ``row``, its message filled from ``values``.
+
+    A ``path`` among the values, the module path the message names, is also the ``path`` of the
+    error, so a failed row is recorded under the module that raised.
+    """
     filled = {name: _row_value(value, row) for name, value in values.items()}
+    where = filled.get("path")
+    if isinstance(where, str) and where:
+        return error(message.format(**filled), code=code, path=where)
     return error(message.format(**filled), code=code)
 
 

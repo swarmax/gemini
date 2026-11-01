@@ -5,8 +5,8 @@ import numpy as np
 from gemini import units
 from gemini._utils.jsonable import to_plain
 from gemini.errors import ValidationError
-from gemini.study._utils.target import quantities
 from gemini.study._utils.parallel import mapped
+from gemini.study._utils.target import quantities
 from gemini.study._utils.trial import checked_metric, drawn_trial
 from gemini.study._utils.uncertain import declared
 from gemini.types.shapes import measure
@@ -14,6 +14,7 @@ from gemini.types.shapes import measure
 ATTEMPTS = 10000
 """Draws of a truncated normal before its bounds are judged out of reach."""
 SUMMARY = ("mean", "p5", "p50", "p95")
+"""The statistics of a summary; ``failed`` is the number of draws left out, beside them."""
 
 
 class Sample(dict):
@@ -29,9 +30,7 @@ class Sample(dict):
             }
             for draw in self["samples"]
         ]
-        summary = {
-            metric: to_plain(spread) for metric, spread in self["summary"].items()
-        }
+        summary = {metric: to_plain(spread) for metric, spread in self["summary"].items()}
         return {"samples": samples, "summary": summary}
 
     @classmethod
@@ -94,13 +93,14 @@ def _spread(samples, name):
     """Return ``{mean, p5, p50, p95}``, each a ``Value``, of a metric over the samples giving it."""
     metrics = [item["metrics"][name] for item in samples if name in item["metrics"]]
     numbers = [item.value for item in metrics if item.value is not None]
-    unit = metrics[0].unit if metrics else "-"
+    unit = next((item.unit for item in metrics if item.value is not None), "-")
+    failed = measure(len([item for item in samples if "reason" in item]), "-")
     if not numbers:
         reason = "no sample gives this metric"
-        return {key: measure(None, unit, reason) for key in SUMMARY}
+        return {key: measure(None, unit, reason) for key in SUMMARY} | {"failed": failed}
     low, middle, high = np.percentile(numbers, (5, 50, 95))
     spread = {"mean": np.mean(numbers), "p5": low, "p50": middle, "p95": high}
-    return {key: measure(number, unit) for key, number in spread.items()}
+    return {key: measure(number, unit) for key, number in spread.items()} | {"failed": failed}
 
 
 def sample(plant, case, metrics, count, seed, *, plan=None):
@@ -141,8 +141,9 @@ def sample(plant, case, metrics, count, seed, *, plan=None):
         values in SI by ``case.<path>``, and ``metrics``, a ``Value`` per metric, with a
         ``reason`` for a draw whose run failed; ``summary`` gives, for each metric,
         ``{mean, p5, p50, p95}`` over the draws that give it, each a ``Value`` that is ``None``
-        with a ``reason`` when none does. ``to_dict()`` is plain JSON; ``Sample.from_dict`` reads
-        it back.
+        with a ``reason`` when none does, and ``failed``, the number of draws left out because
+        their run had failed steps (their ``reason`` names the count and the most frequent
+        failure). ``to_dict()`` is plain JSON; ``Sample.from_dict`` reads it back.
     """
     if count < 1:
         raise ValidationError(f"study.sample: count = {count}; expected at least 1", path="count")

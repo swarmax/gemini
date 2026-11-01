@@ -45,10 +45,12 @@ class _Well(Equipment, Module):
 
         # Parameters
         self.section_length = Parameter(
-            list[Length], description="Length of each section of the well path, from the surface down"
+            list[Length],
+            description="Length of each section of the well path, from the surface down",
         )
         self.section_inclination = Parameter(
-            list[Angle], description="Inclination of each section of the well path from the horizontal"
+            list[Angle],
+            description="Inclination of each section of the well path from the horizontal",
         )
         self.section_diameter = Parameter(
             list[Length], description="Inner diameter of each section of the well path"

@@ -230,8 +230,12 @@ def row_code(error, inlet=False):
 
 
 def error_record(path, error, inlet=False):
-    """Return the problem of the exception of a twin, with its row code."""
-    return problem(path, row_code(error, inlet), error)
+    """Return the problem of the exception of a twin, with its row code.
+
+    The path is the one the error names, the module that raised, else the path of the twin.
+    """
+    where = getattr(error, "path", None) if isinstance(error, GeminiError) else None
+    return problem(where or path, row_code(error, inlet), error)
 
 
 def _add_skips(skips, outcome, count):

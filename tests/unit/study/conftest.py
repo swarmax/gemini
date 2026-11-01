@@ -1,15 +1,19 @@
 """A shallow plant and case, and a run replaced by a cost model, shared by the study tests."""
 
+from datetime import timedelta
+
 import pandas as pd
 import pytest
 
 import gemini as gm
 from gemini._utils.files import from_json
 from gemini.case._utils.kinds import EQUIPMENT_KINDS
+from gemini.engine.chunks import ResultChunk
+from gemini.errors.base import problem
 from gemini.plants._utils.roles import units_of
 from gemini.study._utils import trial
 from gemini.types.shapes import measure
-from tests.fixtures.result_tables import make_results
+from tests.fixtures.result_tables import START, make_results
 from tests.fixtures.sample_cases import SHALLOW_DISTRICT
 
 SAMPLE = SHALLOW_DISTRICT
@@ -110,3 +114,31 @@ def runs(monkeypatch):
     monkeypatch.setattr(trial, "metric", cost_model)
     monkeypatch.setattr(trial, "constraints", lambda plant, case, results: [])
     return calls
+
+
+FAILS_ABOVE = 200
+"""The electricity price [EUR/MWh] above which a run fails."""
+FAILS_DEEPER = 1700
+"""The depth [m] beyond which a run fails."""
+
+
+@pytest.fixture
+def failing_runs(runs, monkeypatch):
+    """Like ``runs``, but the injected module ``d0.esp`` fails two steps of a run that is too dear.
+
+    A run fails where the electricity price is above ``FAILS_ABOVE`` EUR/MWh or the depth is
+    beyond ``FAILS_DEEPER``; the others run clean.
+    """
+
+    def fake(plant, case=None, plan=None):
+        runs.append((plant, case, plan))
+        results = make_results({"users": {"unmet_demand": [0.0, 0.0, 0.0]}})
+        price = case.assumptions.finance.opex.electricity * 3.6e9
+        if price > FAILS_ABOVE or plant.depth > FAILS_DEEPER:
+            errors = [(row, problem("d0.esp", "out_of_range", "flow too high")) for row in (0, 1)]
+            later = [START + timedelta(hours=3), START + timedelta(hours=4)]
+            results.commit(ResultChunk(later, [3600.0] * 2, {}, [{}] * 2, errors))
+        return results
+
+    monkeypatch.setattr(trial, "simulate", fake)
+    return runs

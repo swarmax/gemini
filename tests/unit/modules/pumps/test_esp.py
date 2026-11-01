@@ -5,8 +5,8 @@ import pytest
 
 import gemini as gm
 from gemini import analysis, units
-from gemini.errors import PhysicsError
 from gemini.analysis import wells
+from gemini.errors import PhysicsError
 from gemini.modules.pumps import ESP
 from gemini.ops import kernels
 from gemini.types.flows import Stream

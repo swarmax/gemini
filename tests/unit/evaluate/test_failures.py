@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import gemini as gm
-from tests.fixtures.engine_plants import TICKS, pair_frame, pair_plant
+from tests.fixtures.engine_plants import TICKS, holder_plant, pair_frame, pair_plant
 
 
 @pytest.fixture(scope="module")
@@ -51,3 +51,11 @@ def test_a_run_without_failures_has_no_group():
     found = gm.evaluate.failures(engine.replay(gm.Dataset.from_frame(pair_frame())))
     assert found.to_dict() == {"total": 0, "groups": []}
     assert found.to_frame().empty and "count" in found.to_frame().columns
+
+
+def test_a_failure_below_a_twin_is_grouped_under_the_path_of_the_failing_module():
+    """The twin ``duo`` holds the booster ``front``: the group names the module that raised."""
+    frame = pair_frame({("level", 3): -1.0, ("level", 4): -1.0})
+    engine = gm.Engine(holder_plant(), on_error="record")
+    found = gm.evaluate.failures(engine.replay(gm.Dataset.from_frame(frame)))
+    assert [(group["path"], group["count"]) for group in found.groups] == [("duo.front", 2)]
