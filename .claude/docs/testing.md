@@ -146,6 +146,24 @@ ESP over the July dataset tick by tick and as one traced NumPy call, with and wi
 common-subexpression elimination, and the full `doublet_heat` replay on the old path and through
 the graph, and checks that they agree.
 
+Speed is measured by two more scripts, run from the repository root with `PYTHONPATH=.`.
+`scripts/bench_year.py` times a daily year (365 rows) and an hourly month (744 rows) of each sample
+plant, eager and compiled, and prints per run a line with the median wall time of `gm.simulate`
+after one warm-up (`--repeats`, default 5), the first call, a call on a copy of the plant and the
+load average, then a line with the rows that ran row by row against those on arrays, the loop
+closures, tear advances, constraint solves and trial calls, the failed rows and skips, then the top
+ten functions by cumulative time. Read it as: "by row" near the row count means the mode goes by
+rows, "closures" above zero with few "by row" means a loop on arrays. The load average is the
+first thing to look at when a median looks off. `--only <text>` picks cases by name, `--baseline
+FILE` prints each median as a ratio to a file an earlier run wrote (`.tmp/speed/bench-<label>.json`,
+`--label`, `--out`). `scripts/bench_check.py` checks the numbers, not the time: `--save` runs every
+case on code known to be right and writes the baseline `.tmp/speed/baseline.npz`; a later run
+without it compares every result column within a relative 1e-9 (zeros, NaN and infinities exactly)
+and the failed steps, error codes, messages and skip counts exactly, prints PASS or each
+differing column with its worst row, and exits 1 on a difference. It takes minutes, so run it once
+before a speed change is accepted, never as a test. `tests/e2e/test_year_time.py` is the only
+timing test: the best of three eager daily years against three times a measured time.
+
 ## Shared fixtures
 
 Read-only expensive setup belongs in session or module fixtures. `dataset_path`,
@@ -305,7 +323,8 @@ build equipment from the original `.param` files: the subsurface, wells and exch
 profiles (the development profile selects them when any file under `examples/` changes) and are
 exempt from the one-second budget; `TIMEOUT_S` is the time budget of one example, 120 s on the fast
 dataset and a 900 s hang guard on the slow one. Each example runs as a subprocess from an empty
-`tmp_path`, without `PYTHONPATH`, which proves it is standalone and keeps its output out of the
+`tmp_path`, without `PYTHONPATH`, so it imports the installed `gemini`, not the files of the checkout: a
+worktree needs its own venv with its own code installed to test its own code, which proves it is standalone and keeps its output out of the
 repository; `GEMINI_EXAMPLE_DATASET` points it at the selected dataset. On the fast dataset what it
 prints is compared with `tests/e2e/expected/<name>.txt`: the text exactly, the numbers
 within 1e-6 relative, 1e-6 absolute or one unit of the last printed digit. Regenerate those files

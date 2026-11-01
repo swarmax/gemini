@@ -1,5 +1,7 @@
 """The eager executor: arrays when it can, rows when it must, the numbers of the compiler."""
 
+import time
+
 import numpy as np
 import pytest
 
@@ -196,3 +198,30 @@ def test_a_plant_with_a_constraint_still_goes_by_rows():
     plant = gm.plants.get("BoilerChpPlant")
     assert any(isinstance(item, Solve) for item in plant._compiled().items)
     assert _by_rows(plant)
+
+
+def test_a_plant_with_a_loop_runs_on_arrays_eager_and_compiled_with_the_numbers_of_its_rows(
+    monkeypatch,
+):
+    """Eager arrays, compiled arrays and row by row agree, and the array modes call no row."""
+    ring = loop_plant()
+    inputs = {"warmer.target": np.linspace(310.0, 350.0, 40)}
+    eager, compiled = EagerExecutor(), gm.compiler.compile(ring)
+    prepared = {
+        "rows": eager.prepare(ring, {}, inputs, False),
+        "eager": eager.prepare(ring, {}, inputs, False),
+        "compiled": compiled.prepare(ring, {}, inputs, False),
+    }
+    by_rows = eager._rows(prepared["rows"], 40, {})
+    monkeypatch.setattr(EagerExecutor, "_rows", None)
+    started = time.perf_counter()
+    arrays = {
+        "eager": eager.evaluate(prepared["eager"], 40, {}),
+        "compiled": compiled.evaluate(prepared["compiled"], 40, {}),
+    }
+    assert time.perf_counter() - started < 1.0
+    expected = by_rows.result.children["carrier"].inlets.fluid_in.T
+    for mode, evaluation in arrays.items():
+        assert evaluation.breaks == [] and not evaluation.failed.any(), mode
+        found = evaluation.result.children["carrier"].inlets.fluid_in.T
+        assert found == pytest.approx(expected, rel=1e-9, abs=1e-9), mode

@@ -25,10 +25,13 @@ exports `from_csv` and `from_values` from it.
 The run works without it: `executor_for(plant, compile)` (`gemini/engine/executor.py`) takes the
 compiled executor when `compile=True` and one is registered, else the eager one. The eager executor
 (`gemini/engine/eager.py`) runs `forward` on arrays over a chunk, and row by row
-(`gemini/engine/rows.py`) for a module with state, a loop or a pre-hook, on the python backend, at a
-precision other than float64, or when the array call raises something no row can be blamed for
-(then `Evaluation.breaks` keeps the exception). A row that fails a check is a failed row of the array
-call, not a reason to leave it: the executor runs the call under `ops.failures.marking`, so the
+(`gemini/engine/rows.py`) for a plant with a constraint (`Solve`), a module with state or a
+pre-hook, on the python backend, at a precision other than float64, or when the array call raises
+something no row can be blamed for (then `Evaluation.breaks` keeps the exception). A plant with a
+loop is not on that list: eager, it runs on arrays and `loops.iterate` keeps one Wegstein iterate
+per row, masked so that a row that settled or failed stops moving; compiled, the loop is one
+`fixed_point` node that runs the same iteration. A row that fails a check is a failed row of the
+array call, not a reason to leave it: the executor runs the call under `ops.failures.marking`, so the
 failing rows of a physics function travel with its results (`FailedRows`) and fail those rows
 with the row call's exception; an inline check in `forward` raises with the failures of all its
 rows and the call runs again on the others. `gm.simulate(..., compile=False)` and
@@ -318,7 +321,10 @@ equipment twins of a replay; the plant in simulate) evaluated over **chunks** of
   row by row with its states, so its results are real `ModuleResult` trees (children and
   combinations exact). There is one implementation of a break, used by every mode. A loop is no
   break: compiled, it is one `fixed_point` node whose interpreter runs the same iteration
-  (`loops.iterate`) on arrays, masked per row (native-engine.md, Loops).
+  (`loops.iterate`) on arrays, masked per row (native-engine.md, Loops); eager, the plant runs on
+  arrays with the same iteration. Eager has no graph: it goes by rows for a constraint, state or
+  pre-hook without a record, and records in `Evaluation.breaks` (kept per twin path in
+  `engine.graph_breaks`) only a fall back to rows after an array call raised.
 - **Skips and errors.** A twin is skipped for the first missing column in this order: controls,
   boundaries, inlet fields (each inlet's stream is checked once its fields are read), observations,
   measured states. In simulate the plant is the one twin: root inlets, then the leaf inputs; a skip
