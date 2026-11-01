@@ -80,7 +80,36 @@ class GeminiProject(BaseModel):
     @classmethod
     def from_folder(cls, folder):
         """Read and validate old diagram/.param files without interpreting physical values."""
-        return _from_folder(folder)
+        folder = Path(folder)
+        diagram_path = folder / "diagram.json"
+        diagram = _from_json(diagram_path, "old diagram JSON")
+        nodes, links = _from_diagram(diagram, diagram_path)
+        params, tags, timestamps, raw_files = {}, {}, {}, {}
+        for path in sorted(folder.glob("*.param")):
+            raw = _from_json(path, "old parameter file")
+            node_id, times, properties = _from_param_file(raw, path)
+            if node_id not in nodes:
+                raise ValidationError(
+                    f"{path}: node id {node_id!r} is absent from diagram.json",
+                    code="invalid_format",
+                )
+            params[node_id], timestamps[node_id] = properties, times
+            tags[node_id] = _from_tags(raw, path)
+            raw_files[path.name] = raw
+        if set(params) != set(nodes):
+            missing = sorted(set(nodes) - set(params))
+            raise ValidationError(
+                f"{folder}: diagram nodes without a .param file = {missing}", code="invalid_format"
+            )
+        project = cls(nodes=nodes, links=links, params=params, tags=tags)
+        project._diagram = diagram
+        project._param_files = raw_files
+        project._timestamps = timestamps
+        skipped = set(raw_files) | {"diagram.json"}
+        for path in folder.iterdir():
+            if path.is_file() and path.name not in skipped:
+                project._auxiliary[path.name] = path.read_bytes()
+        return project
 
     def to_folder(self, folder):
         """Write old project files; parsed projects keep values exactly after normalisation."""
@@ -183,39 +212,6 @@ def _from_param_file(raw, path):
             )
         params[name] = GeminiParam(values=values, timestamps=times)
     return node_id, times, params
-
-
-def _from_folder(folder):
-    """Read and validate old diagram/.param files without interpreting physical values."""
-    folder = Path(folder)
-    diagram_path = folder / "diagram.json"
-    diagram = _from_json(diagram_path, "old diagram JSON")
-    nodes, links = _from_diagram(diagram, diagram_path)
-    params, tags, timestamps, raw_files = {}, {}, {}, {}
-    for path in sorted(folder.glob("*.param")):
-        raw = _from_json(path, "old parameter file")
-        node_id, times, properties = _from_param_file(raw, path)
-        if node_id not in nodes:
-            raise ValidationError(
-                f"{path}: node id {node_id!r} is absent from diagram.json", code="invalid_format"
-            )
-        params[node_id], timestamps[node_id] = properties, times
-        tags[node_id] = _from_tags(raw, path)
-        raw_files[path.name] = raw
-    if set(params) != set(nodes):
-        raise ValidationError(
-            f"{folder}: diagram nodes without a .param file = {sorted(set(nodes) - set(params))}",
-            code="invalid_format",
-        )
-    project = GeminiProject(nodes=nodes, links=links, params=params, tags=tags)
-    project._diagram = diagram
-    project._param_files = raw_files
-    project._timestamps = timestamps
-    skipped = set(raw_files) | {"diagram.json"}
-    for path in folder.iterdir():
-        if path.is_file() and path.name not in skipped:
-            project._auxiliary[path.name] = path.read_bytes()
-    return project
 
 
 def _format_times(timestamps):

@@ -154,14 +154,11 @@
                 "type": "number"
               },
               {
-                "type": "string"
-              },
-              {
                 "type": "object"
               }
             ]
           },
-          "description": "Inputs by path: a control or boundary such as heat_pump.temperature_setpoint, or a plant inlet field such as heating_return.T, to a number in SI or a unit string.",
+          "description": "Inputs by path: a control or boundary such as heat_pump.temperature_setpoint, or a plant inlet field such as heating_return.T, to a number in SI or a quantity {value, unit}.",
           "type": "object"
         },
         "param_history": {
@@ -338,14 +335,11 @@
                 "type": "number"
               },
               {
-                "type": "string"
-              },
-              {
                 "type": "object"
               }
             ]
           },
-          "description": "Inputs by path: a control or boundary such as heat_pump.temperature_setpoint, or a plant inlet field such as heating_return.T, to a number in SI or a unit string.",
+          "description": "Inputs by path: a control or boundary such as heat_pump.temperature_setpoint, or a plant inlet field such as heating_return.T, to a number in SI or a quantity {value, unit}.",
           "type": "object"
         },
         "modules": {

@@ -1,6 +1,7 @@
 """The code-quality bar of ``.claude/docs/conventions.md`` cannot silently drop.
 
-McCabe complexity is checked by flake8 (``max-complexity = 10`` in ``pyproject.toml``).
+McCabe complexity is checked here with the limit of ``max-complexity`` in ``pyproject.toml``,
+the one flake8 enforces.
 """
 
 import ast
@@ -9,8 +10,11 @@ import io
 import re
 import subprocess
 import tokenize
+import tomllib
+from collections import Counter
 
 import pytest
+from mccabe import PathGraphingAstVisitor
 
 import gemini as gm
 from gemini._utils import paths
@@ -149,11 +153,18 @@ def python_files():
 
 
 @functools.cache
+def tree(path):
+    """Return the syntax tree of one file, parsed once per process."""
+    return ast.parse((ROOT / path).read_text())
+
+
+@functools.cache
 def functions(path):
     """Return every function definition of one file, parsed once per process."""
-    tree = ast.parse((ROOT / path).read_text())
     return tuple(
-        node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        node
+        for node in ast.walk(tree(path))
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     )
 
 
@@ -856,3 +867,255 @@ def test_no_reader_or_writer_breaks_the_naming_rule():
         if path.startswith("gemini/")
         for name in READ_WRITE_NAME.findall((ROOT / path).read_text())
     ] == []
+
+
+GEMINI_FILES = [path for path in PYTHON_FILES if path.startswith("gemini/")]
+LEGACY_FOLDERS = ("gemini/plants/_utils/legacy/", "gemini/data/legacy/")
+OLD_NAME = re.compile(r"legacy|compat|deprecated|^old_|_old($|_)|_v1|_v2", re.IGNORECASE)
+"""What a kept old name, shape or call path is called."""
+NAME_ALLOWANCE = {
+    "from_legacy": "gm.Plant.from_legacy is the public reader of the old GEMINI project folder",
+    "legacy_project": "paths.legacy_project is the sample folder of that reader",
+}
+"""Names with ``OLD_NAME`` outside the legacy folders, each with its reason."""
+WRAPPER_ALLOWANCE = {
+    "gemini/plants/plant.py::from_legacy": "the public name is api.md; the reader is its folder",
+    "gemini/modules/module.py::fluid": "a property setter that calls the hook plants override",
+}
+"""Public functions that only call another gemini function, each with its reason."""
+HOOKS = {"model_validator", "field_validator", "model_serializer", "field_serializer"}
+"""Decorators that call a private function without a visible reference."""
+
+
+@pytest.fixture(scope="module")
+def package_trees():
+    """Return the syntax tree of every Python file, parsed before the test is timed."""
+    return {path: tree(path) for path in PYTHON_FILES}
+
+
+def complex_functions(syntax, limit):
+    """Return ``(name, line, complexity)`` of every function over ``limit``, as flake8 counts."""
+    visitor = PathGraphingAstVisitor()
+    visitor.preorder(syntax, visitor)
+    return [
+        (graph.entity, graph.lineno, graph.complexity())
+        for graph in visitor.graphs.values()
+        if graph.complexity() > limit
+    ]
+
+
+def identifiers(syntax):
+    """Return ``(line, name)`` of every name a file defines or binds."""
+    found = []
+    for node in ast.walk(syntax):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            found.append((node.lineno, node.name))
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            found.append((node.lineno, node.id))
+        elif isinstance(node, ast.arg):
+            found.append((node.lineno, node.arg))
+        elif isinstance(node, ast.alias):
+            found.append((node.lineno, node.asname or ""))
+    return found
+
+
+def old_names(syntax):
+    """Return the names of one file that say they keep something old."""
+    return sorted({name for _, name in identifiers(syntax) if OLD_NAME.search(name)})
+
+
+def callee(node, known):
+    """Return the name of the gemini function a call reaches, or ``None``."""
+    target = node.func
+    if isinstance(target, ast.Name):
+        return target.id if target.id in known and not target.id[0].isupper() else None
+    if not isinstance(target, ast.Attribute):
+        return None
+    root = target.value
+    if isinstance(root, ast.Name) and root.id in known | {"self", "cls"}:
+        return target.attr
+    is_super = isinstance(root, ast.Call) and getattr(root.func, "id", "") == "super"
+    return target.attr if is_super else None
+
+
+def forwarded(node):
+    """Return the names a call passes on, or ``None`` where it passes anything else."""
+    items = [*node.args, *(keyword.value for keyword in node.keywords)]
+    items = [item.value if isinstance(item, ast.Starred) else item for item in items]
+    names = [item.id if isinstance(item, ast.Name) else None for item in items]
+    return None if None in names else sorted(names)
+
+
+def own_parameters(function):
+    """Return the parameter names of a function without ``self`` and ``cls``."""
+    arguments = function.args
+    names = [item.arg for item in arguments.posonlyargs + arguments.args + arguments.kwonlyargs]
+    names += [item.arg for item in (arguments.vararg, arguments.kwarg) if item]
+    return sorted(name for name in names if name not in ("self", "cls"))
+
+
+def gemini_names(syntax):
+    """Return the names a file imports from gemini and the functions it defines at its top."""
+    known = {node.name for node in syntax.body if isinstance(node, ast.FunctionDef)}
+    for node in ast.walk(syntax):
+        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("gemini"):
+            known |= {item.asname or item.name for item in node.names}
+        elif isinstance(node, ast.Import):
+            known |= {
+                item.asname or item.name.split(".")[0]
+                for item in node.names
+                if item.name.startswith("gemini")
+            }
+    return known
+
+
+def wrappers(syntax, path):
+    """Return ``path::name`` of every public function that only forwards its arguments."""
+    known = gemini_names(syntax)
+    found = []
+    for function in ast.walk(syntax):
+        if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        body = function.body[1:] if ast.get_docstring(function) else function.body
+        only = body[0] if len(body) == 1 else None
+        call = only.value if isinstance(only, (ast.Return, ast.Expr)) else None
+        if function.name.startswith("_") or not isinstance(call, ast.Call):
+            continue
+        if callee(call, known) and forwarded(call) == own_parameters(function):
+            found.append(f"{path}::{function.name}")
+    return found
+
+
+def private_functions_unused(trees):
+    """Return ``path::name`` of every private function that nothing in the package names."""
+    references = Counter()
+    for syntax in trees.values():
+        for node in ast.walk(syntax):
+            if isinstance(node, ast.Name):
+                references[node.id] += 1
+            elif isinstance(node, ast.Attribute):
+                references[node.attr] += 1
+            elif isinstance(node, ast.alias):
+                references[node.name.split(".")[-1]] += 1
+            elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+                references[node.value] += 1
+    return sorted(
+        f"{path}::{node.name}"
+        for path, syntax in trees.items()
+        for node in ast.walk(syntax)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name.startswith("_")
+        and not node.name.startswith("__")
+        and not references[node.name]
+        and not hooked(node)
+    )
+
+
+def hooked(function):
+    """Tell whether a decorator of a function is one that calls it without a reference."""
+    names = {getattr(item, "id", getattr(item, "attr", "")) for item in function.decorator_list}
+    names |= {getattr(getattr(item, "func", None), "id", "") for item in function.decorator_list}
+    return bool(names & HOOKS)
+
+
+def test_no_function_is_more_complex_than_the_flake8_limit(package_trees):
+    """The limit of ``pyproject.toml`` holds in every file the lint covers, in the test run."""
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    limit = pyproject["tool"]["flake8"]["max-complexity"]
+    paths = [path for path in PYTHON_FILES if path not in package_trees]
+    trees = package_trees | {path: tree(path) for path in paths}
+    assert {
+        (path, *found)
+        for path, syntax in trees.items()
+        for found in complex_functions(syntax, limit)
+    } == set()
+
+
+def test_the_complexity_guard_counts_branches():
+    """A function of eleven branches is over the limit of ten; one of three is not."""
+    over = "def f(x):\n" + "".join(f"    if x == {n}:\n        return {n}\n" for n in range(11))
+    assert complex_functions(ast.parse(over), 10) == [("f", 1, 12)]
+    assert complex_functions(ast.parse("def g(x):\n    if x:\n        return 1\n"), 10) == []
+
+
+def package_only(trees):
+    """Return the trees of the files of ``gemini/``."""
+    return {path: syntax for path, syntax in trees.items() if path.startswith("gemini/")}
+
+
+def test_no_public_function_only_calls_another_with_its_arguments(package_trees):
+    """A function that forwards its arguments is replaced by the one it calls, or is a hook."""
+    trees = package_only(package_trees)
+    found = [name for path, syntax in trees.items() for name in wrappers(syntax, path)]
+    assert sorted(set(found) - set(WRAPPER_ALLOWANCE)) == []
+
+
+def test_every_wrapper_allowance_is_still_a_wrapper(package_trees):
+    """An allowance that no longer matches a wrapper is removed."""
+    trees = package_only(package_trees)
+    found = {name for path, syntax in trees.items() for name in wrappers(syntax, path)}
+    assert set(WRAPPER_ALLOWANCE) <= found
+
+
+def test_the_wrapper_guard_finds_a_forwarding_function():
+    """Same arguments in any order are caught; another argument, a class or a builtin is not."""
+    source = (
+        "from gemini.units import convert\n"
+        "def caught(value, unit):\n    return convert(unit, value=value)\n"
+        "def method(self, a):\n    return self.other(a)\n"
+        "def adds(value):\n    return convert(value, 1)\n"
+        "def builds(value):\n    return Quantity(value)\n"
+        "def sums(values):\n    return sum(values)\n"
+        "def _private(value):\n    return convert(value)\n"
+    )
+    assert wrappers(ast.parse(source), "x.py") == ["x.py::caught", "x.py::method"]
+
+
+def test_no_name_keeps_something_old_outside_the_legacy_folders(package_trees):
+    """No ``legacy``, ``compat``, ``deprecated``, ``old_``, ``_old``, ``_v1``, ``_v2`` in a name."""
+    found = [
+        f"{path}: {name}"
+        for path, syntax in package_only(package_trees).items()
+        if not path.startswith(LEGACY_FOLDERS)
+        for name in old_names(syntax)
+        if name not in NAME_ALLOWANCE
+    ]
+    found += [
+        path
+        for path in tracked_files()
+        if path.startswith("gemini/") and not path.startswith(LEGACY_FOLDERS)
+        if OLD_NAME.search(path.removeprefix("gemini/"))
+    ]
+    assert found == []
+
+
+def test_every_name_allowance_is_still_used(package_trees):
+    """An allowed name that no file defines is removed from the allowance."""
+    used = {name for syntax in package_only(package_trees).values() for name in old_names(syntax)}
+    assert set(NAME_ALLOWANCE) <= used
+
+
+def test_the_old_name_guard_finds_old_names_and_not_words_that_contain_them():
+    """``old_value``, ``_compat`` and ``f_v2`` are caught; ``is_older`` and ``old`` are not."""
+    caught = "def old_value(): pass\nclass Compat: pass\n_compat = 1\ndef f_v2(deprecated): pass\n"
+    assert old_names(ast.parse(caught)) == ["Compat", "_compat", "deprecated", "f_v2", "old_value"]
+    assert old_names(ast.parse("def is_older(folder, hold): pass\nold = 1\n")) == []
+
+
+def test_no_private_function_is_unused(package_trees):
+    """A private function that nothing in ``gemini/`` calls, passes or names is dead code."""
+    assert private_functions_unused(package_only(package_trees)) == []
+
+
+def test_the_unused_guard_finds_a_dead_function_and_not_a_used_or_hooked_one():
+    """A name that is called, passed on, written as a string or decorated as a hook is used."""
+    source = (
+        "def _dead(): pass\n"
+        "def _called(): pass\n"
+        "def _passed(): pass\n"
+        "def _named(): pass\n"
+        "@model_validator(mode='after')\n"
+        "def _hook(self): pass\n"
+        "_called()\nrun(_passed)\ngetattr(x, '_named')\n"
+    )
+    assert private_functions_unused({"x.py": ast.parse(source)}) == ["x.py::_dead"]

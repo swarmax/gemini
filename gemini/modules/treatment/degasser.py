@@ -92,4 +92,4 @@ class Degasser(Equipment, Module):
 
     def capex(self, finance):
         """Return the cost of the degasser, a fixed item."""
-        return self.capex_of(finance)
+        return self.capex_of(finance, 1)

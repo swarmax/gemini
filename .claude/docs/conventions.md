@@ -305,6 +305,12 @@ test-first bug fixes) are checked in review.
 - A direct call (`esp(fluid_in=...)`, `pumps.head(...)`) is **eager**: the same `forward`, the same
   ops, no graph, on the Python backend. It is not a second implementation. The eager scope below
   makes plain operators safe in it; a function never has a "checked" and an "unchecked" version.
+- Update the code, never wrap it. When a refactor changes a name or a shape, every caller is
+  changed in the same task, and no wrapper, alias or shim is written for the old one: no function
+  that only calls another with its arguments, no second name, no `legacy`, `compat` or
+  `deprecated` branch outside the legacy readers. `tests/unit/test_code_quality.py` rejects such
+  wrappers, old names and unused private functions; a public name kept on purpose is listed there
+  with its reason.
 - Physics code uses plain operators (`/`, `**`, `-`) where the Python and NumPy results agree. A
   public function of `physics` carries `@ops.physics`; a module method that a user can call
   directly with raw operators carries it too. Do not add `Failed` handling anywhere in physics or

@@ -52,4 +52,4 @@ class GasMakeup(Equipment, Module):
 
     def capex(self, finance):
         """Return the cost of the grid connection, a fixed item."""
-        return self.capex_of(finance)
+        return self.capex_of(finance, 1)

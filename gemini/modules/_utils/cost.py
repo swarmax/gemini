@@ -43,7 +43,7 @@ class Equipment:
 
     equipment_kind = None
 
-    def capex_of(self, finance, size=1.0):
+    def capex_of(self, finance, size):
         """Return the capex factor of the kind of this module times ``size``."""
         return costs.scaled(capex_factor(finance, self.equipment_kind), size)
 

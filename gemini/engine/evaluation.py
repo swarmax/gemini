@@ -24,23 +24,22 @@ class Evaluation:
     """The result of evaluating a module over ``rows`` rows."""
 
     def __init__(self, rows, failed, result, errors, states=None, stepped=False, breaks=()):
-        """Keep the mapped ``result``, the ``failed`` mask and ``errors``, a function of a row."""
+        """Keep the mapped ``result``, the ``failed`` mask and ``errors``, kept as ``error``.
+
+        ``error(row)`` returns the exception of a failed row: the check's class, its exact message.
+        """
         self.rows = rows
         self.failed = failed
         self.result = result
         self.states = states
         self.stepped = stepped
         self.breaks = list(breaks)
-        self._errors = errors
-
-    def error(self, row):
-        """Return the exception of a failed ``row``: the check's class with its exact message."""
-        return self._errors(row)
+        self.error = errors
 
     def raise_first(self):
         """Raise the exception of the first failed row, if any."""
         if self.failed.any():
-            raise self._errors(int(np.flatnonzero(self.failed)[0]))
+            raise self.error(int(np.flatnonzero(self.failed)[0]))
 
 
 def converter(rows, traced=(), column=None):

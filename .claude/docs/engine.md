@@ -442,7 +442,7 @@ shape, or names a module the plant lacks, raises `ValidationError`.
 The JSON manifest stores the `gm.__version__` that wrote it, the run kind, the importable plant class, `plant.to_dict()`,
 module states, the finite clock, the completed position, the original dataset fingerprint
 (informational only), selected `only` paths, the error policy, the runtime settings captured at
-run start, the backend, the creation time and sibling filenames. Results and unfinished replay/simulation rows
+run start, the backend, whether the run was compiled, the creation time and sibling filenames. Results and unfinished replay/simulation rows
 are written first, then the manifest is atomically replaced. The stored rows start `max_gap`
 before the position, because a held previous row may still supply the next ticks; they use
 JSON-encoded CSV cells to preserve exact float bits, and their JSON sidecar records the column

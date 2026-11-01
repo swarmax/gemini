@@ -451,9 +451,9 @@ Every public call raises on failure by default. A call that can report instead t
 under `errors`, a run records them in `results.errors()` and continues, a cost value is
 `{value: null, reason}`. `gm.evaluate.*` checks return a check; a violated limit never raises.
 
-`gm.errors` holds seven public classes, listed with their use in [errors.md](errors.md):
+`gm.errors` holds seven error classes and `GeminiWarning`, listed with their use in [errors.md](errors.md):
 `GeminiError` with `ValidationError`, `DefinitionError`, `PhysicsError`, `RunError`, `Cancelled` and
-`NotImplementedYet`, and `GeminiWarning`. `to_dict()` is the problem
+`NotImplementedYet`. `to_dict()` is the problem
 `{path, code, message, suggestions}` (schema `problem`; the return shape of an error, not an
 input), `error.problems` lists every problem of an error, `CODES` is the fixed `code` list
 and `ROW_CODES` the row codes with their meaning.
@@ -516,6 +516,7 @@ them up, and a later line wins over an earlier one where they differ (several ol
 | 0.2.0, unreleased changes | | `Assumptions`: `co2_price`, `electricity_emission_factor` and every cost factor are a `Quantity` (the price profile `{"unit", "values"}` is a `Quantity` with an array), and a bare number raises. `Constraint` bounds, `Problem.site` values and the `gm.study` variables, limits and distributions are `Quantity` for a field with a unit. `Assumptions.emission_factor()` gives the factor in SI. |
 | 0.2.0, unreleased changes | | `Results.units` is `{"<path>.<field>": unit}` for every column of `to_frame`; the former `{path: {field: unit}}` is `Results.declared` (and the constructor argument). New units `MWh`, `GWh`, `TWh`, `MJ`, `GJ`, `GW`, `kt`, `Mt`, `kg/yr`, `t/yr`, `kt/yr`, `Mt/yr`, `kWh/yr`, `MWh/yr`, `GWh/yr`, `kEUR`, `MEUR`, `EUR/J`, `EUR/yr`, `kEUR/yr`, `MEUR/yr`. |
 | 0.2.0, unreleased changes | | Outputs: each value of `gm.evaluate`, each check `value` and `limit`, and the results of `gm.study.minimize` and `sample` are a `Value`, a `Quantity` in SI with `reason` and `parts`; `to_plain` gives the JSON of before, with `currency` for money and `yr` for years. `Value` and `measure` are in `gemini/types/shapes.py`. `gm.study.minimize` returns `Value` objects, not JSON. |
+| 0.2.0, unreleased changes | | Behaviour users see, no name changed: `gm.analysis.estimate_conductance` requires `cp_hot`, `cp_cold` and `arrangement`; `years_left` returns years (`yr`); on the Python backend `ops.maximum` and `ops.minimum` return NaN for a NaN operand and `ops.floor` and `ops.ceil` return floats, as on NumPy; `ops.brentq` raises the `PhysicsError` of a failed check instead of swallowing it; `gm.call` reports an error raised inside `forward` as itself, not as `invalid_value`; `report()["boiler_heat"]` is a value with no number and a reason where the run has no series of a boiler; the plant dict schema offers a number or a quantity for an input, no unit string. |
 | 0.2.0 | 2026-10-31 | Demand profiles: `gm.profiles.get` reads the two organiser files of 2027; `profile_schema` describes what `get` returns. |
 | 0.2.0 | 2026-10-31 | No dangling ports: an unconnected port is `unconnected_port`; plant ports exist only when named, the automatic `<path>_<port>` ports are gone. |
 | 0.2.0 | 2026-10-31 | A module may set its children's values: every parameter route reaches an overridden `set_params`; `to_dict` stores no derived value. |

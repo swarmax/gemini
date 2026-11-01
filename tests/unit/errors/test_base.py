@@ -89,8 +89,8 @@ def test_pickling_keeps_location_and_suggestions():
     assert pickle.loads(pickle.dumps(error)).to_dict() == error.to_dict()
 
 
-def test_there_are_seven_public_classes():
-    """Six errors and one warning, plus the two fixed lists of codes."""
+def test_there_are_seven_error_classes_and_one_warning():
+    """Seven error classes (the base and six), one warning, plus the two fixed lists of codes."""
     assert set(errors.__all__) == {
         "CODES",
         "ROW_CODES",

@@ -3,7 +3,7 @@
 ``Module.set_params``, ``params_at``, ``param_history``, ``bindable`` and ``set_bindings`` call
 these functions with the module they belong to. Parameters are addressed by a module path below
 that module and a (possibly dotted) parameter name; values are validated by their declarations,
-so unit strings are accepted and stored in SI.
+so quantities are accepted and stored in SI.
 """
 
 from collections.abc import Mapping

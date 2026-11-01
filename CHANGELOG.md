@@ -57,7 +57,7 @@ below are the history before it. Checkpoints and results files written before 0.
 - Returns: every public return is a value, a problem or a check, built by `gemini.types.shapes`,
   with a JSON Schema each in `docs/schemas/`; a number travels with its unit and `units` maps are
   gone. `Results.energy_report` is a dict and `to_frame(table="energy")` its table.
-- Errors: seven public classes; what the others meant is a `code`. Every public call raises by
+- Errors: seven error classes and `GeminiWarning`; what the others meant is a `code`. Every public call raises by
   default and `on_error="record"` reports instead. `error.problems` carries every problem.
 - Parameters and bindings: `add(kind, name=None, params=None)`, flat `set_bindings` and plant files.
 - `gm.evaluate` is a namespace of `compute` and `names`; `gm.evaluate.co2` takes `(plant, results)`.

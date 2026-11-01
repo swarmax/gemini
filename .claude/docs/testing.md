@@ -51,7 +51,8 @@ module that imports a changed module, directly or transitively:
 It prints what it chose and why, then runs `pytest -n auto -m "not slow" --dataset=fast
 --profile=development` on the selection. Tests marked `slow` belong to the release profile.
 `examples/hackathon.py` is such a test: its search takes minutes, so run it with
-`pytest tests/e2e -m e2e --dataset=fast` (no development profile: it is over the session budget).
+`pytest tests/e2e -m e2e --dataset=fast --profile=release`: it is over the session budget of the
+development profile. It runs on the reference backend only, as `test_backend_parity` leaves it out.
 The development budget is **300 s** wall time: a session-end guard in `tests/conftest.py` fails a
 development-profile run over 300 s and prints the 10 slowest test phases. An individual fast-tier
 test call may take at most one second (below).

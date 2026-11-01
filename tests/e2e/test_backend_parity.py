@@ -11,7 +11,7 @@ import re
 
 import pytest
 
-from tests.e2e.test_examples import EXAMPLES, TIMEOUT_S, run_example
+from tests.e2e.test_examples import EXAMPLES, SLOW_EXAMPLES, TIMEOUT_S, run_example
 from tests.fixtures import ROOT
 from tests.fixtures.parity import BACKENDS, REFERENCE, others
 
@@ -32,7 +32,11 @@ def _stable_lines(output):
     return [line for line in output.splitlines() if not TIMING.search(line)]
 
 
-@pytest.mark.parametrize("path", EXAMPLES, ids=[str(path.relative_to(ROOT)) for path in EXAMPLES])
+COMPARED = [path for path in EXAMPLES if path.name not in SLOW_EXAMPLES]
+"""A slow example runs on the reference backend only: on Python it outlasts ``TIMEOUT_S``."""
+
+
+@pytest.mark.parametrize("path", COMPARED, ids=[str(path.relative_to(ROOT)) for path in COMPARED])
 def test_example_output_is_the_same_on_every_backend(path, tmp_path):
     """The printed numbers, tables and messages agree with the reference backend's."""
     outputs = {

@@ -19,7 +19,7 @@ class CostedHeatingGrid(Equipment, HeatingGrid):
 
     def capex(self, finance):
         """Return the capex factor of the kind."""
-        return self.capex_of(finance)
+        return self.capex_of(finance, 1)
 
 
 class CostedCoolingGrid(Equipment, CoolingGrid):
@@ -29,7 +29,7 @@ class CostedCoolingGrid(Equipment, CoolingGrid):
 
     def capex(self, finance):
         """Return the capex factor of the kind."""
-        return self.capex_of(finance)
+        return self.capex_of(finance, 1)
 
 
 def _with_grids(plant):

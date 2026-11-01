@@ -11,7 +11,7 @@ from gemini.modules.module import Module
 from gemini.physics import energy
 from gemini.plants._utils import circuits, inputs, listing, loops, outputs, reader, writer
 from gemini.plants._utils.factory import make_module
-from gemini.plants._utils.legacy import reader as reader_of_legacy
+from gemini.plants._utils.legacy.reader import from_folder as from_project_folder
 from gemini.plants._utils.plan import STATE, PlanConstraint, compile_plan, is_group, port_ends
 from gemini.plants._utils.ports import PortResolver
 from gemini.plants._utils.run import Run
@@ -113,7 +113,7 @@ class Plant(PortResolver, Module):
     def set_inputs(self, values):
         """Set inputs of the plant by path and return it; ``to_dict`` stores them.
 
-        ``values`` maps a path to a number in SI or a quantity: the
+        ``values`` maps a path to a number in SI or a quantity, never a unit string: the
         dotted path of a control or boundary (``"heat_pump.temperature_setpoint"``), or
         ``port.field`` of a plant inlet (``"heating_return.T"``, the fields ``m_dot``, ``T``, ``p``
         and ``fluid``). One value that does not fit raises and changes nothing. A run overrides an
@@ -366,7 +366,7 @@ class Plant(PortResolver, Module):
         names, and any other file (the data CSV, ``well_trajectory.csv``, ``plant.conf``), which is
         read as-is and not converted.
         """
-        return reader_of_legacy.from_folder(folder)
+        return from_project_folder(folder)
 
     @classmethod
     def from_dict(cls, data):

@@ -74,6 +74,9 @@ print(gm.evaluate.report(plant, case, results)["heat_delivered"].to("MWh").value
   ([no defaults](.claude/docs/conventions.md#no-defaults)).
 - *The input is a case, never a problem.* The word `problem` is only the return shape of an error;
   `tests/unit/test_code_quality.py` rejects it as a name in `gemini/`.
+- *Update the code, never wrap it.* When a refactor changes a name or a shape, every caller is
+  changed in the same task, and no wrapper, alias or shim is written
+  ([one implementation](.claude/docs/conventions.md#one-implementation-per-concept)).
 - `.claude/` holds no separate rules file: this page is the coding rules for Claude.
 
 Everything in the plant's energy and mass flow is a module, everything that crosses between modules
@@ -102,7 +105,7 @@ Read every file in `.claude/docs/` before changing the repository:
 - [Engine](.claude/docs/engine.md): clocks, runs, callbacks, results, checkpoints and live.
 - [Economics](.claude/docs/economics.md): `gm.evaluate` costs, totals, KPIs, constraints and checks, `gm.study` and well analysis.
 - [Equipment](.claude/docs/equipment.md): every shipped module, its model and energy audit.
-- [Errors](.claude/docs/errors.md): the rule for raising, the seven `gm.errors` classes, the codes.
+- [Errors](.claude/docs/errors.md): the rule for raising, the seven `gm.errors` error classes and `GeminiWarning`, the codes.
 - [Glossary](.claude/docs/glossary.md): one name per concept for parameters, outputs and ports.
 - [Legacy](.claude/docs/legacy.md): the old-format boundary and conversion rules.
 - [Modules](.claude/docs/modules.md): declarations, listings, calls, outputs, hooks and state.

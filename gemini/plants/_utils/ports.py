@@ -9,7 +9,7 @@ from gemini.plants._utils.plan import is_group, members, port_ends, split_end
 SIDE_OF = {"source": "outlets", "target": "inlets"}
 
 
-def _compatible(first, second):
+def _connectable(first, second):
     if first.carries_stream != second.carries_stream:
         return False
     return first.kind is None or second.kind is None or first.kind == second.kind
@@ -39,7 +39,7 @@ class PortResolver:
             )
         path, port, declaration = candidates[0]
         own = getattr(self, f"_{side}").get(name)
-        if own is not None and not _compatible(own, declaration):
+        if own is not None and not _connectable(own, declaration):
             raise ValidationError(
                 f"stream mismatch: plant port {name} [{own.kind or 'any'}] to "
                 f"{_describe_end(candidates[0])}",
@@ -155,7 +155,7 @@ class PortResolver:
             )
 
     def _choose(self, first, second):
-        pairs = [(a, b) for a in first for b in second if _compatible(a[2], b[2])]
+        pairs = [(a, b) for a in first for b in second if _connectable(a[2], b[2])]
         if len(pairs) == 1:
             return pairs[0]
         if not pairs:

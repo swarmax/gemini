@@ -387,7 +387,7 @@ class _Port(Declaration):
         )
 
     def _power(self, value):
-        """Return a power [W]: a unit string or a number; an array over rows passes unchanged."""
+        """Return a power [W]: a quantity or a number; an array over rows passes unchanged."""
         if isinstance(value, ops.Symbolic) or (isinstance(value, np.ndarray) and value.ndim):
             return value
         value = units.value_in_si(ops.scope.plain(value), self.unit, self.path, self.quantity)

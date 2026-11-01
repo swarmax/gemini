@@ -1277,7 +1277,7 @@ class Module:
 
         The snapshot is the values in force at ``valid_from`` merged with ``params``; without a
         date the undated base entry and the current values change. Names may be dotted and
-        values unit strings. Returns the module.
+        values numbers in SI or quantities. Returns the module.
 
         Every route that sets parameters comes here. A plant that derives its children's values
         overrides this method (see ``modules.md``); a value for it, at any depth, reaches that

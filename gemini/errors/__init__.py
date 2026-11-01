@@ -1,4 +1,4 @@
-"""The seven public classes and the fixed code lists, available as ``gm.errors.<Name>``.
+"""The seven error classes, ``GeminiWarning`` and the fixed code lists, as ``gm.errors.<Name>``.
 
 What a former class meant is a ``code``: ``CODES`` and ``ROW_CODES`` are the fixed lists. A built-in
 base appears only where Python needs one: ``ValidationError`` is a ``ValueError``, and the private

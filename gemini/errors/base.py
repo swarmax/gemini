@@ -1,4 +1,4 @@
-"""The seven public classes, the fixed lists of codes and the shape of a problem."""
+"""The seven error classes, the warning, the fixed lists of codes and the shape of a problem."""
 
 CODES = (
     "error",

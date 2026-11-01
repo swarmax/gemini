@@ -5,7 +5,7 @@
 - `set_default_fluid` / `get_default_fluid`
 - `set_precision("float64" | "float32")` / `get_precision`
 - `set_display_units("si" | "field")` / `get_display_units`
-- `state()` / `set_state(mapping)`
+- `state()`
 - `settings(**changes)`
 
 Use `with gm.runtime.settings(precision="float32", display_units="field"):` or the same call as a
@@ -15,9 +15,8 @@ restores the previous settings on exit. Settings are context-local: they live in
 from a copy of their creator's settings, while new threads start from the defaults; code that
 hands work to threads passes `state()` along or runs it in `contextvars.copy_context()`.
 
-`state()` returns a JSON-safe copy of the settings. `set_state(mapping)` requires the complete
-mapping that `state()` returns. Unknown setting names, missing names in `set_state` and values
-outside the choices raise `gm.errors.ValidationError`; an invalid fluid raises a validation error.
+`state()` returns a JSON-safe copy of the settings; `settings(**state())` applies a complete one.
+Unknown setting names and values outside the choices raise `gm.errors.ValidationError`; an invalid fluid raises a validation error.
 
 Precision selects the ESP's legacy float32 arithmetic, used for golden parity. Display units
 affect module representations only. A default fluid is copied into newly built modules and

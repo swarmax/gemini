@@ -63,7 +63,7 @@ class _Numbering:
         if node.kind in MERGEABLE_KINDS:
             key = _key(node)
             twin = self.table.setdefault(key, node)
-        if twin is None or twin is node or not self._compatible(twin, node):
+        if twin is None or twin is node or not self._may_merge(twin, node):
             self._keep(node)
             return
         self.survivor[node] = twin
@@ -94,7 +94,7 @@ class _Numbering:
         self.safe[node] = node in self.certain
         self.guarded[node] = bool(node.guards)
 
-    def _compatible(self, twin, node):
+    def _may_merge(self, twin, node):
         """Return whether the guards of either twin may reach the consumers of the other."""
         node_ok = node in self.certain or not node.guards
         twin_ok = self.safe[twin] or not self.guarded[twin]

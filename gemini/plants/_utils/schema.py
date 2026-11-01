@@ -26,9 +26,9 @@ INPUTS = {
     "type": "object",
     "description": (
         "Inputs by path: a control or boundary such as heat_pump.temperature_setpoint, or a plant "
-        "inlet field such as heating_return.T, to a number in SI or a unit string."
+        "inlet field such as heating_return.T, to a number in SI or a quantity {value, unit}."
     ),
-    "additionalProperties": {"anyOf": [{"type": "number"}, {"type": "string"}, {"type": "object"}]},
+    "additionalProperties": {"anyOf": [{"type": "number"}, {"type": "object"}]},
 }
 PATH = {"type": "string", "pattern": r"^[^.\s]+(\.[^.\s]+)*$"}
 SIZE = {
