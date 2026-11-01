@@ -98,20 +98,48 @@ class AquiferStorage(Module):
         super().__init__()
 
         # Parameters
-        self.aquifer_temperature = Parameter(Temperature)
-        self.aquifer_thickness = Parameter(Length, gt=0)
-        self.porosity = Parameter(Fraction, gt=0, lt=1)
-        self.rock_volumetric_heat_capacity = Parameter(VolumetricHeatCapacity)
-        self.ground_conductivity = Parameter(ThermalConductivity, calibratable=True)
-        self.storage_period = Parameter(Duration, default=ground.HALF_YEAR, gt=0)
-        self.groundwater_pressure = Parameter(Pressure | None, default=None, gt=0)
+        self.aquifer_temperature = Parameter(
+            Temperature, description="Undisturbed temperature of the aquifer"
+        )
+        self.aquifer_thickness = Parameter(
+            Length, gt=0, description="Thickness of the storage aquifer"
+        )
+        self.porosity = Parameter(
+            Fraction, gt=0, lt=1, description="Pore volume as a fraction of the aquifer rock volume"
+        )
+        self.rock_volumetric_heat_capacity = Parameter(
+            VolumetricHeatCapacity, description="Volumetric heat capacity of the saturated rock"
+        )
+        self.ground_conductivity = Parameter(
+            ThermalConductivity, calibratable=True, description="Thermal conductivity of the ground"
+        )
+        self.storage_period = Parameter(
+            Duration,
+            default=ground.HALF_YEAR,
+            gt=0,
+            description="Duration of one charge or discharge period of the store",
+        )
+        self.groundwater_pressure = Parameter(
+            Pressure | None,
+            default=None,
+            gt=0,
+            description="Pressure of the groundwater; empty when not given",
+        )
 
         # Inlets
         self.injection_in = Inlet(Stream, kind="brine")
 
         # Controls
-        self.mode = Control(Literal["charge", "discharge", "idle"])
-        self.groundwater_flow = Control(MassFlow | None, default=None, ge=0)
+        self.mode = Control(
+            Literal["charge", "discharge", "idle"],
+            description="Operating mode: charge, discharge or idle",
+        )
+        self.groundwater_flow = Control(
+            MassFlow | None,
+            default=None,
+            ge=0,
+            description="Natural groundwater flow through the store; empty means none",
+        )
 
         # States
         self.warm_volume = State(Volume, default=0)
@@ -122,11 +150,18 @@ class AquiferStorage(Module):
         self.recovered_heat = State(Energy, default=0)
 
         # Outputs
-        self.stored_energy = Output(Energy)
-        self.recovery_efficiency = Output(Dimensionless | None)
-        self.warm_temperature = Output(Temperature)
-        self.cold_temperature = Output(Temperature)
-        self.heat_accumulation = Output(HeatAccumulation)
+        self.stored_energy = Output(
+            Energy, description="Heat held in the store relative to its reference"
+        )
+        self.recovery_efficiency = Output(
+            Dimensionless | None, description="Share of the stored heat recovered"
+        )
+        self.warm_temperature = Output(Temperature, description="Temperature of the warm store")
+        self.cold_temperature = Output(Temperature, description="Temperature of the cold store")
+        self.heat_accumulation = Output(
+            HeatAccumulation,
+            description="Rate at which the store gains heat (negative when it loses)",
+        )
 
         # Outlets
         self.production_out = Outlet(Stream, kind="brine", offered=True)

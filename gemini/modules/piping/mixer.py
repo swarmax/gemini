@@ -36,7 +36,9 @@ class Mixer(Module):
         self.branch2_in = Inlet(Stream)
 
         # Outputs
-        self.pressure_imbalance = Output(PressureDifference)
+        self.pressure_imbalance = Output(
+            PressureDifference, description="Difference between the two inlet pressures"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream)

@@ -26,15 +26,20 @@ class Flare(Equipment, Module):
 
         # Parameters
         self.combustion_efficiency = Parameter(
-            Efficiency, default=float(combustion.FLARE_EFFICIENCY), structural=True
+            Efficiency,
+            default=float(combustion.FLARE_EFFICIENCY),
+            structural=True,
+            description="Share of the flared gas burned completely",
         )
 
         # Inlets
         self.gas_in = Inlet(Stream, kind="gas")
 
         # Outputs
-        self.burned_mass_flow = Output(MassFlow)
-        self.fuel = Output(Fuel)
+        self.burned_mass_flow = Output(MassFlow, description="Mass flow of gas burned")
+        self.fuel = Output(
+            Fuel, description="Chemical power of the fuel burned (lower heating value)"
+        )
 
         # Outlets
         self.flue_out = Outlet(Stream, kind="gas")

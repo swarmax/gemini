@@ -20,20 +20,31 @@ class Filter(Module):
 
         # Parameters
         self.nominal_pressure_drop = Parameter(
-            PressureDifference, default=_physics.FILTER_NOMINAL_DROP, ge=0
+            PressureDifference,
+            default=_physics.FILTER_NOMINAL_DROP,
+            ge=0,
+            description="Pressure drop of the clean filter at the nominal mass flow",
         )
         self.nominal_mass_flow = Parameter(
-            MassFlow, default=_physics.FILTER_NOMINAL_MASS_FLOW, gt=0
+            MassFlow,
+            default=_physics.FILTER_NOMINAL_MASS_FLOW,
+            gt=0,
+            description="Mass flow at which the clean-filter pressure drop holds",
         )
         self.clogging_pressure_drop = Parameter(
-            PressureDifference, default=units.bar_to_pa(separation.FILTER_CLOGGING_BAR), gt=0
+            PressureDifference,
+            default=units.bar_to_pa(separation.FILTER_CLOGGING_BAR),
+            gt=0,
+            description="Pressure drop at which the clogging alarm is raised",
         )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="brine")
 
         # Outputs
-        self.pressure_drop = Output(PressureDifference, soft_sensor=True)
+        self.pressure_drop = Output(
+            PressureDifference, soft_sensor=True, description="Pressure lost through the filter"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="brine")

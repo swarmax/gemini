@@ -40,32 +40,82 @@ class InjectionPump(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.stage_count = Parameter(Count | None, default=None)
-        self.pump_type = Parameter(str, default="unspecified")
-        self.efficiency = Parameter(Efficiency | None, default=None, calibratable=True)
+        self.stage_count = Parameter(
+            Count | None,
+            default=None,
+            description="Number of stages of the pump; empty when it has no curves",
+        )
+        self.pump_type = Parameter(
+            str, default="unspecified", description="Catalogue name or label of the pump model"
+        )
+        self.efficiency = Parameter(
+            Efficiency | None,
+            default=None,
+            calibratable=True,
+            description="Overall efficiency of the pump; empty derives it from the curves",
+        )
         self.head_coefficients = Parameter(
-            list[float] | None, default=None, shape=(pumps.POLYNOMIAL_COEFFICIENT_COUNT,)
+            list[float] | None,
+            default=None,
+            shape=(pumps.POLYNOMIAL_COEFFICIENT_COUNT,),
+            description=(
+                "Polynomial coefficients of the head curve of one stage; empty when not given"
+            ),
         )
         self.power_coefficients = Parameter(
-            list[float] | None, default=None, shape=(pumps.POLYNOMIAL_COEFFICIENT_COUNT,)
+            list[float] | None,
+            default=None,
+            shape=(pumps.POLYNOMIAL_COEFFICIENT_COUNT,),
+            description=(
+                "Polynomial coefficients of the power curve of one stage; empty when not given"
+            ),
         )
 
-        self.nominal_flow = Parameter(VolumeFlow | None, default=None)
-        self.nominal_head = Parameter(PressureDifference | None, default=None)
+        self.nominal_flow = Parameter(
+            VolumeFlow | None,
+            default=None,
+            description=(
+                "Design volume flow of the pump, the basis of its price; empty when not sized"
+            ),
+        )
+        self.nominal_head = Parameter(
+            PressureDifference | None,
+            default=None,
+            description=(
+                "Design pressure rise of the pump, for a pump with no curves; empty when not sized"
+            ),
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="brine")
         self.power_in = Inlet(Power, kind="electricity")
 
         # Controls
-        self.pressure_setpoint = Control(Pressure | None, default=None)
-        self.frequency = Control(Frequency, default=pumps.DEFAULT_INJECTION_PUMP_FREQUENCY)
+        self.pressure_setpoint = Control(
+            Pressure | None,
+            default=None,
+            description=(
+                "Discharge pressure the pump delivers; empty leaves the pressure rise to the "
+                "frequency"
+            ),
+        )
+        self.frequency = Control(
+            Frequency,
+            default=pumps.DEFAULT_INJECTION_PUMP_FREQUENCY,
+            description="Operating frequency of the pump motor",
+        )
 
         # Outputs
-        self.head = Output(PressureDifference, soft_sensor=True)
-        self.power = Output(Power, soft_sensor=True)
-        self.discharge_pressure = Output(Pressure, soft_sensor=True)
-        self.is_pumping = Output(bool)
+        self.head = Output(
+            PressureDifference, soft_sensor=True, description="Pressure rise given to the stream"
+        )
+        self.power = Output(
+            Power, soft_sensor=True, description="Mechanical power on the pump shaft"
+        )
+        self.discharge_pressure = Output(
+            Pressure, soft_sensor=True, description="Pressure at the pump discharge"
+        )
+        self.is_pumping = Output(bool, description="True when the pump is running")
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="brine")

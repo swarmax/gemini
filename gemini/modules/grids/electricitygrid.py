@@ -24,19 +24,33 @@ class ElectricityGrid(Module):
         super().__init__()
 
         # Parameters
-        self.import_limit = Parameter(Power | None, default=None, ge=0)
-        self.export_limit = Parameter(Power | None, default=None, ge=0)
+        self.import_limit = Parameter(
+            Power | None,
+            default=None,
+            ge=0,
+            description="Largest power the connection can import; empty means unlimited",
+        )
+        self.export_limit = Parameter(
+            Power | None,
+            default=None,
+            ge=0,
+            description="Largest power the connection can export; empty means unlimited",
+        )
 
         # Inlets
         self.power_in = Inlet(Power, kind="electricity", many=True)
 
         # Outputs
-        self.net_import = Output(Power)
-        self.net_export = Output(Power)
-        self.unserved_consumption = Output(Power)
-        self.curtailed_generation = Output(Power)
-        self.is_import_limited = Output(bool)
-        self.is_export_limited = Output(bool)
+        self.net_import = Output(Power, description="Power imported from the grid")
+        self.net_export = Output(Power, description="Power exported to the grid")
+        self.unserved_consumption = Output(
+            Power, description="Consumption above the import limit that cannot be served"
+        )
+        self.curtailed_generation = Output(
+            Power, description="Generation above the export limit that is curtailed"
+        )
+        self.is_import_limited = Output(bool, description="True when the import limit was reached")
+        self.is_export_limited = Output(bool, description="True when the export limit was reached")
 
         # Outlets
         self.power_out = Outlet(Power, kind="electricity", many=True)

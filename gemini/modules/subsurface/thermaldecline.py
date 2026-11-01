@@ -57,23 +57,39 @@ class ThermalDecline(Module):
         super().__init__()
 
         # Parameters
-        self.well_spacing = Parameter(Length, gt=0)
-        self.aquifer_thickness = Parameter(Length, gt=0)
-        self.porosity = Parameter(Fraction, gt=0, lt=1)
-        self.rock_volumetric_heat_capacity = Parameter(VolumetricHeatCapacity)
+        self.well_spacing = Parameter(
+            Length, gt=0, description="Distance between the production and injection wells"
+        )
+        self.aquifer_thickness = Parameter(
+            Length, gt=0, description="Thickness of the aquifer between the wells"
+        )
+        self.porosity = Parameter(
+            Fraction, gt=0, lt=1, description="Pore volume as a fraction of the aquifer rock volume"
+        )
+        self.rock_volumetric_heat_capacity = Parameter(
+            VolumetricHeatCapacity, description="Volumetric heat capacity of the saturated rock"
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="brine")
 
         # Boundaries
-        self.injection_temperature = Boundary(Temperature)
+        self.injection_temperature = Boundary(
+            Temperature, description="Temperature of the injected water"
+        )
 
         # States
         self.injected_volume = State(Volume, default=0)
 
         # Outputs
-        self.breakthrough_time = Output(Duration | None)
-        self.temperature_drop = Output(TemperatureDifference)
+        self.breakthrough_time = Output(
+            Duration | None,
+            description="Time at which the cold front reaches the producer; empty when not reached",
+        )
+        self.temperature_drop = Output(
+            TemperatureDifference,
+            description="Fall of the produced temperature below the initial one",
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="brine")

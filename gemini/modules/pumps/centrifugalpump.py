@@ -57,25 +57,49 @@ class CentrifugalPump(Equipment, Module):
 
         # Parameters
         self.head_coefficients = Parameter(
-            list[float], shape=(pumps.CENTRIFUGAL_HEAD_COEFFICIENT_COUNT,), calibratable=True
+            list[float],
+            shape=(pumps.CENTRIFUGAL_HEAD_COEFFICIENT_COUNT,),
+            calibratable=True,
+            description=(
+                "Coefficients c0, c1, c2 of the quadratic head curve at the rated frequency"
+            ),
         )
-        self.rated_frequency = Parameter(Frequency)
-        self.best_efficiency = Parameter(Efficiency, calibratable=True)
-        self.best_efficiency_flow = Parameter(VolumeFlow, gt=0)
-        self.motor_efficiency = Parameter(Efficiency)
+        self.rated_frequency = Parameter(
+            Frequency, description="Frequency at which the head curve is given"
+        )
+        self.best_efficiency = Parameter(
+            Efficiency,
+            calibratable=True,
+            description="Peak hydraulic efficiency of the pump at its best-efficiency flow",
+        )
+        self.best_efficiency_flow = Parameter(
+            VolumeFlow, gt=0, description="Flow at which the pump reaches its best efficiency"
+        )
+        self.motor_efficiency = Parameter(
+            Efficiency,
+            description="Efficiency of the electric motor: shaft power over electric power drawn",
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream)
         self.power_in = Inlet(Power, kind="electricity")
 
         # Controls
-        self.frequency = Control(Frequency)
+        self.frequency = Control(Frequency, description="Operating frequency of the pump motor")
 
         # Outputs
-        self.head = Output(PressureDifference, soft_sensor=True)
-        self.hydraulic_power = Output(HydraulicPower)
-        self.shaft_power = Output(Power, soft_sensor=True)
-        self.efficiency = Output(Fraction)
+        self.head = Output(
+            PressureDifference, soft_sensor=True, description="Pressure rise given to the stream"
+        )
+        self.hydraulic_power = Output(
+            HydraulicPower, description="Power given to the fluid, flow times pressure rise"
+        )
+        self.shaft_power = Output(
+            Power, soft_sensor=True, description="Mechanical power on the pump shaft"
+        )
+        self.efficiency = Output(
+            Fraction, description="Hydraulic efficiency of the pump at the current flow and speed"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream)

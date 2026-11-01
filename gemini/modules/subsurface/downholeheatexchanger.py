@@ -51,14 +51,33 @@ class DownholeHeatExchanger(Module):
         super().__init__()
 
         # Parameters
-        self.borehole_depth = Parameter(Length, gt=0)
-        self.surface_temperature = Parameter(Temperature)
-        self.geothermal_gradient = Parameter(TemperatureGradient)
-        self.ground_conductivity = Parameter(ThermalConductivity, calibratable=True)
-        self.ground_diffusivity = Parameter(ThermalDiffusivity)
-        self.borehole_radius = Parameter(Length, gt=0)
-        self.borehole_resistance = Parameter(LinearThermalResistance, calibratable=True)
-        self.operating_time = Parameter(Duration, gt=0)
+        self.borehole_depth = Parameter(Length, gt=0, description="Depth of the coaxial borehole")
+        self.surface_temperature = Parameter(
+            Temperature, description="Ground temperature at the surface"
+        )
+        self.geothermal_gradient = Parameter(
+            TemperatureGradient, description="Increase of undisturbed rock temperature with depth"
+        )
+        self.ground_conductivity = Parameter(
+            ThermalConductivity, calibratable=True, description="Thermal conductivity of the ground"
+        )
+        self.ground_diffusivity = Parameter(
+            ThermalDiffusivity, description="Thermal diffusivity of the ground"
+        )
+        self.borehole_radius = Parameter(Length, gt=0, description="Radius of the borehole")
+        self.borehole_resistance = Parameter(
+            LinearThermalResistance,
+            calibratable=True,
+            description=(
+                "Thermal resistance between the fluid and the borehole wall per unit borehole "
+                "length"
+            ),
+        )
+        self.operating_time = Parameter(
+            Duration,
+            gt=0,
+            description="Operating time at which the quasi-steady rock resistance is evaluated",
+        )
 
         # Inlets
         self.fluid_in = Inlet(Stream, kind="hot_water")

@@ -73,24 +73,62 @@ class Doublet(Equipment, Plant):
         self.formation = Formation()
 
         # Parameters
-        self.depth = Parameter(Length | None, default=None)
+        self.depth = Parameter(
+            Length | None,
+            default=None,
+            description=(
+                "True vertical depth of the reservoir midpoint; empty leaves the reservoirs to be "
+                "set one by one"
+            ),
+        )
         self.gradient = Parameter(
-            TemperatureGradient | None, default=None, case="environment.ground.gradient"
+            TemperatureGradient | None,
+            default=None,
+            case="environment.ground.gradient",
+            description=(
+                "Increase of undisturbed rock temperature with depth; empty takes it from the case"
+            ),
         )
         self.surface_temperature = Parameter(
-            Temperature | None, default=None, case="environment.ground.surface_temperature"
+            Temperature | None,
+            default=None,
+            case="environment.ground.surface_temperature",
+            description="Ground temperature at the surface; empty takes it from the case",
         )
         self.permeability = Parameter(
-            Permeability | None, default=None, case="environment.reservoir.permeability"
+            Permeability | None,
+            default=None,
+            case="environment.reservoir.permeability",
+            description="Permeability of the reservoir rock; empty takes it from the case",
         )
         self.thickness = Parameter(
-            Length | None, default=None, case="environment.reservoir.thickness"
+            Length | None,
+            default=None,
+            case="environment.reservoir.thickness",
+            description="Gross thickness of the reservoir; empty takes it from the case",
         )
-        self.well_diameter = Parameter(Length | None, default=None)
-        self.drainage_radius = Parameter(Length, default=ground.DOUBLET_WELL_SPACING, gt=0)
-        self.nominal_flow = Parameter(VolumeFlow | None, default=None)
-        self.pump_efficiency = Parameter(Efficiency | None, default=None)
-        self.nominal_wellhead_pressure = Parameter(Pressure | None, default=None)
+        self.well_diameter = Parameter(
+            Length | None, default=None, description="Inner diameter of both vertical wells"
+        )
+        self.drainage_radius = Parameter(
+            Length,
+            default=ground.DOUBLET_WELL_SPACING,
+            gt=0,
+            description="Radius of the drainage area around each well",
+        )
+        self.nominal_flow = Parameter(
+            VolumeFlow | None,
+            default=None,
+            description="Production flow the doublet and its pump are designed for",
+        )
+        self.pump_efficiency = Parameter(
+            Efficiency | None, default=None, description="Overall efficiency of the production pump"
+        )
+        self.nominal_wellhead_pressure = Parameter(
+            Pressure | None,
+            default=None,
+            description="Wellhead pressure the doublet is designed for",
+        )
 
         # Inlets
         self.return_in = Inlet(Stream)
@@ -112,8 +150,16 @@ class Doublet(Equipment, Plant):
         self.connect("riser.wellhead_out", "supply_out")
 
         # Outputs
-        self.brine_cooling = Output.difference("riser.wellhead_out.T", "injector.wellhead_in.T")
-        self.volume_imbalance = Output.difference("reservoir.liquid_flow", "sink.liquid_flow")
+        self.brine_cooling = Output.difference(
+            "riser.wellhead_out.T",
+            "injector.wellhead_in.T",
+            description="Temperature drop of the brine between production and injection wellheads",
+        )
+        self.volume_imbalance = Output.difference(
+            "reservoir.liquid_flow",
+            "sink.liquid_flow",
+            description="Production minus injection liquid volume flow",
+        )
 
     def set_params(self, path, params, valid_from=None):
         """Derive the children's values from the design, unless the same call states them."""

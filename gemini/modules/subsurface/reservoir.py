@@ -35,33 +35,77 @@ class _Reservoir(Module):
         super().__init__()
 
         # Parameters
-        self.role = Parameter(Literal["production", "injection"], default=role)
-        self.pressure = Parameter(Pressure, calibratable=True)
-        self.temperature = Parameter(Temperature)
-        self.permeability = Parameter(Permeability)
-        self.aquifer_thickness = Parameter(Length, gt=0)
-        self.drainage_radius = Parameter(Length, structural=True)
-        self.top_depth = Parameter(Length)
+        self.role = Parameter(
+            Literal["production", "injection"],
+            default=role,
+            description="Whether the reservoir supplies production or receives injection",
+        )
+        self.pressure = Parameter(
+            Pressure, calibratable=True, description="Static reservoir pressure"
+        )
+        self.temperature = Parameter(Temperature, description="Undisturbed reservoir temperature")
+        self.permeability = Parameter(Permeability, description="Permeability of the aquifer rock")
+        self.aquifer_thickness = Parameter(Length, gt=0, description="Thickness of the aquifer")
+        self.drainage_radius = Parameter(
+            Length, structural=True, description="Radius of the drainage area around the well"
+        )
+        self.top_depth = Parameter(Length, description="Depth of the top of the aquifer")
         self.productivity_index = Parameter(
-            ProductivityIndex | None, default=None, calibratable=True
+            ProductivityIndex | None,
+            default=None,
+            calibratable=True,
+            description="Production rate per unit of drawdown; empty derives it from the aquifer",
         )
         self.injectivity_index = Parameter(
-            ProductivityIndex | None, default=None, calibratable=True
+            ProductivityIndex | None,
+            default=None,
+            calibratable=True,
+            description=(
+                "Injection rate per unit of overpressure; empty derives it from the aquifer"
+            ),
         )
-        self.skin = Parameter(Dimensionless, default=0, calibratable=True)
-        self.wellbore_radius = Parameter(Length, gt=0)
+        self.skin = Parameter(
+            Dimensionless,
+            default=0,
+            calibratable=True,
+            description="Dimensionless skin factor of the near-well zone",
+        )
+        self.wellbore_radius = Parameter(
+            Length, gt=0, description="Radius of the wellbore at the aquifer"
+        )
         self.decline_threshold = Parameter(
-            Fraction, default=diagnostics.DEFAULT_DECLINE_THRESHOLD, gt=0, le=1
+            Fraction,
+            default=diagnostics.DEFAULT_DECLINE_THRESHOLD,
+            gt=0,
+            le=1,
+            description="Relative productivity decline at which the alarm is raised",
         )
 
         # Outputs
-        self.bottomhole_pressure = Output(Pressure, soft_sensor=True)
-        self.drawdown = Output(PressureDifference)
-        self.overpressure = Output(PressureDifference)
-        self.flow_pressure_drop = Output(PressureDifference | None)
-        self.skin_pressure_drop = Output(PressureDifference | None)
-        self.hydrostatic_pressure_drop = Output(PressureDifference)
-        self.radial_bottomhole_pressure = Output(Pressure | None)
+        self.bottomhole_pressure = Output(
+            Pressure, soft_sensor=True, description="Flowing pressure at the bottom of the well"
+        )
+        self.drawdown = Output(
+            PressureDifference,
+            description="Pressure below the static reservoir pressure at the bottom of the well",
+        )
+        self.overpressure = Output(
+            PressureDifference,
+            description="Pressure above the static reservoir pressure at the bottom of the well",
+        )
+        self.flow_pressure_drop = Output(
+            PressureDifference | None, description="Pressure drop of the radial flow in the aquifer"
+        )
+        self.skin_pressure_drop = Output(
+            PressureDifference | None, description="Pressure drop across the skin zone"
+        )
+        self.hydrostatic_pressure_drop = Output(
+            PressureDifference,
+            description="Pressure change caused by the weight of the fluid column",
+        )
+        self.radial_bottomhole_pressure = Output(
+            Pressure | None, description="Bottomhole pressure from the radial flow equation"
+        )
 
     def _calculate_outputs(self, flow, p_bh):
         properties = self.fluid.properties(self.pressure, self.temperature)
@@ -153,10 +197,14 @@ class ProductionReservoir(_Reservoir):
         super().__init__("production")
 
         # Controls
-        self.production_rate = Control(MassFlow, ge=0)
+        self.production_rate = Control(
+            MassFlow, ge=0, description="Mass flow produced from the aquifer"
+        )
 
         # Outputs
-        self.liquid_flow = Output(VolumeFlow)
+        self.liquid_flow = Output(
+            VolumeFlow, description="Liquid volume flow produced from or injected into the aquifer"
+        )
 
         # Outlets
         self.sandface_out = Outlet(Stream, kind="brine")
@@ -208,7 +256,9 @@ class InjectionReservoir(_Reservoir):
         self.sandface_in = Inlet(Stream, kind="brine")
 
         # Outputs
-        self.liquid_flow = Output(VolumeFlow)
+        self.liquid_flow = Output(
+            VolumeFlow, description="Liquid volume flow produced from or injected into the aquifer"
+        )
 
     def forward(self, inlets):
         """Receive the sandface stream; the aquifer has no outlet."""

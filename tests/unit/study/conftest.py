@@ -62,10 +62,14 @@ def shallow_case(days=None, folder=None, uncertain=None, **sections):
         for part in parents:
             node = node[part]
         value = node[last]
-        node[last] = {**value, "uncertainty": uncertainty} if isinstance(value, dict) else {
-            "value": value,
-            "uncertainty": uncertainty,
-        }
+        node[last] = (
+            {**value, "uncertainty": uncertainty}
+            if isinstance(value, dict)
+            else {
+                "value": value,
+                "uncertainty": uncertainty,
+            }
+        )
     return gm.Case.from_dict(data | sections, where)
 
 

@@ -43,14 +43,42 @@ class HeatExchanger(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.thermal_conductance = Parameter(ThermalConductance, calibratable=True)
-        self.arrangement = Parameter(Literal["counterflow", "parallel"], default="counterflow")
-        self.hot_nominal_pressure_drop = Parameter(PressureDifference, ge=0)
-        self.cold_nominal_pressure_drop = Parameter(PressureDifference, ge=0)
-        self.hot_nominal_mass_flow = Parameter(MassFlow, gt=0)
-        self.cold_nominal_mass_flow = Parameter(MassFlow, gt=0)
+        self.thermal_conductance = Parameter(
+            ThermalConductance,
+            calibratable=True,
+            description="Heat transfer conductance (UA) of the exchanger",
+        )
+        self.arrangement = Parameter(
+            Literal["counterflow", "parallel"],
+            default="counterflow",
+            description="Flow arrangement of the two streams",
+        )
+        self.hot_nominal_pressure_drop = Parameter(
+            PressureDifference,
+            ge=0,
+            description="Pressure drop of the hot side at its nominal mass flow",
+        )
+        self.cold_nominal_pressure_drop = Parameter(
+            PressureDifference,
+            ge=0,
+            description="Pressure drop of the cold side at its nominal mass flow",
+        )
+        self.hot_nominal_mass_flow = Parameter(
+            MassFlow,
+            gt=0,
+            description="Mass flow of the hot side at which its nominal pressure drop holds",
+        )
+        self.cold_nominal_mass_flow = Parameter(
+            MassFlow,
+            gt=0,
+            description="Mass flow of the cold side at which its nominal pressure drop holds",
+        )
         self.fouling_threshold = Parameter(
-            Fraction, default=diagnostics.DEFAULT_FOULING_THRESHOLD, gt=0, le=1
+            Fraction,
+            default=diagnostics.DEFAULT_FOULING_THRESHOLD,
+            gt=0,
+            le=1,
+            description="Relative loss of conductance at which fouling is reported",
         )
 
         # Inlets
@@ -58,15 +86,32 @@ class HeatExchanger(Equipment, Module):
         self.cold_in = Inlet(Stream)
 
         # Outputs
-        self.duty = Output(Duty, soft_sensor=True)
-        self.effectiveness = Output(Fraction, soft_sensor=True)
-        self.transfer_units = Output(Ratio)
-        self.log_mean_temperature_difference = Output(TemperatureDifference)
-        self.hot_out_T = Output(Temperature)
-        self.cold_out_T = Output(Temperature)
-        self.hot_pressure_drop = Output(PressureDifference)
-        self.cold_pressure_drop = Output(PressureDifference)
-        self.approach_temperature = Output(TemperatureDifference)
+        self.duty = Output(
+            Duty, soft_sensor=True, description="Heat transferred from the hot to the cold stream"
+        )
+        self.effectiveness = Output(
+            Fraction,
+            soft_sensor=True,
+            description="Heat transferred as a share of the thermodynamic maximum",
+        )
+        self.transfer_units = Output(
+            Ratio, description="Number of transfer units, UA over the smaller heat capacity rate"
+        )
+        self.log_mean_temperature_difference = Output(
+            TemperatureDifference, description="Log-mean temperature difference between the streams"
+        )
+        self.hot_out_T = Output(Temperature, description="Outlet temperature of the hot stream")
+        self.cold_out_T = Output(Temperature, description="Outlet temperature of the cold stream")
+        self.hot_pressure_drop = Output(
+            PressureDifference, description="Pressure drop of the hot side"
+        )
+        self.cold_pressure_drop = Output(
+            PressureDifference, description="Pressure drop of the cold side"
+        )
+        self.approach_temperature = Output(
+            TemperatureDifference,
+            description="Smallest temperature difference between the two streams",
+        )
 
         # Outlets
         self.hot_out = Outlet(Stream)

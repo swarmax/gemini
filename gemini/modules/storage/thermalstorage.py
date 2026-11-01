@@ -70,12 +70,31 @@ class ThermalStorage(Equipment, Module):
         super().__init__()
 
         # Parameters
-        self.service = Parameter(Literal["hot", "chilled"])
-        self.volume = Parameter(Volume, gt=0)
-        self.heat_loss_conductance = Parameter(ThermalConductance)
-        self.reference_temperature = Parameter(Temperature)
-        self.charge_effectiveness = Parameter(Fraction, default=1)
-        self.discharge_effectiveness = Parameter(Fraction, default=1)
+        self.service = Parameter(
+            Literal["hot", "chilled"], description="Service of the tank: hot water or chilled water"
+        )
+        self.volume = Parameter(Volume, gt=0, description="Volume of the tank")
+        self.heat_loss_conductance = Parameter(
+            ThermalConductance,
+            description="Conductance of the heat loss from the tank to the surroundings",
+        )
+        self.reference_temperature = Parameter(
+            Temperature, description="Reference temperature of the stored energy and the heat loss"
+        )
+        self.charge_effectiveness = Parameter(
+            Fraction,
+            default=1,
+            description=(
+                "Effectiveness of the charging circuit heat exchange; one is a direct connection"
+            ),
+        )
+        self.discharge_effectiveness = Parameter(
+            Fraction,
+            default=1,
+            description=(
+                "Effectiveness of the discharging circuit heat exchange; one is a direct connection"
+            ),
+        )
 
         # Inlets
         self.charge_in = Inlet(Stream, kind="hot_water")
@@ -86,9 +105,16 @@ class ThermalStorage(Equipment, Module):
         self.temperature = State(Temperature, default=_physics.DEFAULT_TANK_TEMPERATURE)
 
         # Outputs
-        self.tank_temperature = Output(Temperature)
-        self.stored_energy = Output(Energy)
-        self.heat_accumulation = Output(HeatAccumulation)
+        self.tank_temperature = Output(
+            Temperature, description="Uniform temperature of the tank content"
+        )
+        self.stored_energy = Output(
+            Energy, description="Heat held in the tank relative to its reference temperature"
+        )
+        self.heat_accumulation = Output(
+            HeatAccumulation,
+            description="Rate at which the store gains heat (negative when it loses)",
+        )
 
         # Outlets
         self.charge_out = Outlet(Stream, kind="hot_water")

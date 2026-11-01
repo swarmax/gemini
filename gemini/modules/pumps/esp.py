@@ -51,21 +51,74 @@ class ESP(Module):
         super().__init__()
 
         # Parameters
-        self.stage_count = Parameter(Count)
-        self.head_coefficients = Parameter(list[float], shape=CURVE_SHAPE, calibratable=True)
-        self.power_coefficients = Parameter(list[float], shape=CURVE_SHAPE, calibratable=True)
-        self.pump_type = Parameter(str | None, default=None)
-        self.setting_depth = Parameter(Length, default=0)
-        self.motor_efficiency = Parameter(Efficiency, default=1)
-        self.minimum_flow = Parameter(VolumeFlow, default=0, ge=0)
-        self.maximum_flow = Parameter(VolumeFlow, default=1, gt=0)
-        self.best_efficiency_flow = Parameter(VolumeFlow, default=pumps.DEFAULT_BEP_FLOW, gt=0)
-        self.correction_factors = Parameter(
-            tuple[Dimensionless, PressureDifference], default=(1, 0)
+        self.stage_count = Parameter(Count, description="Number of stages of the pump")
+        self.head_coefficients = Parameter(
+            list[float],
+            shape=CURVE_SHAPE,
+            calibratable=True,
+            description="Polynomial coefficients of the head curve of one stage",
         )
-        self.tubing = Parameter(Length | None, default=None, gt=0)
+        self.power_coefficients = Parameter(
+            list[float],
+            shape=CURVE_SHAPE,
+            calibratable=True,
+            description="Polynomial coefficients of the power curve of one stage",
+        )
+        self.pump_type = Parameter(
+            str | None, default=None, description="Catalogue name or label of the pump model"
+        )
+        self.setting_depth = Parameter(
+            Length, default=0, description="Depth at which the pump is set"
+        )
+        self.motor_efficiency = Parameter(
+            Efficiency,
+            default=1,
+            description="Efficiency of the motor: shaft power over electric power drawn",
+        )
+        self.minimum_flow = Parameter(
+            VolumeFlow,
+            default=0,
+            ge=0,
+            description=(
+                "Lowest flow of the recommended operating window at the reference frequency"
+            ),
+        )
+        self.maximum_flow = Parameter(
+            VolumeFlow,
+            default=1,
+            gt=0,
+            description=(
+                "Highest flow of the recommended operating window at the reference frequency"
+            ),
+        )
+        self.best_efficiency_flow = Parameter(
+            VolumeFlow,
+            default=pumps.DEFAULT_BEP_FLOW,
+            gt=0,
+            description="Flow at which the pump reaches its best efficiency",
+        )
+        self.correction_factors = Parameter(
+            tuple[Dimensionless, PressureDifference],
+            default=(1, 0),
+            description=(
+                "Calibration factors of the pressure rise: a multiplier and an added pressure "
+                "difference"
+            ),
+        )
+        self.tubing = Parameter(
+            Length | None,
+            default=None,
+            gt=0,
+            description=(
+                "Inner diameter of the tubing the pump discharges into; empty when not given"
+            ),
+        )
         self.drift_threshold = Parameter(
-            Fraction, default=diagnostics.DEFAULT_DRIFT_THRESHOLD, gt=0, le=1
+            Fraction,
+            default=diagnostics.DEFAULT_DRIFT_THRESHOLD,
+            gt=0,
+            le=1,
+            description="Relative drift from the prediction at which the health alarm is raised",
         )
 
         # Inlets
@@ -73,15 +126,29 @@ class ESP(Module):
         self.power_in = Inlet(Power, kind="electricity")
 
         # Controls
-        self.frequency = Control(Frequency)
+        self.frequency = Control(Frequency, description="Operating frequency of the pump motor")
 
         # Outputs
-        self.head = Output(PressureDifference, soft_sensor=True)
-        self.power = Output(Power, soft_sensor=True)
-        self.efficiency = Output(Dimensionless, soft_sensor=True)
-        self.discharge_pressure = Output(Pressure, soft_sensor=True)
-        self.is_in_operating_window = Output(bool)
-        self.best_efficiency_ratio = Output(Ratio)
+        self.head = Output(
+            PressureDifference, soft_sensor=True, description="Pressure rise given to the stream"
+        )
+        self.power = Output(
+            Power, soft_sensor=True, description="Mechanical power on the pump shaft"
+        )
+        self.efficiency = Output(
+            Dimensionless,
+            soft_sensor=True,
+            description="Hydraulic efficiency: fluid power over shaft power",
+        )
+        self.discharge_pressure = Output(
+            Pressure, soft_sensor=True, description="Pressure at the pump discharge"
+        )
+        self.is_in_operating_window = Output(
+            bool, description="True when the flow is inside the recommended operating window"
+        )
+        self.best_efficiency_ratio = Output(
+            Ratio, description="Flow as a share of the best-efficiency flow at the current speed"
+        )
 
         # Outlets
         self.fluid_out = Outlet(Stream, kind="brine")

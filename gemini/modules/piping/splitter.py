@@ -26,7 +26,9 @@ class Splitter(Module):
         self.fluid_in = Inlet(Stream)
 
         # Controls
-        self.split_fraction = Control(Fraction)
+        self.split_fraction = Control(
+            Fraction, description="Share of the feed mass flow sent to the second branch"
+        )
 
         # Outlets
         self.branch1_out = Outlet(Stream)
