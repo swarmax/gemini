@@ -11,8 +11,15 @@ from gemini.engine.executor import executor_for
 from gemini.errors import PhysicsError
 from gemini.modules import Module
 from gemini.modules.declarations import Control, Inlet, Outlet, Output
+from gemini.plants._utils.plan import Solve
 from gemini.types import Stream
-from tests.fixtures.engine_plants import Booster, holder_plant, pair_frame, pair_plant
+from tests.fixtures.engine_plants import (
+    Booster,
+    holder_plant,
+    loop_plant,
+    pair_frame,
+    pair_plant,
+)
 from tests.fixtures.parity import assert_frames_match
 
 
@@ -166,3 +173,26 @@ def test_the_compiler_returns_the_executor_of_a_plant():
     plant = pair_plant()
     first, second = gm.compiler.compile(plant), gm.compiler.compile(plant)
     assert first.cache is second.cache
+
+
+def test_a_plant_with_a_loop_runs_on_arrays_with_the_numbers_of_its_rows(monkeypatch):
+    """No row is called for real, and each row has the tear it has alone."""
+    ring = loop_plant()
+    assert not _by_rows(ring)
+    executor = EagerExecutor()
+    inputs = {"warmer.target": np.linspace(310.0, 350.0, 5)}
+    prepared = executor.prepare(ring, {}, inputs, False)
+    rows = executor._rows(prepared, 5, {})
+    monkeypatch.setattr(EagerExecutor, "_rows", None)
+    evaluation = executor.evaluate(prepared, 5, {})
+    assert evaluation.breaks == [] and not evaluation.failed.any()
+    found = evaluation.result.children["carrier"].inlets.fluid_in.T
+    assert found.tolist() == rows.result.children["carrier"].inlets.fluid_in.T.tolist()
+    assert found[0] != found[4]
+
+
+def test_a_plant_with_a_constraint_still_goes_by_rows():
+    """A solve is brentq on one row at a time: the plant is called for each row."""
+    plant = gm.plants.get("BoilerChpPlant")
+    assert any(isinstance(item, Solve) for item in plant._compiled().items)
+    assert _by_rows(plant)

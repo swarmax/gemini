@@ -1,7 +1,8 @@
 """The eager executor: ``forward`` on arrays over the whole chunk, row by row only when it must.
 
-A module without state, loop, constraint or pre-hook is called once on the arrays of the chunk
-(the NumPy kernels do the rows at once). Any other module, a run on the Python backend and a
+A module without state, constraint or pre-hook is called once on the arrays of the chunk (the
+NumPy kernels do the rows at once), a plant that closes a loop too (``plants._utils.loops``
+iterates every row at once). Any other module, a run on the Python backend and a
 precision other than float64 call the module for real on each row (``gemini.engine.rows``), and so
 does an array call that raised: the call of each row then gives the exception of its own row, so
 the rows that work are never lost to one that fails.
@@ -18,6 +19,7 @@ from gemini.engine.rows import applied, inlet_feeds, run_rows, stacked
 from gemini.errors import RunError
 from gemini.ops import kernels
 from gemini.ops.failures import marking, merge
+from gemini.plants._utils.plan import Solve
 from gemini.types.flows import STREAM_FIELDS, Stream
 
 
@@ -141,8 +143,15 @@ def _by_rows(module):
     if kernels.forced_name() == "python" or runtime.get_precision() != "float64":
         return True
     return any(
-        member.stateful or member._iterates() or member._pre_hooks for member in module.modules()
+        member.stateful or _solves(member) or member._pre_hooks for member in module.modules()
     )
+
+
+def _solves(member):
+    """Return whether ``member`` solves a constraint; a loop alone runs on arrays."""
+    if not member._iterates():
+        return False
+    return any(isinstance(item, Solve) for item in member._compiled().items)
 
 
 def _no_error(row):

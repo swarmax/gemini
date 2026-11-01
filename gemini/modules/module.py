@@ -20,6 +20,7 @@ from contextvars import ContextVar
 from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import partial
+from itertools import repeat
 
 import numpy as np
 from pydantic_core import to_jsonable_python
@@ -217,6 +218,33 @@ def _scalar_output(declaration, value):
     if is_scalar_array and declaration.accepts_none() and value != value:
         return None
     return value
+
+
+def _row_output(declaration, item):
+    """Return one row of an array output: a NaN is the ``None`` of ``X | None``."""
+    if isinstance(item, float) and item != item and declaration.accepts_none():
+        return None
+    return item
+
+
+def _output_rows(value):
+    """Return the rows of an array output (a column's values once) or of a list of arrays."""
+    if not isinstance(value, list):
+        rows = value.tolist()
+        return list(dict.fromkeys(rows)) if value.ndim == 1 else rows
+    columns = [item.tolist() if _is_column(item) else repeat(item) for item in value]
+    return [list(row) for row in zip(*columns)]
+
+
+def _is_column(item):
+    return isinstance(item, np.ndarray) and item.ndim > 0
+
+
+def _holds_rows(value):
+    """Return whether ``value`` is an array or a list that holds one, so a call made many rows."""
+    if isinstance(value, list):
+        return any(_is_column(item) for item in value)
+    return _is_column(value)
 
 
 def _plain_outlet(value):
@@ -432,9 +460,9 @@ class Module:
             call.outputs[name] = value
             return
         declaration = self._outputs[name]
-        if isinstance(value, np.ndarray) and value.ndim:
-            for item in value.tolist():
-                declaration.validate(_scalar_output(declaration, item))
+        if _holds_rows(value):
+            for item in _output_rows(value):
+                declaration.validate(_row_output(declaration, item))
             call.outputs[name] = value
             return
         call.outputs[name] = declaration.validate(_scalar_output(declaration, value))

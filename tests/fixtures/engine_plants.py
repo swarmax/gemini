@@ -12,6 +12,7 @@ from gemini import ops
 from gemini.errors import PhysicsError
 from gemini.modules import Module
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter, State
+from gemini.plants.plant import Plant
 from gemini.types import Electricity, Health, Ratio, Stream
 from gemini.types.bindings import Binding, DatedParams, ModuleBindings
 
@@ -244,3 +245,73 @@ def holder_plant(nested=False):
             measured={"rise": Binding(column="rise", unit="bar")},
         )
     return plant
+
+
+class Warmer(Module):
+    """Move the temperature half way to a control and set the flow; the first guess is 300 K."""
+
+    def __init__(self):
+        """Declare a control, an inlet, an output and an outlet."""
+        super().__init__()
+
+        # Controls
+        self.target = Control(float)
+
+        # Inlets
+        self.fluid_in = Inlet(Stream)
+
+        # Outputs
+        self.drop = Output(float)
+
+        # Outlets
+        self.fluid_out = Outlet(Stream)
+
+    def forward(self, inlets):
+        """Return the warmed stream, flowing at 2 kg/s, and the change of temperature."""
+
+        # Outlets
+        outlet = inlets.fluid_in.with_(T=0.5 * inlets.fluid_in.T + 0.5 * self.target, m_dot=2.0)
+        self.drop = inlets.fluid_in.T - outlet.T
+        return dict(fluid_out=outlet)
+
+    def _loop_start(self, port, entering):
+        return 300.0
+
+
+class Carrier(Module):
+    """Pass the stream on at 2 bar."""
+
+    def __init__(self):
+        """Declare an inlet and an outlet."""
+        super().__init__()
+
+        # Inlets
+        self.fluid_in = Inlet(Stream)
+
+        # Outlets
+        self.fluid_out = Outlet(Stream)
+
+    def forward(self, inlets):
+        """Return the stream at 2 bar."""
+        return dict(fluid_out=inlets.fluid_in.with_(p=2e5))
+
+
+class Ring(Plant):
+    """A warmer and a carrier in a closed loop, with no inlet."""
+
+    def __init__(self):
+        """Connect the two modules in a ring."""
+        super().__init__()
+
+        # Modules
+        self.warmer = Warmer()
+        self.carrier = Carrier()
+
+        # Connections
+        self.connect("warmer.fluid_out", "carrier.fluid_in")
+        self.connect("carrier.fluid_out", "warmer.fluid_in")
+
+
+def loop_plant():
+    """Return a ring: a plant that closes one loop."""
+    return Ring()
