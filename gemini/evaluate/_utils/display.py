@@ -24,10 +24,16 @@ DISPLAY = {
     "co2": ("mass", "kt"),
     "co2_emitted": ("mass", "kt"),
     "methane_emitted": ("mass", "kt"),
+    "permeability": ("permeability", "mD"),
+    "temperature_gradient": ("temperature_gradient", "K/km"),
+    "price_per_mass": ("money_per_mass", "EUR/t"),
     "flow": ("volume_flow", "m3/h"),
     "temperature": ("temperature", "degC"),
 }
 """For each metric its quantity and the unit it is shown in; a metric not listed is shown in SI.
+
+The values of a case that a study moves (permeability, gradient, prices) are shown by the unit of
+their SI unit (``by_si_unit``), through the entries named after their quantity.
 
 The one display table of ``gm.evaluate``: ``flow`` and ``temperature`` stand for the quantities of
 the capacities and constraints of a report, which are shown by their SI unit (``by_si_unit``).

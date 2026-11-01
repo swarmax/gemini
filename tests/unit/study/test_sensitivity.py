@@ -111,5 +111,27 @@ def test_the_result_round_trips_through_json(tornado):
     """to_dict is plain JSON and from_dict gives an equal Tornado."""
     text = json.dumps(tornado.to_dict(), allow_nan=False)
     again = gm.study.Tornado.from_dict(json.loads(text))
-    assert isinstance(again, gm.study.Tornado) and list(again) == list(tornado)
-    assert json.loads(text)["rows"][0]["low"]["unit"] == "currency/J"
+    assert isinstance(again, gm.study.Tornado) and len(again) == len(tornado)
+    for new, old in zip(again, tornado):
+        assert new["parameter"] == old["parameter"]
+        assert new["low"].si == pytest.approx(old["low"].si)
+        assert new["effect"].si == pytest.approx(old["effect"].si)
+
+
+def test_the_bounds_are_shown_in_readable_units_but_kept_in_si(runs):
+    """The table and the JSON show EUR/MWh and mD; the rows hold SI quantities."""
+    rock = {"kind": "uniform", "min": 100, "max": 600}
+    declared = DECLARED | {"environment.reservoir.permeability": rock}
+    found = gm.study.sensitivity(shallow_plant(), shallow_case(uncertain=declared), ["lcts"])
+    row = next(row for row in found if row["parameter"].endswith("permeability"))
+    assert row["low"].unit == "m2" and row["low"].si == pytest.approx(100 * 9.869233e-16)
+    frame = found.to_frame().set_index("parameter")
+    assert frame.loc[PRICE, ["low", "high"]].tolist() == pytest.approx([100, 300])
+    assert frame.loc[PRICE, "value_unit"] == "EUR/MWh"
+    assert frame.loc[PRICE, "unit"] == "EUR/MWh"
+    permeability = frame.loc["case.environment.reservoir.permeability"]
+    assert [permeability["low"], permeability["high"]] == pytest.approx([100, 600])
+    assert permeability["value_unit"] == "mD"
+    shown = next(r for r in found.to_dict()["rows"] if r["parameter"] == PRICE)
+    assert shown["low"] == {"value": pytest.approx(100), "unit": "EUR/MWh"}
+    assert shown["effect"]["unit"] == "EUR/MWh"
