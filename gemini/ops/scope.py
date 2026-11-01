@@ -19,7 +19,9 @@ as the graph, evaluated on the Python backend. One mechanism makes plain operato
 - **A failing check** (``ops.check`` on concrete scalars) raises a marked error; ``physics``
   returns ``Failed(error)`` for it at each function boundary (see ``gemini.ops.failed``).
   Outside any scope the caller sees the real error. A failing check on an eager array raises at
-  once, for its first failing row, and is never turned into a ``Failed``.
+  once, for its first failing row, and is never turned into a ``Failed``; the eager executor asks
+  for ``gemini.ops.failures.marking`` instead, and then the failing rows of a physics function
+  travel with its results as ``FailedRows``, the array counterpart of ``Failed``.
 - **In a trace** (``tracing(graph)``) a physics function keeps the checks recorded directly in it
   and guards every traced value it returns with them, so the graph attaches an error to the
   results of the function exactly as the eager ``Failed`` does. A check recorded outside any
@@ -39,6 +41,8 @@ import numpy as np
 from gemini._utils.context import ContextSetting
 from gemini.ops.dispatch import Symbolic
 from gemini.ops.failed import Failed, is_marked
+from gemini.ops.failures import Frame, is_marking
+from gemini.ops.failures import require as require_rows
 from gemini.ops.kernels import PLAIN, WRAP
 from gemini.ops.kernels.scalars import scope_mode, scope_variable
 
@@ -125,7 +129,7 @@ def _wrapped(values):
         if kind is np.ndarray and value.ndim == 0:
             converted.append(value)
             continue
-        if kind not in _PASS and (kind is np.ndarray or isinstance(value, Symbolic)):
+        if kind not in _PASS and isinstance(value, (np.ndarray, Symbolic)):
             return None
         converted.append(value)
     return converted
@@ -194,6 +198,8 @@ def physics(function):
         if mode is WRAP:
             args, kwargs = _wrapped_nested(args, kwargs)
         try:
+            if mode is PLAIN and is_marking():
+                return _marked(function, args, kwargs)
             return _framed(function, args, kwargs)
         except Exception as error:
             if not is_marked(error):
@@ -201,6 +207,13 @@ def physics(function):
             return Failed(error)
 
     return wrapper
+
+
+def _marked(function, args, kwargs):
+    """Call ``function`` and give its results the rows its array checks failed."""
+    with Frame() as frame:
+        result = _framed(function, args, kwargs)
+    return frame.result(result)
 
 
 def _wrapped_nested(args, kwargs):
@@ -228,6 +241,8 @@ def require(value):
     """
     if isinstance(value, Failed):
         raise value.error
+    if is_marking():
+        require_rows(value)
     graph = _traced.get()
     if graph is not None:
         graph.require(value)
@@ -239,6 +254,8 @@ def _outermost(function, args, kwargs):
     with Scope(arrays=not wrapping) as scope:
         if scope.wrapping:
             args, kwargs = wrapped_args, wrapped_kwargs
+        elif is_marking():
+            return plain(_marked(function, args, kwargs))
         return plain(_framed(function, args, kwargs))
 
 

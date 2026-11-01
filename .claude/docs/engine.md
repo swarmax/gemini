@@ -26,7 +26,12 @@ The run works without it: `executor_for(plant, compile)` (`gemini/engine/executo
 compiled executor when `compile=True` and one is registered, else the eager one. The eager executor
 (`gemini/engine/eager.py`) runs `forward` on arrays over a chunk, and row by row
 (`gemini/engine/rows.py`) for a module with state, a loop or a pre-hook, on the python backend, at a
-precision other than float64, or when the array call raises. `gm.simulate(..., compile=False)` and
+precision other than float64, or when the array call raises something no row can be blamed for
+(then `Evaluation.breaks` keeps the exception). A row that fails a check is a failed row of the array
+call, not a reason to leave it: the executor runs the call under `ops.failures.marking`, so the
+failing rows of a physics function travel with its results (`FailedRows`) and fail those rows
+with the row call's exception; an inline check in `forward` raises with the failures of all its
+rows and the call runs again on the others. `gm.simulate(..., compile=False)` and
 `Engine(..., compile=False)` force eager. The numbers are the same either way.
 
 ## Functions or engine

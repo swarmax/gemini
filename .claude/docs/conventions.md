@@ -405,7 +405,13 @@ reason it is needed:
   selected one, like the graph's error codes. A `Failed` carries through every op, raises when used
   as a number (`bool`, `float`, `int`, `format`, a `Stream`, a `Declaration`) and raises its error
   when it leaves the outermost scope. A failing `check` on an eager array raises at once, for the
-  first failing row; tests compare arrays through `gemini.compiler.graph.run_function`. In a trace the graph
+  first failing row, unless the caller runs under `ops.failures.marking()` (the eager executor does):
+  the failing rows of a physics function then mark its results, which become `FailedRows` (an `ndarray`
+  with the failures of its rows, only when a row failed) and carry them through ops and NumPy
+  arithmetic, lowest check number first; `where` keeps the marks of the selected branch per row; a
+  row already marked is not checked again; an inline check outside every physics function raises
+  with `error.failures` of all its rows. A mark that reaches a result fails that row with the row
+  call's exact exception. Tests compare arrays through `gemini.compiler.graph.run_function`. In a trace the graph
   does the same: a check recorded in a physics function guards that function's traced results (all
   of them, through an `identity` node for a passed-through argument) and reaches an outer function
   through data, and a check outside any physics function (inline in `forward`) guards every graph

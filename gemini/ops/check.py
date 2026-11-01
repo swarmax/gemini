@@ -15,7 +15,10 @@ In an eager scope (``gemini.ops.scope``) a failing check on concrete scalars rai
 marked as coming from a check; ``ops.physics`` turns that into a ``Failed`` value at the function's
 boundary, so ``where`` can drop it. A check whose condition or named values are already ``Failed``
 does nothing: the earlier failure is the one the value carries. A failing check on an eager array
-raises at once, for the first failing row, and is not marked.
+raises at once, for the first failing row, unless the caller asked for ``marking`` (the eager
+executor does): inside a physics function it then marks the failing rows of the function's results
+(``gemini.ops.failures``), outside one it raises with the failures of all its rows in
+``error.failures``. A row that already failed is not checked again.
 """
 
 import numpy as np
@@ -24,6 +27,13 @@ from gemini.errors import PhysicsError
 from gemini.ops.dispatch import Constant, Symbolic
 from gemini.ops.elementwise import isnan, logical_not, logical_or
 from gemini.ops.failed import mark
+from gemini.ops.failures import (
+    Failures,
+    current_frame,
+    is_marking,
+    merge,
+    stripped,
+)
 from gemini.ops.registry import get, register
 
 register("check", "check", 1)
@@ -47,10 +57,35 @@ def check(condition, error, message, code=None, **values):
             return
         concrete = {name: _concrete(value) for name, value in values.items()}
         raise mark(failure(error, message, concrete, 0, code))
-    failing = np.flatnonzero(np.logical_not(condition))
-    if failing.size:
-        concrete = {name: _concrete(value) for name, value in values.items()}
-        raise failure(error, message, concrete, int(failing[0]), code)
+    failing = _failing_rows(condition, values)
+    if not failing.any():
+        return
+    concrete = {name: _concrete(value) for name, value in values.items()}
+
+    def build(row):
+        return failure(error, message, concrete, row, code)
+
+    if not is_marking():
+        raise build(int(np.flatnonzero(failing)[0]))
+    failures = Failures.at(failing, build)
+    frame = current_frame()
+    if frame is not None:
+        frame.add(failures)
+        return
+    raised = build(int(np.flatnonzero(failing)[0]))
+    raised.failures = failures
+    raise raised
+
+
+def _failing_rows(condition, values):
+    """Return per row whether ``condition`` fails; a row that already failed does not count."""
+    failing = np.logical_not(stripped(condition))
+    if failing.ndim > 1:
+        failing = failing.reshape(len(failing), -1).any(axis=1)
+    if not failing.any():
+        return failing
+    earlier = merge((condition, *values.values()))
+    return failing if earlier is None else failing & ~earlier.mask
 
 
 def check_numbers(function, **values):
