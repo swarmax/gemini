@@ -22,17 +22,17 @@ WRAPPER = ROOT / "tests/fixtures/run_example.py"
 TIMING = re.compile(r"\b(elapsed|took|duration|wall[- ]?time|runtime)\b|\d\s*(ms|seconds)\b", re.I)
 
 
-def _run(path, backend, dataset_path, folder):
+def _run(path, backend, folder):
     """Run one example under ``backend`` in ``folder`` and return its standard output."""
     folder.mkdir()
-    env = example_environment(dataset_path) | {"GEMINI_EXAMPLE_BACKEND": backend}
+    env = example_environment() | {"GEMINI_EXAMPLE_BACKEND": backend}
     completed = subprocess.run(
         [sys.executable, str(WRAPPER), str(path)],
         cwd=folder,
         capture_output=True,
         text=True,
         encoding="utf-8",
-        timeout=TIMEOUT_S["slow"],
+        timeout=TIMEOUT_S,
         env=env,
     )
     assert completed.returncode == 0, f"{backend}: {completed.stderr}"
@@ -44,11 +44,10 @@ def _stable_lines(output):
 
 
 @pytest.mark.parametrize("path", EXAMPLES, ids=[str(path.relative_to(ROOT)) for path in EXAMPLES])
-def test_example_output_is_the_same_on_every_backend(path, dataset_path, tmp_path):
+def test_example_output_is_the_same_on_every_backend(path, tmp_path):
     """The printed numbers, tables and messages agree with the reference backend's."""
     outputs = {
-        backend: _stable_lines(_run(path, backend, dataset_path, tmp_path / backend))
-        for backend in BACKENDS
+        backend: _stable_lines(_run(path, backend, tmp_path / backend)) for backend in BACKENDS
     }
     assert outputs[REFERENCE]
     for backend, lines in others(outputs):

@@ -1,32 +1,36 @@
-"""Simulate the doublet heat plant on one month of data and print a few results.
+"""Quickstart: a case and a plant from JSON, one simulation, its constraints and its report.
 
-Shows ``gm.plants.example``, ``gm.Dataset.from_frame``, ``gm.simulate`` and ``Results.summary``.
+Shows ``gm.Case.from_json``, ``gm.Plant.from_json``, ``gm.simulate``, ``gm.evaluate.constraints``
+and ``gm.evaluate.report`` on the shallow district sample.
 
 Run with ``python examples/quickstart.py``.
 """
 
-import os
 from pathlib import Path
-
-import pandas as pd
 
 import gemini as gm
 
-INPUTS = Path(__file__).resolve().parents[1] / "inputs"
-MONTH = INPUTS / "doublet_heat/doublet_2024_15min_month.csv"
-DATA = Path(os.environ.get("GEMINI_EXAMPLE_DATASET", MONTH))
+SAMPLE = Path(__file__).resolve().parents[1] / "inputs/examples/shallow_district"
+
+
+def show(label, quantity, unit):
+    """Print one quantity in ``unit``."""
+    value = quantity.to(unit)
+    print(f"{label:<18} {value.value:10.2f} {value.unit}")
 
 
 def main():
-    """Load the plant, simulate the data and print its heat, electricity and temperature."""
-    plant = gm.plants.example("DoubletHeatPlant")
-    frame = pd.read_csv(DATA, parse_dates=["time"])
-    results = gm.simulate(plant, plan=gm.Dataset.from_frame(frame, time_column="time"))
-    summary = results.summary(units={"power": "MW", "temperature": "degC"})
-    print(f"Steps:              {len(results)}")
-    print(f"Mean heat duty:     {summary['heat_exchanger']['duty']['mean']['value']:.2f} MW")
-    print(f"Mean pump power:    {summary['injection_pump']['power_in']['mean']['value']:.3f} MW")
-    print(f"Mean hot outlet:    {summary['heat_exchanger']['hot_out_T']['mean']['value']:.1f} °C")
+    """Run the sample for its three weeks and print what it delivered and what it costs."""
+    case = gm.Case.from_json(SAMPLE / "case.json")
+    plant = gm.Plant.from_json(SAMPLE / "plant.json")
+    results = gm.simulate(plant, case)
+    for check in gm.evaluate.constraints(plant, case, results):
+        print(f"{check['name']:<45} {'ok' if check['passed'] else 'VIOLATED'}")
+    report = gm.evaluate.report(plant, case, results)
+    show("Heat delivered", report["heat_delivered"], "MWh")
+    show("Cold delivered", report["cold_delivered"], "MWh")
+    show("LCTS", report["lcts"], "EUR/MWh")
+    show("CO2", report["co2"], "t")
 
 
 if __name__ == "__main__":

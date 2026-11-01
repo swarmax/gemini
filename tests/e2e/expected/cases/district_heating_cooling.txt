@@ -1,8 +1,0 @@
-Assumptions: 10 °C air, an 11 °C aquifer, 150 and 100 kW of heat, 150 kW of cold
-hour  heat kW  cold kW  electricity kW  stored MWh  chilled °C  closes
-   0    250.0    150.0            8.37       0.000       11.59  True
-   1    250.0    150.0            8.37       0.228       11.41  True
-   2    250.0    150.0            8.37       0.385       11.39  True
-   3    250.0    150.0            8.37       0.536       11.39  True
-   4    250.0    150.0            8.37       0.685       11.39  True
-   5    250.0    150.0            8.37       0.835       11.39  True

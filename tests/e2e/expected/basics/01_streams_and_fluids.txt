@@ -1,9 +1,0 @@
-Brine mass flow:     44.50 kg/s
-Brine volume flow:   150.0 m³/h
-Temperature:         80.0 °C
-Pressure:            20.0 bar
-After cooling:       40.0 °C
-Same volume, water:  41.67 kg/s
-Default brine:       1000 kg/m3
-A quantity in SI:    0.04167 m3/s
-Is m3/h a flow?      True

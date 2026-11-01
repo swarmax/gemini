@@ -1,3 +1,0 @@
-Old project rows:     17280
-Modules converted:    5
-Same as the stored plant dict: True

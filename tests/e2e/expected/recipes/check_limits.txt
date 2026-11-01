@@ -1,3 +1,0 @@
-Assumptions: at most 60 bar from the injection pump, at least 3.5 MW of heat
-injection_pump.discharge_pressure  ok        worst 45.97 bar
-heat_exchanger.duty                VIOLATED  worst 2.82 MW

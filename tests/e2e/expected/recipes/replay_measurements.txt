@@ -1,7 +1,0 @@
-ESP head, first step:  33.3237 bar
-ESP head, mean:        33.2914 bar
-module, port: energy, peak, operating hours, alarms
-doublet.esp power_in           0.00 MWh       0.0 kW    744 h   2976 alarms
-doublet.injector loss_out     72.63 MWh     160.4 kW    744 h      0 alarms
-heat_exchanger                 0.00 MWh    3913.0 kW    744 h      0 alarms
-injection_pump power_in      134.91 MWh     182.9 kW    744 h      0 alarms

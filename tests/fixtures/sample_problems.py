@@ -9,7 +9,7 @@ from gemini.run._utils.apply import apply_case
 HACKATHON_2027 = paths.INPUTS / "examples/hackathon_2027"
 SHALLOW_DISTRICT = paths.INPUTS / "examples/shallow_district"
 SAMPLE_PLANT = "HeatingCoolingPlant"
-"""The class of the design in ``plant.json``; the other template plants are in ``templates/``."""
+"""The class of the main candidate; every candidate is in ``plants/``."""
 TEMPLATES = (
     "HeatingPlant",
     "HeatingAbsorptionCoolingPlant",
@@ -35,12 +35,12 @@ def shallow_case():
 
 def treatment_plant():
     """Return the design with desander and inhibitor dosing, with the values of the sample case."""
-    return apply_case(gm.Plant.from_dict(sample_json("plant_with_treatment.json")), sample_case())
+    return apply_case(gm.Plant.from_dict(sample_json("plants/HackathonPlant.json")), sample_case())
 
 
 def template_dict(name):
     """Return the plant dict of template plant ``name``, without the values of the case."""
-    return sample_json("plant.json" if name == SAMPLE_PLANT else f"templates/{name}.json")
+    return sample_json(f"plants/{name}.json")
 
 
 def template_plant(name):

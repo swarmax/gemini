@@ -10,6 +10,11 @@ SECONDARY = gm.Stream(
     p={"value": 3, "unit": "bar"},
     fluid=gm.Fluid(kind="water"),
 )
+FITTED_INJECTION = gm.Stream(
+    flow={"value": 125.1, "unit": "m3/h"},
+    T={"value": 70, "unit": "degC"},
+    p={"value": 44.47, "unit": "bar"},
+)
 INPUTS = {
     "doublet.esp.frequency": {"value": 60, "unit": "Hz"},
     "doublet.wellhead_pressure": {"value": 10, "unit": "bar"},
@@ -53,3 +58,18 @@ def test_the_call_closes(run):
     assert gm.modules.mass_balance(plant, result)["residual"] == 0
     assert gm.modules.energy_balance(plant, result)["relative_thermal_residual"] < 1e-9
     assert all(check["passed"] for check in gm.evaluate.plant_balance(plant, None, result))
+
+
+def test_a_recalibrated_injectivity_reproduces_the_fitted_injection():
+    """The index fitted to 44.47 bar at 125.1 m3/h gives that pressure and a smaller pump."""
+    plant = gm.plants.example("ParallelExchangerPlant")
+    plant._set_inputs(INPUTS)
+    doublet = plant.doublet
+    bottom = doublet.injector(wellhead_in=FITTED_INJECTION).outlets.bottom_out
+    flow = abs(bottom.m_dot) / doublet.sink.fluid.properties(bottom.p, bottom.T).rho_l
+    index = doublet.sink.injectivity_from_measurements(flow, bottom.p)
+    doublet.sink.set_params("", {"injectivity_index": index})
+    outputs = plant(return_in=SECONDARY).children["doublet.injection_pump"].outputs
+    assert round(gm.units.convert(index, "m3/s/Pa", "m3/h/bar"), 4) == 2.843
+    assert round(outputs.get("discharge_pressure", unit="bar"), 2) == 44.47
+    assert round(outputs.get("power", unit="kW"), 1) == 150.5

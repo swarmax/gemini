@@ -10,6 +10,8 @@ SECONDARY = gm.Stream(
     p={"value": 3, "unit": "bar"},
     fluid=gm.Fluid(kind="water"),
 )
+GAS_FACTOR = 56.6 / 1e9
+GRID_FACTOR = 0.3 / 3.6e6
 INPUTS = {
     "doublet.esp.frequency": {"value": 65, "unit": "Hz"},
     "doublet.wellhead_pressure": {"value": 3, "unit": "bar"},
@@ -48,3 +50,9 @@ def test_the_call_closes(run):
     """Every balance of the plant closes."""
     plant, result = run
     assert all(check["passed"] for check in gm.evaluate.plant_balance(plant, None, result))
+
+
+def test_the_emissions_charge_the_fuel_and_the_grid_electricity(run):
+    """The case emits 5742 kg of CO2 a day at 56.6 kg/GJ of gas and 0.3 kg/kWh of grid power."""
+    _, result = run
+    assert round(gm.modules.emissions(result, GAS_FACTOR, GRID_FACTOR) * 86400) == 5742

@@ -1,3 +1,0 @@
-Conductance:    100.0 -> 3458.012 kW/K
-Normalised RMS: 0.371476 -> 1.84552e-05
-Evaluations:   3, converged: True, applied: True

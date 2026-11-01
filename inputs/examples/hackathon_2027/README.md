@@ -1,6 +1,6 @@
-# Hackathon 2027 sample problem
+# Hackathon 2027 sample case
 
-One sample problem of gemini: only `examples/` and `tests/` read this folder, and nothing under
+One sample case of gemini: only `examples/` and `tests/` read this folder, and nothing under
 `gemini/` knows it. The inputs of the GEMINI agentic geothermal design hackathon, as the organisers released them on
 2026-10-29. The requirements document is dated 28 October 2026. These files are unchanged:
 `GEMINI_Heating_Demand_Daily_2027.csv`, `GEMINI_Cooling_Demand_Daily_2027.csv` and
@@ -63,66 +63,46 @@ Review 5/1996, pp. 33-34. It is a general figure and no data of these machines.
 
 ## Files added for the examples
 
-These are not the organisers' files: they hold the requirements above, and the assumptions the
-requirements leave open, in the shapes of gemini. The two organiser CSVs stay as released.
+The organiser files stay as released. The others hold the requirements above, and the assumptions
+they leave open, in the shapes of gemini.
 
 | File | Holds | Read by |
 | --- | --- | --- |
-| `demand.csv` | The two organiser demand files joined on `date`: `heating_demand_MWth` and `cooling_demand_MWcool`, values unchanged | both problems |
-| `problem.json` | The problem of `plant.json`: the demand, the site, the constraints (with the 330 day operating duration) and the assumptions with prices; `gm.Problem.from_json` | `examples/cases/challenge_year.py` |
-| `problem_with_treatment.json` | The problem of the treatment design: the same demand and prices, no duration constraint (no outages), the heating supply as its only supply limit | `examples/cases/hackathon.py` |
-| `plant.json` | A plant dict of class `HeatingCoolingPlant` on two doublets: design values only | `examples/cases/challenge_year.py` |
-| `plant_with_treatment.json` | A plant dict in the structure form: two doublets, desander, inhibitor dosing, one absorption chiller; design values only | `examples/cases/hackathon.py` |
-| `templates/<Class>.json` | Plant dicts of the other template plants on these requirements, design values only | tests |
+| `demand.csv` | The two organiser demand files joined on `date`: `heating_demand_MWth` and `cooling_demand_MWcool`, values unchanged | `case.json` |
+| `case.json` | The one case: time, site, brine, demand, the choices (1 to 3 doublets, 2000 to 3500 m), the constraints (with the 330 day operating duration) and the assumptions | every example, `gm.Case.from_json` |
+| `plants/<Class>.json` | One plant dict per candidate: `HeatingPlant`, `HeatingAbsorptionCoolingPlant`, `HeatingHeatPumpCoolingPlant`, `HeatingFullCoolingPlant`, `HeatingCoolingPlant`, and `HackathonPlant` (structure form: desander, inhibitor dosing, one absorption chiller); design values only, no site | `examples/hackathon.py`, tests |
 
-Sizes of equipment, return temperatures, the air and the injection pressure are assumptions of the
-examples, which print them.
+Sizes of equipment and the injection pressure are design values of the plants. The return
+temperatures, the air temperature and every price are assumptions of the case.
 
-## Site in `problem.json`
+## Given by the organisers, in `case.json`
 
-The values of the ground and of the fluid's place are the `site`, applied to a plant with
-`problem.apply_site(plant)`; the plant keeps the design values (`depth`, `well_diameter`,
-`nominal_flow`, `pump_efficiency`, `nominal_wellhead_pressure` and the surface equipment).
-
-| Key | Value |
+| Section | Values |
 | --- | --- |
-| `d*.gradient` | 30 K/km |
-| `d*.surface_temperature` | 12 degC |
-| `d*.thickness` | 100 m |
-| `d*.permeability` | 200 mD |
-| `d*.reservoir.pressure`, `d*.sink.pressure` | 250 barg (`problem.json` only: the treatment design takes the hydrostatic pressure of its depth) |
+| `environment` | Gradient 30 K/km, surface 12 degC, 2500 m, 100 m, 200 mD, 250 barg; brine 1030 kg/m3, 0.4 mPa.s, GLR 0.8, 80 % CH4 and 20 % CO2 |
+| `demand` | The two profiles; supply 100 degC heating and 20 degC cooling |
+| `choices` | 1 to 3 doublets; the depth range 2000 to 3500 m is an assumption of the example |
+| `constraints` | 50 to 300 m3/h while running, brine cooling at most 40 K, at most 330 d running, pump efficiency 0.7, equal liquid volumes (within 1e-6 m3/s) |
 
-The brine and its gas (`fluids`) are not a plant parameter, so they stay in the plant dict.
+## Assumptions of the example
 
-## Constraints in `problem.json`
+Every value of this section is a placeholder of the example, from no source and none given by the organisers: return temperatures 60 degC (heating) and 25 degC (cooling), air
+10 degC; prices electricity 100 and gas 40 EUR/MWh, chemical 3 EUR/kg, waste disposal 0.2 EUR/kg,
+heat and cold revenue 60 EUR/MWh; discount rate 0.05, lifetime 25 yr, `heat_cost_share` 0.8;
+electricity 300 g CO2/kWh; CO2 price 80 EUR/t (`opex.co2`); capex of the production and injection pump 0.5 EUR/W, absorption and
+adsorption chiller and compression chiller 0.3 EUR/W, heat exchanger 0.5 EUR/(W/K), cooler
+0.1 EUR/W, pipe 500 EUR/m, flare 100000 EUR, gas makeup 50000 EUR; fixed opex per kind of 0.5 to
+2 %/yr of its capex (heat pump 2, boiler 1.5, heat exchanger 1, drilling 1).
 
-| Path | Bound | Source |
+Cited, price year 2015, currency EUR:
+
+| Key | Value | Source |
 | --- | --- | --- |
-| `d*.reservoir.liquid_flow`, while running | 50 to 300 m3/h | stable minimum and hard cap |
-| `d*.reservoir.liquid_flow`, total time running | at most 330 d | annual operation of a doublet |
-| `d*.brine_cooling` | at most 40 K | maximum brine cooling |
-| `d*.pump_efficiency` | 0.7 | pump efficiency |
-| `d*.volume_imbalance` | within 1e-6 m3/s | equal liquid volumes |
-| `heating_consumer.supply_in.temperature` | at least 100 degC | heating supply |
-| `cooling_consumer.supply_in.temperature` | at most 20 degC | cooling supply |
+| `capex.drilling` | 1239.13 EUR/m | SDE+ 2013 reference case, 2300 m doublet, 5.7 MEUR net drilling (Mijnlieff et al. 2013, EGC, slide 26), over two wells of 2300 m, taken into 2015 without escalation |
+| `capex.degasser` | 1.0 MEUR | Same note: reserve for separation of hydrocarbons per doublet |
+| `capex.heat_pump` | 0.67 EUR/W | Danish Energy Agency, Technology Data for Energy Plants, April 2020, chapter 40, compression heat pump, excess heat, 10 MW, 2015 prices |
+| `capex.boiler` | 0.06 EUR/W | DEA Technology Data, chapter 44, district heating boiler, natural gas, 2015 prices |
+| `capex.chp` | 0.95 EUR/W electric | DEA Technology Data, chapter 06, spark ignition engine, natural gas, 1-10 MWe, 2015 prices |
+| `emissions.CH4.gwp` | 29.8 | IPCC AR6 WG1 chapter 7 table 7.15 (Forster et al. 2021), fossil methane, 100 years |
 
-`problem_with_treatment.json` has the flow, brine cooling and `heat_users.supply_in.temperature`
-limits only. The pump efficiency and the volume balance are not limits of that design, and the
-duration constraint is left out: it is planned without outages.
-
-## Assumptions and prices
-
-The assumptions are placeholders of the examples. Their source is an `assumptions.json` written
-for the examples, now the `assumptions` key of both problem files: none comes from gemini code and
-none from the organisers, whose requirements give no price, rate or lifetime.
-
-| Value | Setting | Source |
-| --- | --- | --- |
-| `prices.electricity` | 100 EUR/MWh | placeholder of the examples |
-| `prices.gas` | 40 EUR/MWh | placeholder of the examples |
-| `prices.heat`, `prices.cold` | 60 EUR/MWh | placeholder of the examples |
-| `prices.waste_disposal` | 0.2 EUR/kg | placeholder of the examples |
-| `prices.chemical` | 3 EUR/kg | placeholder of the examples |
-| `discount_rate`, `lifetime_years` | 0.05, 25 years | placeholder of the examples |
-| `electricity_emission_factor` | 300 g CO2/kWh | placeholder of the examples |
-| `pump_cost`, `chiller_cost`, `exchanger_cost`, `flare_cost`, `makeup_cost` | as in the file | placeholder of the examples |
+The compression chiller factor is a 0.3 EUR/W placeholder, not the heat pump row. `capex.injection_pump` is in the case as the design has it, but no module is priced by it yet (the injection pump has no design head), so it is not used.

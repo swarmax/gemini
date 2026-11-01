@@ -191,14 +191,22 @@
           "unit": "EUR"
         },
         "compression_chiller": {
-          "value": 0.67,
+          "value": 0.3,
           "unit": "EUR/W"
         },
         "production_pump": {
           "value": 0.5,
           "unit": "EUR/W"
         },
+        "injection_pump": {
+          "value": 0.5,
+          "unit": "EUR/W"
+        },
         "absorption_chiller": {
+          "value": 0.3,
+          "unit": "EUR/W"
+        },
+        "adsorption_chiller": {
           "value": 0.3,
           "unit": "EUR/W"
         },
@@ -213,9 +221,79 @@
         "gas_makeup": {
           "value": 50000,
           "unit": "EUR"
+        },
+        "cooler": {
+          "value": 0.1,
+          "unit": "EUR/W"
+        },
+        "pipe": {
+          "value": 500,
+          "unit": "EUR/m"
         }
       },
       "opex": {
+        "fixed": {
+          "drilling": {
+            "value": 1,
+            "unit": "%/yr"
+          },
+          "heat_pump": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "boiler": {
+            "value": 1.5,
+            "unit": "%/yr"
+          },
+          "chp": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "degasser": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "compression_chiller": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "production_pump": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "injection_pump": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "absorption_chiller": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "adsorption_chiller": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "heat_exchanger": {
+            "value": 1,
+            "unit": "%/yr"
+          },
+          "flare": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "gas_makeup": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "cooler": {
+            "value": 2,
+            "unit": "%/yr"
+          },
+          "pipe": {
+            "value": 0.5,
+            "unit": "%/yr"
+          }
+        },
         "electricity": {
           "value": 100,
           "unit": "EUR/MWh"
@@ -231,6 +309,10 @@
         "waste_disposal": {
           "value": 0.2,
           "unit": "EUR/kg"
+        },
+        "co2": {
+          "value": 80,
+          "unit": "EUR/t"
         }
       },
       "revenue": {
@@ -242,6 +324,9 @@
           "value": 60,
           "unit": "EUR/MWh"
         }
+      },
+      "allocation": {
+        "heat_cost_share": 0.8
       }
     },
     "emissions": {

@@ -1,5 +1,0 @@
-Assumptions: 5 % discount rate, 25 years, gas at 40 EUR/MWh, heat at 60 EUR/MWh
-Capex:      60.0 kEUR, prices of 2015
-Opex:      389.6 kEUR/year
-LCOH:       89.9 EUR/MWh
-CO2:        5416 kg over the day

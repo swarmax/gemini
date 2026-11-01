@@ -1,0 +1,4 @@
+Modules: 22
+Same plant after the file: True
+Heat from the boiler: 31.4 MWh
+Heat delivered:       691.7 MWh

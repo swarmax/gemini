@@ -1,9 +1,0 @@
-Assumptions: 500 kW demand on 15 kg/s of water, a 1 MW boiler at 90 % efficiency
-Boiler energy in:    15.014 MW
-Boiler energy out:   15.014 MW
-Boiler residual:     0.0e+00 of the energy in
-Boiler mass:         0.0 kg/s
-Balances that close: 10 of 10
-Heat delivered:      24.00 MWh
-CO2 emitted:         5416 kg
-Losses:              2.67 MWh

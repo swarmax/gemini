@@ -1,3 +1,0 @@
-Module checks passed: True
-Alone:                5.000 bar
-Behind a filter:      4.987 bar

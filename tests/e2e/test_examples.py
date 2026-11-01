@@ -1,9 +1,8 @@
 """Run every example as a user would and compare what it prints.
 
-Each file under ``examples/`` runs as a subprocess from an empty temporary folder, without
-``PYTHONPATH``, which proves it is standalone: its paths come from ``__file__``, and anything it
-writes stays in that folder. ``GEMINI_EXAMPLE_DATASET`` hands it the selected dataset. On the fast
-dataset its output is compared with ``tests/e2e/expected/`` line by line: the text exactly, the
+Each of the five files in ``examples/`` runs as a subprocess from an empty temporary folder,
+without ``PYTHONPATH``, which proves it is standalone: its paths come from ``__file__``. Its
+output is compared with ``tests/e2e/expected/`` line by line: the text exactly, the
 numbers within ``RELATIVE``, ``ABSOLUTE`` or one unit of the last printed digit (1.5 units, so that
 a difference of one is not lost to rounding), so a silent change in physics shows up.
 ``tests/fixtures/capture_example_outputs.py`` writes the expected files; a changed number there is
@@ -20,24 +19,23 @@ import pytest
 from tests.fixtures import ROOT
 
 pytestmark = pytest.mark.e2e
-EXAMPLES = sorted((ROOT / "examples").rglob("*.py"))
+EXAMPLES = sorted((ROOT / "examples").glob("*.py"))
 EXPECTED = ROOT / "tests/e2e/expected"
-TIMEOUT_S = {"fast": 120, "slow": 900}
-"""Time budget per example; the slow value is a hang guard for release runners, as that profile
-has no budget."""
+TIMEOUT_S = 900
+"""Time budget per example: a hang guard, as the hackathon flow runs for minutes."""
 RELATIVE = 1e-6
 ABSOLUTE = 1e-6
 """Tolerances of a printed number; the absolute one is for the rounding noise of a balance."""
 NUMBER = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?(?:e[+-]?\d+)?(?![\w])")
 
 
-def example_environment(dataset_path):
-    """Return the environment of a user's shell, with the dataset named."""
+def example_environment():
+    """Return the environment of a user's shell."""
     env = {name: value for name, value in os.environ.items() if name != "PYTHONPATH"}
-    return env | {"GEMINI_EXAMPLE_DATASET": str(dataset_path), "PYTHONIOENCODING": "utf-8"}
+    return env | {"PYTHONIOENCODING": "utf-8"}
 
 
-def run_example(path, dataset_path, folder, timeout):
+def run_example(path, folder, timeout):
     """Run one example from ``folder`` and return the finished process."""
     return subprocess.run(
         [sys.executable, str(path)],
@@ -46,7 +44,7 @@ def run_example(path, dataset_path, folder, timeout):
         text=True,
         encoding="utf-8",
         timeout=timeout,
-        env=example_environment(dataset_path),
+        env=example_environment(),
     )
 
 
@@ -84,14 +82,13 @@ def differences(printed, expected):
 
 
 @pytest.mark.parametrize("path", EXAMPLES, ids=[str(path.relative_to(ROOT)) for path in EXAMPLES])
-def test_example(path, dataset_name, dataset_path, tmp_path):
+def test_example(path, tmp_path):
     """An example runs from an empty folder within its budget and prints the expected numbers."""
-    completed = run_example(path, dataset_path, tmp_path, TIMEOUT_S[dataset_name])
+    completed = run_example(path, tmp_path, TIMEOUT_S)
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.strip()
-    if dataset_name == "fast":
-        expected = expected_path(path).read_text(encoding="utf-8")
-        assert differences(completed.stdout, expected) == []
+    expected = expected_path(path).read_text(encoding="utf-8")
+    assert differences(completed.stdout, expected) == []
 
 
 @pytest.mark.parametrize(

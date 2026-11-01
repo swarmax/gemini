@@ -1,0 +1,29 @@
+capex d0 (production_pump)                       0.23 MEUR
+capex d0.well (drilling)                         2.66 MEUR
+capex d0.riser (drilling)                        0.44 MEUR
+capex d0.injector (drilling)                     3.10 MEUR
+capex d1 (production_pump)                       0.23 MEUR
+capex d1.well (drilling)                         2.66 MEUR
+capex d1.riser (drilling)                        0.44 MEUR
+capex d1.injector (drilling)                     3.10 MEUR
+capex degasser (degasser)                        1.00 MEUR
+capex heat_exchanger (heat_exchanger)            0.75 MEUR
+capex heat_pump (heat_pump)                     10.05 MEUR
+capex heating_return_pipe (pipe)                 0.05 MEUR
+capex peak_boiler (boiler)                       1.80 MEUR
+capex absorption_chiller (absorption_chiller)         2.10 MEUR
+capex adsorption_chiller (adsorption_chiller)         0.30 MEUR
+capex heating_supply_pipe (pipe)                 0.05 MEUR
+capex cooling_return_pipe (pipe)                 0.05 MEUR
+capex compression_chiller (compression_chiller)         1.50 MEUR
+capex cooling_supply_pipe (pipe)                 0.05 MEUR
+capex gas_makeup (gas_makeup)                    0.05 MEUR
+capex flare (flare)                              0.10 MEUR
+capex absorption_cooler (cooler)                 4.00 MEUR
+capex adsorption_cooler (cooler)                 1.00 MEUR
+capex compression_cooler (cooler)                2.00 MEUR
+capex                                           37.70 MEUR
+opex                                             4.68 MEUR/yr
+LCTS                                            54.30 EUR/MWh
+CO2                                             14.49 kt
+missing_assumption: assumptions.finance.capex.heat_pump

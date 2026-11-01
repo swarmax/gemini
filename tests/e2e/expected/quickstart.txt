@@ -1,4 +1,11 @@
-Steps:              2976
-Mean heat duty:     3.21 MW
-Mean pump power:    0.207 MW
-Mean hot outlet:    54.2 °C
+d0.reservoir.liquid_flow                      ok
+d0.brine_cooling                              ok
+d0.reservoir.liquid_flow                      ok
+d0.pump_efficiency                            ok
+d0.volume_imbalance                           ok
+heating_consumer.supply_in.temperature        ok
+cooling_consumer.supply_in.temperature        ok
+Heat delivered         691.69 MWh
+Cold delivered          54.85 MWh
+LCTS                    59.16 EUR/MWh
+CO2                     56.81 t

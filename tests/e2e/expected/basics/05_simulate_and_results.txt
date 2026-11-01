@@ -1,7 +1,0 @@
-Steps:            2976, failed rows: 0
-First duty:       3.314 MW
-Lowest pump head: 41.58 bar
-Highest pump head: 42.02 bar
-Table:            2976 rows, 299 columns
-Hot outlet mean:  54.23 °C
-Unit of duty:     MW

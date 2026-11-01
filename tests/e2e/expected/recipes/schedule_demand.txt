@@ -1,8 +1,0 @@
-Assumptions: a 2500 m doublet, 40 MW boiler, return at 60 °C, supply at 100 °C
-             electricity at 100 EUR/MWh, gas at 40 EUR/MWh
-Days planned:     365
-Doublet flow:     58 to 300 m³/h
-Boiler, peak:     16.27 MW
-Heat delivered:   111.67 GWh
-Gas bought:       72.76 GWh
-Electricity:      2.56 GWh
