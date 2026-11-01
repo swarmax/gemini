@@ -7,6 +7,8 @@ function.
 
 import ast
 
+import pytest
+
 from tests.fixtures import ROOT
 
 SOURCE = ROOT / "gemini"
@@ -42,11 +44,15 @@ def test_source_files_have_mirrored_unit_tests():
     assert missing == []
 
 
-def test_mirrored_unit_tests_define_tests():
+@pytest.fixture(scope="module")
+def defining():
+    """Give ``{mirror: whether it defines a test}``, parsed before the test is timed."""
+    return {mirror: _defines_test(mirror) for _, mirror in _mirrors() if mirror.exists()}
+
+
+def test_mirrored_unit_tests_define_tests(defining):
     """Every mirror defines at least one test function."""
     empty = [
-        str(mirror.relative_to(UNIT_TESTS))
-        for _, mirror in _mirrors()
-        if mirror.exists() and not _defines_test(mirror)
+        str(mirror.relative_to(UNIT_TESTS)) for mirror, defined in defining.items() if not defined
     ]
     assert empty == []
