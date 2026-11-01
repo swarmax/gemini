@@ -5,7 +5,7 @@ from copy import deepcopy
 from gemini import units
 from gemini._utils.strings import close_matches, did_you_mean, join_names
 from gemini.errors import GeminiError, ValidationError
-from gemini.evaluate import annualised_cost, co2, lcoc, lcoh, lcts, totals
+from gemini.evaluate import annualised_cost, co2, constraints, lcoc, lcoh, lcts, totals
 from gemini.evaluate.totals import KPI_NAMES
 from gemini.run.simulate import simulate
 from gemini.study._utils.target import is_case_name, parameter_value, with_case_values
@@ -18,6 +18,10 @@ ECONOMICS = {
     "co2": co2,
 }
 """The economic metrics of ``gm.evaluate``; the others are the KPIs of ``gm.evaluate.totals``."""
+
+
+LARGEST_VIOLATION = 1e6
+"""The violation of a trial that failed: above that of any design that ran."""
 
 
 def checked_metric(name):
@@ -57,20 +61,63 @@ def metric(plant, case, results, name):
     return totals(plant, case, results)[name]
 
 
+def _run(plant, case, plan, values):
+    """Return ``(copy, case, results)`` of one run of a copy of ``plant`` with ``values`` set."""
+    trial = deepcopy(plant)
+    for name, number in values.items():
+        if not is_case_name(name):
+            path, _, parameter = name.rpartition(".")
+            trial.set_params(path, {parameter: parameter_value(trial, name, number)})
+    changed = with_case_values(case, {k: v for k, v in values.items() if is_case_name(k)})
+    return trial, changed, simulate(trial, changed, plan=plan)
+
+
 def run_trial(plant, case, plan, values, names):
     """Return ``(metrics, reason)`` of one run of a copy; a run that fails has its reason.
 
     ``values`` are SI numbers by name: a parameter of the plant, or ``case.<path>`` for a number of
     the case, which the copy of the case takes.
     """
-    trial = deepcopy(plant)
     try:
-        for name, number in values.items():
-            if not is_case_name(name):
-                path, _, parameter = name.rpartition(".")
-                trial.set_params(path, {parameter: parameter_value(trial, name, number)})
-        changed = with_case_values(case, {k: v for k, v in values.items() if is_case_name(k)})
-        results = simulate(trial, changed, plan=plan)
+        trial, changed, results = _run(plant, case, plan, values)
         return {item: metric(trial, changed, results, item) for item in names}, None
     except GeminiError as error:
         return {}, str(error)
+
+
+def _excess(check):
+    """Return how far a failed check is out of its limit, relative to the larger of the two."""
+    found, limit = check["value"].value, check["limit"].value
+    return abs(found - limit) / (max(abs(found), abs(limit)) or 1.0)
+
+
+def judged(plant, case, results):
+    """Return ``(reason, violation)`` of a finished run against the constraints of the case.
+
+    The checks are those of ``gm.evaluate.constraints``, the supply temperatures of the services
+    included. A run with a failed step is infeasible with ``LARGEST_VIOLATION``. Otherwise the
+    ``violation`` is the sum of the relative excess of every failed check, and the ``reason`` is the
+    first failed check itself (the dict of ``gm.evaluate.constraints``). A feasible run is
+    ``(None, 0.0)``; a check with nothing to judge does not fail.
+    """
+    if results.failures:
+        first = results.failures[0]
+        return f"{len(results.failures)} steps failed; first: {first}", LARGEST_VIOLATION
+    failed = [item for item in constraints(plant, case, results) if item["passed"] is False]
+    if not failed:
+        return None, 0.0
+    return failed[0], min(sum(map(_excess, failed)), LARGEST_VIOLATION)
+
+
+def run_judged(plant, case, plan, values, names):
+    """Return ``(metrics, reason, violation)`` of one run of a copy, judged against the case.
+
+    A run that raises is infeasible with its message as the reason and ``LARGEST_VIOLATION``;
+    ``values`` are as for ``run_trial``.
+    """
+    try:
+        trial, changed, results = _run(plant, case, plan, values)
+        metrics = {item: metric(trial, changed, results, item) for item in names}
+        return (metrics, *judged(trial, changed, results))
+    except GeminiError as error:
+        return {}, str(error), LARGEST_VIOLATION

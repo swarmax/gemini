@@ -121,11 +121,12 @@ def test_every_trial_failing_leaves_no_best(monkeypatch, runs):
     assert "every trial" in result["best"].reason
 
 
-def test_a_plant_with_no_structural_size_cannot_vary_its_doublets(runs):
-    """The case asks for doublets and the class takes none: refused before any run."""
+def test_a_plant_with_no_structural_size_cannot_search_only_its_doublets(runs):
+    """Nothing else to search: refused before any run."""
     plant = gm.plants.get("DoubletHeatPlant")
+    variables = [{"path": "size", "parameter": "doublets", "lower": 1, "upper": 3}]
     with raises(gm.errors.ValidationError, "invalid_design", match="doublets") as refused:
-        gm.study.minimize(plant, shallow_case(), "lcts", evaluations=5)
+        gm.study.minimize(plant, shallow_case(), "lcts", variables, evaluations=5)
     assert refused.value.path == "size.doublets" and runs == []
 
 
@@ -161,3 +162,99 @@ def test_a_search_that_does_not_fit_is_refused(arguments, code, runs):
     with raises(gm.errors.ValidationError, code):
         gm.study.minimize(shallow_plant(), shallow_case(), **call)
     assert runs == []
+
+
+CAPACITY = {
+    "path": "heat_pump",
+    "parameter": "capacity",
+    "lower": gm.units.Quantity(1, "MW"),
+    "upper": gm.units.Quantity(2, "MW"),
+}
+
+
+def failing_above(limit):
+    """Return a replacement of the constraints that fails when the depth is above ``limit`` m."""
+
+    def checks(plant, case, results):
+        deep = plant.depth - limit
+        if deep <= 0:
+            return []
+        value, bound = gm.types.shapes.measure(plant.depth, "m"), gm.types.shapes.measure(
+            limit, "m"
+        )
+        return [{"name": "d0.depth", "passed": False, "value": value, "limit": bound}]
+
+    return checks
+
+
+def test_the_cheapest_trial_that_breaks_a_constraint_is_not_best(monkeypatch, runs):
+    """The cost falls with a shallower depth in this model only above 1500 m: a limit decides."""
+    monkeypatch.setattr(trial, "constraints", failing_above(1200))
+    result = gm.study.minimize(shallow_plant(), shallow_case(), "lcts", DEPTH, evaluations=5)
+    assert result["feasible"] is True
+    assert result["best"].parts["parameters"]["depth"].value <= 1200
+    broken = [item for item in result["history"] if item.reason]
+    assert broken and all(item.reason["name"] == "d0.depth" for item in broken)
+    assert all(item.parts["violation"] > 0 for item in broken)
+
+
+def test_without_a_feasible_trial_the_least_violating_one_is_best(monkeypatch, runs):
+    """``feasible`` is false and the best trial is the shallowest, the nearest to the limit."""
+    monkeypatch.setattr(trial, "constraints", failing_above(900))
+    result = gm.study.minimize(shallow_plant(), shallow_case(), "lcts", DEPTH, evaluations=5)
+    assert result["feasible"] is False and result["best"].reason["name"] == "d0.depth"
+    violations = [item.parts["violation"] for item in result["history"]]
+    assert result["best"].parts["violation"] == min(violations)
+    assert result["best"]["plant"].depth == result["best"].parts["parameters"]["depth"].value
+
+
+def test_a_trial_that_raises_is_infeasible_and_the_search_goes_on(monkeypatch, runs):
+    """A physics error at some depth costs the trial, not the search."""
+    cost = trial.metric
+
+    def deep_fails(plant, case, results, name):
+        if plant.depth > 1700:
+            raise gm.errors.ValidationError("negative head", code="invalid_value")
+        return cost(plant, case, results, name)
+
+    monkeypatch.setattr(trial, "metric", deep_fails)
+    result = gm.study.minimize(shallow_plant(), shallow_case(), "lcts", DEPTH, evaluations=5)
+    failed = [item for item in result["history"] if item.value is None]
+    assert failed and all(item.parts["violation"] == trial.LARGEST_VIOLATION for item in failed)
+    assert result["feasible"] and result["best"].parts["parameters"]["depth"].value <= 1700
+
+
+def test_a_plant_without_doublets_is_searched_over_depth(runs):
+    """The count goes to ``fixed`` with the reason, and the depth of the doublet is searched."""
+    plant = gm.plants.get("DoubletHeatPlant")
+    result = gm.study.minimize(plant, shallow_case(), "lcts", evaluations=5)
+    assert [item["name"] for item in result["fixed"]] == ["size.doublets"]
+    assert result["fixed"][0]["value"].value == 1 and "takes no" in result["fixed"][0]["reason"]
+    assert result["evaluations"] == 5
+    assert "depth" in result["history"][0].parts["parameters"]
+
+
+def test_a_role_variable_reaches_every_unit_of_the_role(runs):
+    """The capacity goes to the heat pump of every trial plant."""
+    result = gm.study.minimize(shallow_plant(), shallow_case(), "lcts", [CAPACITY], evaluations=5)
+    assert result["fixed"] == []
+    assert all(
+        1e6 <= item.parts["parameters"]["heat_pump.capacity"].value <= 2e6
+        for item in result["history"]
+    )
+    assert result["best"]["plant"].get_submodule("heat_pump").capacity == pytest.approx(
+        result["best"].parts["parameters"]["heat_pump.capacity"].value
+    )
+    assert all(copy.get_submodule("heat_pump").capacity <= 2e6 for copy, _, _ in runs)
+
+
+def test_a_role_the_plant_lacks_is_fixed(runs):
+    """It is not searched and the result says why."""
+    other = {**CAPACITY, "path": "chp"}
+    result = gm.study.minimize(
+        shallow_plant(), shallow_case(), "lcts", [other, *DEPTH], evaluations=5
+    )
+    assert result["fixed"] == [
+        {"name": "chp.capacity", "value": None, "reason": "the plant has no unit of the role 'chp'"}
+    ]
+    assert result["evaluations"] == 5

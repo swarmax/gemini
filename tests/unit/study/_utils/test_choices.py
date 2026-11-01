@@ -16,14 +16,15 @@ def test_the_choices_of_the_case_are_two_variables():
 def test_the_counts_and_the_continuous_variables_are_split():
     """Every integer from lower to upper; the others in SI."""
     plant, case = shallow_plant(), shallow_case()
-    counts, names, bounds = split(plant, case, from_choices(case))
+    counts, names, bounds, fixed = split(plant, case, from_choices(case))
     assert counts == [1, 2, 3] and names == ["depth"] and bounds == [(1000, 2000)]
+    assert fixed == []
 
 
 def test_without_the_count_the_plant_keeps_its_doublets():
     """The counts are ``[None]``."""
     case = shallow_case()
-    counts, _, _ = split(shallow_plant(), case, from_choices(case)[1:])
+    counts, _, _, _ = split(shallow_plant(), case, from_choices(case)[1:])
     assert counts == [None]
 
 
