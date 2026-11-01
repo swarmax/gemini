@@ -1,6 +1,7 @@
 {
   "plant": "HeatingSubstation",
   "params": {
+    "pump.efficiency": 0.55,
     "pump.flow": {"value": 3, "unit": "kg/s"},
     "pump.pressure_rise": {"value": 0.5, "unit": "bar"},
     "pump.loop_pressure": {"value": 3, "unit": "bar"},

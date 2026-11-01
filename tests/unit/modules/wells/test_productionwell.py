@@ -8,12 +8,13 @@ from gemini.modules.wells import ProductionWell
 from gemini.types.flows import Stream
 from scripts.legacy import tables as mapping
 from tests.fixtures import OLD_PROJECT
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_function_matches, assert_module_matches
 
 
 def test_split_esp_traversal():
     """Split at 600 m inside a section; pumping raises the resulting wellhead pressure."""
-    c = ProductionWell().set_params(
+    c = with_values(ProductionWell()).set_params(
         "",
         mapping.productionwell_params_from_gemini(
             mapping.from_property(OLD_PROJECT / "production_well_c774.param"),
@@ -33,12 +34,13 @@ def test_split_esp_traversal():
 
 
 def _well(**changes):
-    return ProductionWell().set_params(
+    return with_values(ProductionWell()).set_params(
         "",
         mapping.productionwell_params_from_gemini(
             mapping.from_property(OLD_PROJECT / "production_well_c774.param"),
             esp_property=mapping.from_property(OLD_PROJECT / "esp_1ee3.param"),
         )
+        | {"segment": "full"}
         | changes,
     )
 

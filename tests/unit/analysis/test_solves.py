@@ -14,6 +14,7 @@ from gemini.modules.subsurface import InjectionReservoir, ProductionReservoir
 from gemini.modules.wells import InjectionWell, ProductionWell
 from gemini.physics.geometry import build_path, section_values
 from gemini.types.flows import Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.reading import reading
@@ -59,12 +60,12 @@ def segment_of(path, segment):
 @pytest.fixture(scope="module")
 def producer():
     """Return reservoir, lower well, ESP and riser of the upstream producer."""
-    reservoir = ProductionReservoir().set_params(
+    reservoir = with_values(ProductionReservoir()).set_params(
         "", {"pressure": 250e5, "productivity_index": INDEX, "top_depth": 2400, **RESERVOIR}
     )
     path = vertical_path(2400)
-    well = ProductionWell().set_params("", segment_of(path, "below_esp"))
-    riser = ProductionWell().set_params("", segment_of(path, "above_esp"))
+    well = with_values(ProductionWell()).set_params("", segment_of(path, "below_esp"))
+    riser = with_values(ProductionWell()).set_params("", segment_of(path, "above_esp"))
     esp = ESP().set_params(
         "",
         ESP_MODULE
@@ -94,10 +95,10 @@ def producer():
 @pytest.fixture(scope="module")
 def injector():
     """Return the upstream injection well and receiving aquifer."""
-    well = InjectionWell().set_params(
+    well = with_values(InjectionWell()).set_params(
         "", {**section_values(vertical_path(3100)), "soil_temperature": 293.15}
     )
-    sink = InjectionReservoir().set_params(
+    sink = with_values(InjectionReservoir()).set_params(
         "", {"pressure": 240e5, "injectivity_index": INDEX, "top_depth": 3100, **RESERVOIR}
     )
     return well, sink
@@ -138,11 +139,11 @@ def test_production_rate_and_esp_power_match_the_upstream_reference(producer):
 
 def test_production_rate_without_esp():
     """A free-flowing well solves the same balance through one full-length segment."""
-    reservoir = ProductionReservoir().set_params(
+    reservoir = with_values(ProductionReservoir()).set_params(
         "", {"pressure": 250e5, "productivity_index": INDEX, "top_depth": 2400, **RESERVOIR}
     )
-    well = ProductionWell().set_params(
-        "", {**section_values(vertical_path(2400)), "soil_temperature": 293.15}
+    well = with_values(ProductionWell()).set_params(
+        "", {**section_values(vertical_path(2400)), "soil_temperature": 293.15, "segment": "full"}
     )
     rate = nodal.solve_production_rate(reservoir, well, 3e5, (1, 60))
     arrived = well(bottom_in=reservoir.sandface_stream(rate)).outlets.wellhead_out
@@ -160,10 +161,10 @@ def test_injection_rate_balances_well_and_aquifer(injector):
 
 def test_injection_pressure_balances_a_shallow_injector():
     """A 2000 m injector into a 230 bar aquifer needs a pump; the solved pressure balances."""
-    well = InjectionWell().set_params(
+    well = with_values(InjectionWell()).set_params(
         "", {**section_values(vertical_path(2000)), "soil_temperature": 293.15}
     )
-    sink = InjectionReservoir().set_params(
+    sink = with_values(InjectionReservoir()).set_params(
         "", {"pressure": 230e5, "injectivity_index": INDEX, "top_depth": 2000, **RESERVOIR}
     )
     wellhead = Stream(flow={"value": 129.02, "unit": "m3/h"}, T=293.15, p=2e5)
@@ -224,10 +225,10 @@ def test_injection_pressure_gap_to_upstream_is_the_friction_sign():
         (2327, 1883, 0.0995668),
     ]
     rows = [dict(MD=md, TVD=tvd, ID=bore, roughness=2e-5) for md, tvd, bore in stations]
-    well = InjectionWell().set_params(
+    well = with_values(InjectionWell()).set_params(
         "", {**section_values(build_path(rows)), "soil_temperature": 293.15}
     )
-    sink = InjectionReservoir().set_params(
+    sink = with_values(InjectionReservoir()).set_params(
         "", {"pressure": 180e5, "injectivity_index": 2.3 / 3.6e8, "top_depth": 1883, **RESERVOIR}
     )
     wellhead = Stream(flow={"value": 125.1, "unit": "m3/h"}, T=343.15, p=1e5)

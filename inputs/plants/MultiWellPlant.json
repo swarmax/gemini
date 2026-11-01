@@ -1,6 +1,55 @@
 {
   "plant": "MultiWellPlant",
   "params": {
+    "producers.0.esp.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.1.esp.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.0.reservoir.decline_threshold": 0.15,
+    "producers.1.reservoir.decline_threshold": 0.15,
+    "injectors.0.sink.decline_threshold": 0.15,
+    "producers.0.reservoir.skin": 0.0,
+    "producers.0.well.friction_correlation": "darcy_weisbach",
+    "producers.0.well.two_phase_friction_correlation": "BeggsBrill",
+    "producers.0.well.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.0.well.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "producers.0.riser.friction_correlation": "darcy_weisbach",
+    "producers.0.riser.two_phase_friction_correlation": "BeggsBrill",
+    "producers.0.riser.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.0.riser.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "producers.1.reservoir.skin": 0.0,
+    "producers.1.well.friction_correlation": "darcy_weisbach",
+    "producers.1.well.two_phase_friction_correlation": "BeggsBrill",
+    "producers.1.well.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.1.well.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "producers.1.riser.friction_correlation": "darcy_weisbach",
+    "producers.1.riser.two_phase_friction_correlation": "BeggsBrill",
+    "producers.1.riser.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "producers.1.riser.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "injectors.0.well.friction_correlation": "darcy_weisbach",
+    "injectors.0.well.two_phase_friction_correlation": "BeggsBrill",
+    "injectors.0.well.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "injectors.0.well.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "injectors.0.sink.skin": 0.0,
     "producers.0.reservoir.pressure": {"value": 220, "unit": "bar"},
     "producers.0.reservoir.temperature": {"value": 80, "unit": "degC"},
     "producers.0.reservoir.permeability": {"value": 9.869233e-12, "unit": "m2"},

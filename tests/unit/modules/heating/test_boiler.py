@@ -7,10 +7,11 @@ from gemini.modules import GasGrid
 from gemini.modules.heating import Boiler, ElectricBoiler
 from gemini.physics import gas
 from gemini.types.flows import Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.reading import reading
 
-GRID_GAS = GasGrid()._offered()["gas_out"]
+GRID_GAS = with_values(GasGrid())._offered()["gas_out"]
 COPRODUCED = gm.Fluid(kind="gas", gas_composition={"CH4": 0.8, "CO2": 0.2})
 WATER = Stream(m_dot=10, T=300, p=1e6)
 

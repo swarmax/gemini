@@ -4,6 +4,7 @@ import pytest
 
 import gemini as gm
 from gemini.errors import ValidationError
+from tests.fixtures.designs import design_values
 from tests.fixtures.errors import raises
 from tests.fixtures.esp_design import ESP_DESIGN
 from tests.fixtures.heating_cooling import days_case
@@ -68,7 +69,7 @@ def designed(count):
         values |= {f"d{index}.{name}": value for name, value in WELL_DESIGN.items()}
     for pipe in ("heating_return_pipe", "heating_supply_pipe"):
         values |= {f"{pipe}.{name}": value for name, value in PIPE.items()}
-    plant.set_params("", values)
+    plant.set_params("", design_values(plant) | values)
     return plant.set_inputs(INPUTS)
 
 

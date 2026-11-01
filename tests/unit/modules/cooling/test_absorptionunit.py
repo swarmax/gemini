@@ -6,6 +6,7 @@ from gemini.errors import PhysicsError
 from gemini.modules._utils.balance import energy_balance, mass_balance
 from gemini.modules.cooling import AbsorptionUnit
 from gemini.types.flows import Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.reading import reading
 
@@ -26,7 +27,7 @@ def unit(mode="chiller", **params):
         evaporator_coefficient=1.2,
         auxiliary_power_ratio=0.01,
     )
-    return AbsorptionUnit().set_params("", design | params)
+    return with_values(AbsorptionUnit()).set_params("", design | params)
 
 
 def call(machine, setpoint, **streams):

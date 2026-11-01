@@ -4,7 +4,7 @@ from gemini.modules._utils.cost import Equipment
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.modules.module import Module
 from gemini.modules.treatment import _physics
-from gemini.types import Fraction, Pressure, PressureDifference, Stream
+from gemini.types import Fraction, Pressure, PressureDifference, Stream, ThermalConductance
 
 
 class Degasser(Equipment, Module):
@@ -35,11 +35,10 @@ class Degasser(Equipment, Module):
 
     NOTE(refactor): ``separation_efficiency`` is structural: it sets the gas fraction of the liquid
     outlet's ``Fluid``, which is static during a trace, so a trace reads it as a plain number.
-    NOTE(refactor): the 0.149 bar default loss comes from Sep_Pin/Sep_Pout in the example.
-    NOTE(refactor): the default ``separation_efficiency = 0`` reproduces the former liquid-only
-    model exactly for every fluid (zero gas flow, liquid unchanged but for the pressure loss);
-    the example brine carries no free gas either. Separation efficiency is vessel specific and has
-    no industry-typical value; set it from design data or a measured gas flow.
+    NOTE(refactor): a ``separation_efficiency`` of 0 reproduces a liquid-only model exactly for
+    every fluid (zero gas flow, liquid unchanged but for the pressure loss). Separation
+    efficiency and the pressure loss are vessel specific and have no industry-typical value; the
+    plant sets them from design data or a measured gas flow.
     """
 
     equipment_kind = "degasser"
@@ -59,19 +58,19 @@ class Degasser(Equipment, Module):
         )
         self.nominal_pressure_drop = Parameter(
             PressureDifference,
-            default=_physics.DEFAULT_DEGASSER_DROP,
             ge=0,
             description="Pressure drop across the vessel at the nominal flow",
         )
         self.heat_transfer_coefficient = Parameter(
-            float,
-            default=0,
-            ge=0,
-            description="Heat loss of the vessel per unit of temperature difference",
+            ThermalConductance | None,
+            default=None,
+            description=(
+                "Heat loss of the vessel per unit of temperature difference; empty means no "
+                "heat loss"
+            ),
         )
         self.separation_efficiency = Parameter(
             Fraction,
-            default=0,
             structural=True,
             description="Share of the inlet free gas that leaves through the gas outlet",
         )

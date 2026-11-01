@@ -9,6 +9,7 @@ from gemini.types.flows import Stream
 from gemini.types.fluid import Fluid
 from scripts.legacy import tables as mapping
 from tests.fixtures import OLD_PROJECT
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_health_matches, assert_module_matches
 
 
@@ -18,7 +19,7 @@ def test_example_production_and_decline():
         mapping.from_property(OLD_PROJECT / "reservoir_c1b5.param"),
         mapping.from_property(OLD_PROJECT / "production_well_c774.param"),
     )
-    c = ProductionReservoir().set_params("", p)
+    c = with_values(ProductionReservoir()).set_params("", p)
     c.fluid = mapping.reservoir_fluid(mapping.from_property(OLD_PROJECT / "reservoir_c1b5.param"))
     result = c(production_rate=40)
     out, flow = result.outputs, 40 / 1068
@@ -35,7 +36,7 @@ def test_injection_zero_radius_is_explicit():
         mapping.from_property(OLD_PROJECT / "injection_well_a06b.param"),
         "injection",
     )
-    c = InjectionReservoir().set_params("", p)
+    c = with_values(InjectionReservoir()).set_params("", p)
     result = c(sandface_in=Stream(m_dot=-40, T=300, p=23e6))
     out = result.outputs
     assert out.bottomhole_pressure > c.pressure
@@ -55,14 +56,14 @@ def test_ipr_helpers_match_the_call_outputs():
         top_depth=2400,
         wellbore_radius=0.1,
     )
-    producer = ProductionReservoir().set_params(
+    producer = with_values(ProductionReservoir()).set_params(
         "", {"pressure": 250e5, "productivity_index": 10 / 3.6e8, **common}
     )
     sandface = producer.sandface_stream(40)
     assert sandface.m_dot == 40 and sandface.T == 353.15
     assert sandface.p == producer(production_rate=40).outputs.bottomhole_pressure
     assert sandface.p == pytest.approx(250e5 - 40 / 1000 * 3.6e8 / 10)
-    sink = InjectionReservoir().set_params(
+    sink = with_values(InjectionReservoir()).set_params(
         "", {"pressure": 240e5, "injectivity_index": 10 / 3.6e8, **common}
     )
     arriving = Stream(m_dot=-40, T=300, p=230e5)
@@ -95,6 +96,7 @@ def _producer(**changes):
         wellbore_radius=0.1,
         productivity_index=10 / 3.6e8,
         skin=2,
+        decline_threshold=0.15,
     )
     return RowCarrier().set_params("", design | changes)
 
@@ -116,7 +118,7 @@ def test_reservoir_without_drainage_radius_matches_traced():
 
 def test_injection_reservoir_matches_traced():
     """Positive and negative sandface flows equal one call per row."""
-    sink = InjectionReservoir().set_params(
+    sink = with_values(InjectionReservoir()).set_params(
         "",
         {
             "pressure": 240e5,
@@ -177,7 +179,7 @@ def test_production_health_matches_on_arrays():
 
 def test_injection_health_matches_on_arrays():
     """The injectivity comparison agrees on arrays, including the unassessed row."""
-    sink = InjectionReservoir().set_params(
+    sink = with_values(InjectionReservoir()).set_params(
         "",
         {
             "pressure": 240e5,

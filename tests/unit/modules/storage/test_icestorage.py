@@ -11,6 +11,7 @@ from gemini.modules import Module, energy_balance, mass_balance
 from gemini.modules.declarations import Inlet, Outlet
 from gemini.modules.storage import IceStorage
 from gemini.types import GLYCOL_30, Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_function_matches, assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
@@ -32,7 +33,7 @@ WARM = COLD.with_(T=285.15)
 
 def _store():
     """Return a 1 t store with a 2 kW/K coil."""
-    return IceStorage().set_params("", {"water_mass": MASS, "thermal_conductance": UA})
+    return with_values(IceStorage()).set_params("", {"water_mass": MASS, "thermal_conductance": UA})
 
 
 def test_plain_call_charges_an_empty_store():

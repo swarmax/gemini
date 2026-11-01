@@ -2,6 +2,83 @@
   "format": 2,
   "type": "DoubletHeatPlant",
   "params": {
+    "doublet.roughness": {
+      "value": 4.5e-05,
+      "unit": "m"
+    },
+    "doublet.esp.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "doublet.reservoir.decline_threshold": 0.15,
+    "doublet.sink.decline_threshold": 0.15,
+    "filters.hot.clogging_pressure_drop": {
+      "value": 50000.0,
+      "unit": "Pa"
+    },
+    "filters.cold.clogging_pressure_drop": {
+      "value": 50000.0,
+      "unit": "Pa"
+    },
+    "heat_exchanger.fouling_threshold": 0.15,
+    "doublet.drainage_radius": {
+      "value": 1000.0,
+      "unit": "m"
+    },
+    "doublet.reservoir.skin": 0.0,
+    "doublet.well.friction_correlation": "darcy_weisbach",
+    "doublet.well.two_phase_friction_correlation": "BeggsBrill",
+    "doublet.well.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "doublet.well.heat_transfer_coefficient": {
+      "value": 10.0,
+      "unit": "W/m2/K"
+    },
+    "doublet.riser.friction_correlation": "darcy_weisbach",
+    "doublet.riser.two_phase_friction_correlation": "BeggsBrill",
+    "doublet.riser.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "doublet.riser.heat_transfer_coefficient": {
+      "value": 10.0,
+      "unit": "W/m2/K"
+    },
+    "doublet.injector.friction_correlation": "darcy_weisbach",
+    "doublet.injector.two_phase_friction_correlation": "BeggsBrill",
+    "doublet.injector.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "doublet.injector.heat_transfer_coefficient": {
+      "value": 10.0,
+      "unit": "W/m2/K"
+    },
+    "doublet.sink.skin": 0.0,
+    "degasser.nominal_pressure_drop": {
+      "value": 14900.0,
+      "unit": "Pa"
+    },
+    "degasser.separation_efficiency": 0.0,
+    "filters.hot.nominal_pressure_drop": {
+      "value": 1600.0,
+      "unit": "Pa"
+    },
+    "filters.hot.nominal_mass_flow": {
+      "value": 44.20333333333333,
+      "unit": "kg/s"
+    },
+    "filters.cold.nominal_pressure_drop": {
+      "value": 1600.0,
+      "unit": "Pa"
+    },
+    "filters.cold.nominal_mass_flow": {
+      "value": 44.20333333333333,
+      "unit": "kg/s"
+    },
+    "heat_exchanger.arrangement": "counterflow",
     "doublet.reservoir.pressure": {
       "value": 22000000.0,
       "unit": "Pa"
@@ -288,7 +365,10 @@
       "value": 0.0765,
       "unit": "m"
     },
-    "degasser.heat_transfer_coefficient": 100000.0,
+    "degasser.heat_transfer_coefficient": {
+      "value": 100000.0,
+      "unit": "W/K"
+    },
     "heat_exchanger.thermal_conductance": {
       "value": 100000.0,
       "unit": "W/K"

@@ -786,6 +786,62 @@ def test_the_case_has_no_default_but_absent():
     assert found == []
 
 
+DEFAULTED = {"Parameter", "Control", "Boundary", "State"}
+DECLARED_DEFAULTS = {
+    (
+        "Atmosphere",
+        "pressure",
+    ): "normal pressure of DIN 1343, a standard state (gas.NORMAL_PRESSURE)",
+    ("Cooler", "latent_heat"): "latent heat of vaporisation of water, IAPWS-IF97 tables",
+    ("IceStorage", "latent_heat"): "latent heat of fusion of ice, 333.55 kJ/kg (IAPWS R10-06)",
+    ("IceStorage", "freezing_temperature"): "normal melting point of ice at 101.325 kPa",
+    ("IceStorage", "water_specific_heat"): "liquid water at 0.01 degC (IAPWS-95)",
+    ("IceStorage", "ice_specific_heat"): "ice Ih at the triple point (IAPWS R10-06)",
+    (
+        "InjectionPump",
+        "frequency",
+    ): "the catalogue frequency of the curves, ESP_REFERENCE_FREQUENCY",
+    ("_Reservoir", "role"): "the identity of the subclass (production or injection), not a choice",
+    ("PIDController", "integral"): "the integrator memory starts at zero by definition",
+    ("AquiferStorage", "warm_volume"): "accumulator: zero before any charge",
+    ("AquiferStorage", "warm_temperature_change"): "change relative to the ground: zero at start",
+    ("AquiferStorage", "cold_volume"): "accumulator: zero before any discharge",
+    ("AquiferStorage", "cold_temperature_change"): "change relative to the ground: zero at start",
+    ("AquiferStorage", "charged_heat"): "accumulator: zero before any charge",
+    ("AquiferStorage", "recovered_heat"): "accumulator: zero before any recovery",
+    ("BoreholeField", "ground_temperature_change"): "change relative to the undisturbed ground",
+    ("ThermalDecline", "injected_volume"): "accumulator: zero before any injection",
+}
+"""The only declarations of ``gemini/modules`` and ``gemini/plants`` that keep a default, by
+``(class, name)``, each with its reason: a physical constant or standard reference whose source is
+in the docstring of its constant, or the reference zero of an accumulator. A default that means
+"feature off" is ``None``; every design value or assumption has none and the plant sets it."""
+
+
+def _kept_defaults(path):
+    """Return ``(class, name)`` of every declaration of one file whose default is not ``None``."""
+    found = []
+    for cls in (n for n in ast.walk(tree(path)) if isinstance(n, ast.ClassDef)):
+        for node in ast.walk(cls):
+            call = node.value if isinstance(node, ast.Assign) else None
+            if not isinstance(call, ast.Call) or getattr(call.func, "id", None) not in DEFAULTED:
+                continue
+            default = next((k.value for k in call.keywords if k.arg == "default"), None)
+            if isinstance(default, ast.Constant) and default.value is None:
+                continue
+            if default is not None:
+                found.append((cls.name, node.targets[0].attr))
+    return found
+
+
+def test_no_declaration_has_a_default_but_the_listed_constants():
+    """A module or plant declaration has no numeric, text or named default unless it is listed."""
+    files = [p for p in tracked_files() if p.startswith(("gemini/modules/", "gemini/plants/"))]
+    kept = {item for path in files if path.endswith(".py") for item in _kept_defaults(path)}
+    assert sorted(kept - DECLARED_DEFAULTS.keys()) == []
+    assert sorted(DECLARED_DEFAULTS.keys() - kept) == []
+
+
 def _open_objects(node, path="case"):
     """Return the paths of the objects of a JSON Schema that accept unknown keys."""
     if isinstance(node, list):

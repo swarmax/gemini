@@ -1216,7 +1216,13 @@ class Module:
 
     def _initial_states(self):
         """Return the validated initial value of every declared state."""
-        return {name: state.default_value() for name, state in self._states.items()}
+        return {name: self._initial_state(name, state) for name, state in self._states.items()}
+
+    def _initial_state(self, name, state):
+        """Return the initial value of one state: its reference default, else its parameter."""
+        if state.default is not UNSET:
+            return state.default_value()
+        return state.validate(self._parameter_value(f"initial_{name}"))
 
     def _call_states(self, step):
         """Return the state values one call starts from, or ``None`` without declared states."""

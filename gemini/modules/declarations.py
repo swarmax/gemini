@@ -433,16 +433,20 @@ class Boundary(Declaration):
 class State(Declaration):
     """Value a stateful module carries from one time step to the next.
 
-    ``default`` is the initial state. ``Module.step`` supplies the value at the start of a step
-    and ``_advance_states`` returns the value at its end; a plain call uses the initial state.
+    ``default`` is the initial state when it is a reference value of the state itself (an
+    accumulator that starts at zero). Without it the initial state is a design value: the
+    parameter ``initial_<name>`` of the module sets it, and a run without it raises
+    ``missing_value``. ``Module.step`` supplies the value at the start of a step and
+    ``_advance_states`` returns the value at its end; a plain call uses the initial state.
     """
 
     section = "state"
 
-    def __init__(self, type, *, default, description=None, **bounds):
-        """Declare a carried value with its initial state."""
+    def __init__(self, type, *, default=UNSET, description=None, **bounds):
+        """Declare a carried value with its initial state, or with the parameter that sets it."""
         super().__init__(type, default=default, description=description, **bounds)
-        self.validate(deepcopy(default))
+        if default is not UNSET:
+            self.validate(deepcopy(default))
 
 
 class Output(Declaration):

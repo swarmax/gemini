@@ -76,6 +76,7 @@ def _run_entries(plant, results):
                 "cold_nominal_pressure_drop": 1e4,
                 "hot_nominal_mass_flow": 40,
                 "cold_nominal_mass_flow": 40,
+                "arrangement": "counterflow",
             },
             {
                 "hot_in": {

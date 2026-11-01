@@ -9,15 +9,6 @@ from gemini import ops
 DRIFT_FLOOR = 1e-12
 """Smallest prediction magnitude used as a drift denominator, so a zero prediction is finite."""
 
-DEFAULT_DRIFT_THRESHOLD = 0.10
-"""Relative drift [-] of a measurement from its prediction that raises an alarm by default."""
-
-DEFAULT_DECLINE_THRESHOLD = 0.15
-"""Fractional decline [-] of a reservoir productivity or injectivity that alarms by default."""
-
-DEFAULT_FOULING_THRESHOLD = 0.15
-"""Fractional loss [-] of apparent conductance that alarms as fouling by default."""
-
 
 @ops.physics
 def relative_drift(measured: float, predicted: float) -> float:

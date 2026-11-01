@@ -357,16 +357,32 @@
   "modules": {
     "degasser": {
       "params": {
-        "heat_transfer_coefficient": 100000.0
+        "heat_transfer_coefficient": {
+          "unit": "W/K",
+          "value": 100000.0
+        },
+        "nominal_pressure_drop": {
+          "unit": "Pa",
+          "value": 14900.0
+        },
+        "separation_efficiency": 0.0
       },
       "type": "Degasser"
     },
     "doublet": {
       "params": {
+        "drainage_radius": {
+          "unit": "m",
+          "value": 1000.0
+        },
         "esp.best_efficiency_flow": {
           "unit": "m3/s",
           "value": 0.03610555555555555
         },
+        "esp.correction_factors": [
+          1.0,
+          0.0
+        ],
         "esp.drift_threshold": 0.1,
         "esp.head_coefficients": [
           125.518426,
@@ -402,6 +418,15 @@
         "esp.tubing": {
           "unit": "m",
           "value": 0.1778
+        },
+        "injector.correction_factors": [
+          1.0,
+          0.0
+        ],
+        "injector.friction_correlation": "darcy_weisbach",
+        "injector.heat_transfer_coefficient": {
+          "unit": "W/m2/K",
+          "value": 10.0
         },
         "injector.section_diameter": {
           "unit": "m",
@@ -439,10 +464,12 @@
           "unit": "K",
           "value": 288.15
         },
+        "injector.two_phase_friction_correlation": "BeggsBrill",
         "reservoir.aquifer_thickness": {
           "unit": "m",
           "value": 45.0
         },
+        "reservoir.decline_threshold": 0.15,
         "reservoir.drainage_radius": {
           "unit": "m",
           "value": 1000.0
@@ -459,6 +486,7 @@
           "unit": "m3/s/Pa",
           "value": 5.833333333333333e-08
         },
+        "reservoir.skin": 0.0,
         "reservoir.temperature": {
           "unit": "K",
           "value": 353.15
@@ -471,9 +499,18 @@
           "unit": "m",
           "value": 0.0765
         },
+        "riser.correction_factors": [
+          1.0,
+          0.0
+        ],
         "riser.esp_depth": {
           "unit": "m",
           "value": 600.0
+        },
+        "riser.friction_correlation": "darcy_weisbach",
+        "riser.heat_transfer_coefficient": {
+          "unit": "W/m2/K",
+          "value": 10.0
         },
         "riser.section_diameter": {
           "unit": "m",
@@ -544,10 +581,16 @@
           "unit": "K",
           "value": 288.15
         },
+        "riser.two_phase_friction_correlation": "BeggsBrill",
+        "roughness": {
+          "unit": "m",
+          "value": 4.5e-05
+        },
         "sink.aquifer_thickness": {
           "unit": "m",
           "value": 45.0
         },
+        "sink.decline_threshold": 0.15,
         "sink.drainage_radius": {
           "unit": "m",
           "value": 0.0
@@ -564,6 +607,7 @@
           "unit": "Pa",
           "value": 22000000.0
         },
+        "sink.skin": 0.0,
         "sink.temperature": {
           "unit": "K",
           "value": 353.15
@@ -576,9 +620,18 @@
           "unit": "m",
           "value": 0.0765
         },
+        "well.correction_factors": [
+          1.0,
+          0.0
+        ],
         "well.esp_depth": {
           "unit": "m",
           "value": 600.0
+        },
+        "well.friction_correlation": "darcy_weisbach",
+        "well.heat_transfer_coefficient": {
+          "unit": "W/m2/K",
+          "value": 10.0
         },
         "well.section_diameter": {
           "unit": "m",
@@ -648,18 +701,45 @@
         "well.soil_temperature": {
           "unit": "K",
           "value": 288.15
-        }
+        },
+        "well.two_phase_friction_correlation": "BeggsBrill"
       },
       "type": "Doublet"
     },
     "filters": {
       "modules": {
         "cold": {
-          "params": {},
+          "params": {
+            "clogging_pressure_drop": {
+              "unit": "Pa",
+              "value": 50000.0
+            },
+            "nominal_mass_flow": {
+              "unit": "kg/s",
+              "value": 44.20333333333333
+            },
+            "nominal_pressure_drop": {
+              "unit": "Pa",
+              "value": 1600.0
+            }
+          },
           "type": "Filter"
         },
         "hot": {
-          "params": {},
+          "params": {
+            "clogging_pressure_drop": {
+              "unit": "Pa",
+              "value": 50000.0
+            },
+            "nominal_mass_flow": {
+              "unit": "kg/s",
+              "value": 44.20333333333333
+            },
+            "nominal_pressure_drop": {
+              "unit": "Pa",
+              "value": 1600.0
+            }
+          },
           "type": "Filter"
         }
       },
@@ -667,6 +747,7 @@
     },
     "heat_exchanger": {
       "params": {
+        "arrangement": "counterflow",
         "cold_nominal_mass_flow": {
           "unit": "kg/s",
           "value": 1.0
@@ -675,6 +756,7 @@
           "unit": "Pa",
           "value": 0.0
         },
+        "fouling_threshold": 0.15,
         "hot_nominal_mass_flow": {
           "unit": "kg/s",
           "value": 1.0

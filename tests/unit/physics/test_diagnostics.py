@@ -22,8 +22,8 @@ def test_score_margin_and_limit_cross_every_branch():
     assert diagnostics.bounded_score(0.4) == 0.4
     assert diagnostics.remaining_margin(0.25) == 0.75
     assert diagnostics.remaining_margin(2.0) == 0
-    assert diagnostics.below_limit(0.8, diagnostics.DEFAULT_FOULING_THRESHOLD)
-    assert not diagnostics.below_limit(0.85, diagnostics.DEFAULT_FOULING_THRESHOLD)
+    assert diagnostics.below_limit(0.8, 0.15)
+    assert not diagnostics.below_limit(0.85, 0.15)
     ratios = [(1.5,), (-0.5,), (0.4,), (0.0,), (1.0,)]
     assert_function_matches(diagnostics.bounded_score, ratios)
     assert_function_matches(diagnostics.remaining_margin, ratios)

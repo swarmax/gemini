@@ -5,6 +5,7 @@ import pytest
 import gemini as gm
 from gemini.modules import energy_balance, mass_balance
 from gemini.physics import combustion, gas
+from tests.fixtures.designs import with_values
 
 BRINE = gm.Fluid(
     density={"value": 1030, "unit": "kg/m3"},
@@ -49,11 +50,10 @@ def chain():
     plant.connect("makeup.excess_out", "flare.gas_in")
     plant.connect("water_in", "boiler.fluid_in")
     plant.connect("boiler.fluid_out", "water_out")
-    assert {
-        item["code"]
-        for item in gm.plants.validate(plant, on_error="record")
-    } == {"root_plant_port"}
-    return plant
+    assert {item["code"] for item in gm.plants.validate(plant, on_error="record")} == {
+        "root_plant_port"
+    }
+    return with_values(plant)
 
 
 def run(setpoint):
@@ -102,6 +102,7 @@ def test_without_co_produced_gas_the_grid_covers_everything():
     plant.connect("boiler.fluid_out", "water_out")
     plant.boiler.temperature_setpoint = {"value": 70, "unit": "degC"}
     plant.air.temperature = {"value": 15, "unit": "degC"}
+    with_values(plant)
     leaves = plant(water_in=WATER).leaves()
     outputs = leaves["boiler"].outputs
     bought = leaves["grid"].outlets.gas_out.m_dot

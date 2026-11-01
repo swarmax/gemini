@@ -53,18 +53,6 @@ PIPE_TURBULENT_REYNOLDS = Constant(
     "Reynolds number from which pipe flow is taken as turbulent (Swamee–Jain)",
 )
 
-COMMERCIAL_STEEL_ROUGHNESS = 4.5e-5
-"""Absolute roughness [m] of new commercial steel pipe (Moody 1944, Friction factors for pipe
-flow, Trans. ASME 66; the 0.045 mm of the Moody chart and Crane TP-410)."""
-
-DEFAULT_VALVE_RANGEABILITY = 50
-"""Default inherent rangeability [-] of a control valve, typical of globe valves (Emerson, Control
-Valve Handbook, 5th ed., 2017)."""
-
-DEFAULT_WELL_U_VALUE = 10
-"""Default overall heat transfer coefficient [W/m2/K] between a well and the soil, the value of
-the original GEMINI well model."""
-
 
 @ops.physics
 def reynolds_number(velocity: float, density: float, diameter: float, viscosity: float) -> float:

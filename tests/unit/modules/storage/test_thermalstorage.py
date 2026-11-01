@@ -13,6 +13,7 @@ from gemini.modules.declarations import Inlet, Outlet
 from gemini.modules.storage import ThermalStorage
 from gemini.types import Stream
 from tests.fixtures.air import air
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_close, assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
@@ -32,7 +33,7 @@ def _tank(service="hot", **changes):
     params = dict(
         service=service, volume=2.0, heat_loss_conductance=10.0, reference_temperature=313.15
     )
-    return ThermalStorage().set_params("", params | changes)
+    return with_values(ThermalStorage()).set_params("", params | changes)
 
 
 def _inlets(charge=CHARGE, discharge=DISCHARGE, ambient=293.15):

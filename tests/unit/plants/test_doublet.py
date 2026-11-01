@@ -11,6 +11,7 @@ from gemini.physics import constants, hydraulics
 from gemini.run._utils.apply import apply_case
 from gemini.types import Stream
 from tests.fixtures.balance import assert_plant_closes
+from tests.fixtures.designs import WELL
 from tests.fixtures.esp_design import ESP_DESIGN
 from tests.fixtures.reading import reading
 
@@ -46,6 +47,20 @@ DESIGN = {
     "permeability": {"value": 200, "unit": "mD"},
     "thickness": {"value": 100, "unit": "m"},
     "well_diameter": {"value": 0.244, "unit": "m"},
+    "roughness": {"value": 4.5e-5, "unit": "m"},
+    "drainage_radius": {"value": 1000, "unit": "m"},
+    "reservoir.skin": 0.0,
+    "sink.skin": 0.0,
+    **{
+        f"{well}.{name}": value
+        for well in ("well", "riser", "injector")
+        for name, value in WELL.items()
+        if name != "heat_transfer_coefficient"
+    },
+    **{
+        f"{well}.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"}
+        for well in ("well", "riser", "injector")
+    },
 }
 OWNED = ("gradient", "surface_temperature", "permeability", "thickness")
 STORED = {name: value for name, value in DESIGN.items() if name not in OWNED}
@@ -215,7 +230,14 @@ def test_a_waiting_depth_is_a_missing_parameter():
 def test_a_depth_waits_for_its_geotherm():
     """A plant holds the design and a case the environment: nothing is derived until both exist."""
     doublet = gm.plants.Doublet().set_params(
-        "", {"depth": {"value": 2500, "unit": "m"}, "gradient": {"value": 30, "unit": "K/km"}}
+        "",
+        {
+            "depth": {"value": 2500, "unit": "m"},
+            "gradient": {"value": 30, "unit": "K/km"},
+            "drainage_radius": {"value": 1000, "unit": "m"},
+            "reservoir.skin": 0.0,
+            "sink.skin": 0.0,
+        },
     )
     assert doublet.get_submodule("reservoir")._params_at(None).get("temperature") is None
     doublet.set_params("", {"surface_temperature": {"value": 12, "unit": "degC"}})

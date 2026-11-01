@@ -9,6 +9,7 @@ from gemini.modules import energy_balance, mass_balance
 from gemini.modules.piping import Pipe
 from gemini.types import Fluid, Stream
 from tests.fixtures.air import air
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
@@ -21,7 +22,7 @@ def pipe(**changes):
     params = dict(
         length=1000, inner_diameter=0.1, elevation_change=5, heat_transfer_coefficient=1.0
     )
-    return Pipe().set_params("", params | changes)
+    return with_values(Pipe()).set_params("", params | changes)
 
 
 def test_turbulent_flow_matches_hand_calculation():

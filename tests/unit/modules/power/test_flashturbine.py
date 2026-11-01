@@ -8,6 +8,7 @@ from gemini.modules import Module, mass_balance
 from gemini.modules.declarations import Inlet, Outlet
 from gemini.modules.power import FlashTurbine, Separator, _physics
 from gemini.types import STEAM, WATER, Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.reading import reading
 
@@ -16,7 +17,7 @@ STEAM_FEED = Stream(m_dot=20, T=431.98, p=6e5, fluid=STEAM)
 
 def turbine():
     """Return a turbine exhausting to a 0.1 bar condenser through a 98 % generator."""
-    return FlashTurbine().set_params(
+    return with_values(FlashTurbine()).set_params(
         "", {"condenser_pressure": {"value": 0.1, "unit": "bar"}, "generator_efficiency": 0.98}
     )
 

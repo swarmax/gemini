@@ -12,6 +12,7 @@ from gemini.run._utils.apply import apply_case
 from gemini.units import Quantity
 from tests.fixtures.cases import make_case
 from tests.fixtures.costed_plants import heating_plant
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 from tests.fixtures.esp_design import ESP_DESIGN
 
@@ -142,6 +143,7 @@ def test_a_doublet_pays_for_its_wells_by_the_metre_and_its_pump_by_its_power():
     """The wells together are two depths; the pump is its shaft power at the nominal flow."""
     plant = gm.Plant("One")
     plant.add("Doublet", name="unit", params=DESIGN | PUMP)
+    with_values(plant)
     case = make_case(finance={"capex": ALL})
     result = gm.evaluate.capex(plant, case)
     head = apply_case(plant, case).unit.esp.head_coefficients

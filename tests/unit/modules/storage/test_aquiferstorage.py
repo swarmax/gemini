@@ -12,6 +12,7 @@ from gemini.modules.heating import ElectricBoiler
 from gemini.modules.storage import AquiferStorage
 from gemini.physics import ground
 from gemini.types import Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_function_matches, assert_same_error
 from tests.fixtures.reading import reading
 
@@ -24,7 +25,7 @@ HOUR = 3600.0
 
 def storage(mode="charge"):
     """Return a configured well pair in ``mode``."""
-    module = AquiferStorage().set_params(
+    module = with_values(AquiferStorage()).set_params(
         "",
         {
             "aquifer_temperature": 284.15,

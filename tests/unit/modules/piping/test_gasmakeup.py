@@ -5,11 +5,12 @@ import pytest
 import gemini as gm
 from gemini.modules import GasGrid, GasMakeup
 from gemini.physics import gas
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 
 FLUID = gm.Fluid(kind="gas", gas_composition={"CH4": 0.8, "CO2": 0.2})
 GAS = gm.Stream(m_dot=0.05, T=330, p=2e5, fluid=FLUID)
-GRID = GasGrid()._offered()["gas_out"]
+GRID = with_values(GasGrid())._offered()["gas_out"]
 
 
 def test_the_makeup_marks_the_offer_and_moves_no_gas():
@@ -48,6 +49,7 @@ def test_traced_calls_match_one_call_per_row():
     plant.connect("boiler.fluid_out", "water_out")
     plant.connect("boiler.flue_out", "flue")
     plant.connect("boiler.loss_out", "loss")
+    with_values(plant)
     plant.boiler.temperature_setpoint = 330.0
     water = gm.Stream(m_dot=5.0, T=320.0, p=3e5, fluid=gm.WATER)
     rows = [dict(gas_in=GAS.with_(m_dot=flow), water_in=water) for flow in (0.0, 0.1)]

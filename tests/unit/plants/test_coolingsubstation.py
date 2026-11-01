@@ -9,6 +9,7 @@ from gemini.modules import energy_balance, mass_balance
 from gemini.plants import CoolingSubstation
 from gemini.types import Stream
 from tests.fixtures.balance import assert_plant_closes
+from tests.fixtures.designs import with_values
 from tests.fixtures.reading import reading
 
 CP = 4217.4
@@ -24,7 +25,7 @@ def counterflow_effectiveness(ua, c_min, c_max):
 
 def test_met_loads_close_the_building_loop(plants):
     """Sensible plus latent load enter the water; e C_min (T_return - T_network) = Q."""
-    substation = plants["cooling_substation"](CoolingSubstation())
+    substation = plants["cooling_substation"](with_values(CoolingSubstation()))
     result = substation(supply_in=NETWORK)
     out = reading(result)
     effectiveness = counterflow_effectiveness(3e4, 3 * CP, 4 * CP)
@@ -50,7 +51,7 @@ def test_met_loads_close_the_building_loop(plants):
 
 def test_warm_network_cannot_dehumidify(plants):
     """A supply too warm for the dew-point margin leaves the latent load unmet."""
-    substation = plants["cooling_substation"](CoolingSubstation())
+    substation = plants["cooling_substation"](with_values(CoolingSubstation()))
     result = substation(supply_in=NETWORK.with_(T=284.15))
     assert (
         result.children["consumer"].inlets.supply_in.T
@@ -66,7 +67,7 @@ def test_warm_network_cannot_dehumidify(plants):
 
 def test_large_load_is_capped_at_the_return_limit(plants):
     """Beyond the exchanger's reach the return sits at the 18 degC limit."""
-    substation = plants["cooling_substation"](CoolingSubstation(), sensible=5e5)
+    substation = plants["cooling_substation"](with_values(CoolingSubstation()), sensible=5e5)
     result = substation(supply_in=NETWORK)
     effectiveness = counterflow_effectiveness(3e4, 3 * CP, 4 * CP)
     available = effectiveness * 3 * CP * (291.15 - 279.15)
@@ -80,7 +81,7 @@ def test_large_load_is_capped_at_the_return_limit(plants):
 
 def test_stopped_network_and_invalid_inputs(plants):
     """No network flow absorbs nothing; reverse flow raises."""
-    substation = plants["cooling_substation"](CoolingSubstation())
+    substation = plants["cooling_substation"](with_values(CoolingSubstation()))
     result = substation(supply_in=NETWORK.with_(m_dot=0.0))
     assert (
         reading(result.children["consumer"]).heat_absorbed == 0
@@ -92,6 +93,6 @@ def test_stopped_network_and_invalid_inputs(plants):
 
 def test_loop_without_a_steady_state_raises(plants):
     """At the dew-point threshold the on/off latent test leaves no fixed point of the loop."""
-    substation = plants["cooling_substation"](CoolingSubstation(), latent=5e4)
+    substation = plants["cooling_substation"](with_values(CoolingSubstation()), latent=5e4)
     with pytest.raises(gm.errors.PhysicsError, match="did not converge"):
         substation(supply_in=NETWORK.with_(T=281.15))

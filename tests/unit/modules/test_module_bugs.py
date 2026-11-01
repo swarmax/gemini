@@ -7,6 +7,7 @@ from gemini.modules import Filter, Module, ProductionReservoir
 from gemini.modules.declarations import Control, Inlet, Outlet, Output, Parameter
 from gemini.plants.plant import Plant
 from gemini.types import Power, Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 
 STREAM = Stream(m_dot=10, T=330, p=1e6)
@@ -52,7 +53,7 @@ def test_user_class_may_reuse_a_builtin_name():
     class Filter(Module):
         """User filter with the same class name as the built-in."""
 
-    assert Filter().name == "filter"
+    assert with_values(Filter()).name == "filter"
 
 
 def test_subclass_of_a_concrete_module_may_add_declarations():
@@ -67,7 +68,7 @@ def test_subclass_of_a_concrete_module_may_add_declarations():
             # Parameters
             self.score = Parameter(float, default=1.0)
 
-    module = ScoredFilter()
+    module = with_values(ScoredFilter())
     assert "score" in dict(module.named_parameters())
     assert module(fluid_in=STREAM).outputs.pressure_drop >= 0
 
@@ -87,11 +88,11 @@ def test_missing_super_init_is_explicit():
 
 def test_assigned_fluid_survives_parameter_changes_and_is_saved():
     """E-modules-003: ``module.fluid = ...`` is not reverted and ``state_dict`` stores it."""
-    module = Filter()
+    module = with_values(Filter())
     module.fluid = gm.WATER
     module.nominal_pressure_drop = 1000
     assert module.fluid == gm.WATER
-    assert Filter().set_state_dict(module.state_dict()).fluid == gm.WATER
+    assert with_values(Filter()).set_state_dict(module.state_dict()).fluid == gm.WATER
 
 
 def test_a_reservoir_fluid_applies_as_soon_as_it_is_set(fresh_plant):
@@ -233,6 +234,7 @@ def test_injection_reservoir_without_injectivity_fails_in_forward():
             "drainage_radius": 0,
             "top_depth": 2000,
             "wellbore_radius": 0.1,
+            "skin": 0.0,
         },
     )
     with (
@@ -244,6 +246,6 @@ def test_injection_reservoir_without_injectivity_fails_in_forward():
 
 def test_reservoir_health_without_design_index_is_not_assessed():
     """E-modules-011: a missing productivity index means not assessed, not a crash."""
-    reservoir = ProductionReservoir()
+    reservoir = with_values(ProductionReservoir())
     reservoir.set_params("", {"pressure": 2e7, "temperature": 350})
     assert reservoir.health(None, {"flow": 0.04, "bottomhole_pressure": 1.9e7}) is None

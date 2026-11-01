@@ -10,6 +10,7 @@ from gemini import units
 from gemini.analysis import wells
 from gemini.physics.geometry import section_values, vertical_path
 from gemini.types.flows import Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 from tests.fixtures.sample_cases import example_plant
 
@@ -132,7 +133,7 @@ def injector():
         },
     )
     limb["well"].fluid = limb["sink"].fluid = BRINE
-    return plant
+    return with_values(plant)
 
 
 def needed(rate):

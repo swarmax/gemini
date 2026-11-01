@@ -91,7 +91,6 @@ class ESP(Module):
         )
         self.correction_factors = Parameter(
             tuple[Dimensionless, PressureDifference],
-            default=(1, 0),
             description=(
                 "Calibration factors of the pressure rise: a multiplier and an added pressure "
                 "difference"

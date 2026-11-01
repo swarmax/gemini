@@ -12,6 +12,7 @@ from gemini.modules.declarations import Boundary, Control, Inlet, Outlet, Output
 from gemini.modules.storage import ThermalStorage
 from gemini.types import Stream, Temperature
 from tests.fixtures.air import air
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_close
 from tests.fixtures.errors import raises
 
@@ -106,7 +107,7 @@ class ControlledTank(Module):
 
         # Modules
         self.controller = _controller(proportional_gain=0.1, integral_time=600.0)
-        self.storage = ThermalStorage().set_params(
+        self.storage = with_values(ThermalStorage()).set_params(
             "",
             {
                 "service": "hot",

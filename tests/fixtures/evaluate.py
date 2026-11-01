@@ -18,6 +18,7 @@ from gemini.physics import chemistry, corrosion, erosion, geometry, heat_transfe
 from gemini.types.flows import Stream
 from gemini.types.fluid import Fluid
 from tests.fixtures import FIXTURES
+from tests.fixtures.designs import WELL
 from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.old_names import RENAMED_NAMES
 
@@ -103,6 +104,7 @@ def _reservoir_parameters():
         drainage_radius=1000,
         top_depth=1800,
         wellbore_radius=0.0765,
+        skin=0.0,
         productivity_index=units.index_to_si(21),
         injectivity_index=units.index_to_si(20),
     )
@@ -191,6 +193,8 @@ def _well(is_production, parameters, inputs):
         dict(
             **geometry.section_values(_pipe_path(parameters)),
             soil_temperature=inputs["temperature_ambient"],
+            **WELL,
+            **({"segment": "full"} if is_production else {}),
         ),
     )
     stream = Stream(m_dot=inputs["flowrate"] * 1000, p=inputs["pressure"], T=inputs["temperature"])

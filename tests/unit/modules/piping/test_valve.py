@@ -6,6 +6,7 @@ import gemini as gm
 from gemini.modules import energy_balance, mass_balance
 from gemini.modules.piping import Valve
 from gemini.types import Fluid, Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 
 KV = 100 / 3600 / 1e5**0.5
@@ -16,7 +17,7 @@ STREAM = Stream(flow={"value": 36, "unit": "m3/h"}, T=353.15, p=20e5)
 
 def valve(**changes):
     """Return a Kv 100 equal-percentage valve."""
-    return Valve().set_params(
+    return with_values(Valve()).set_params(
         "", {"flow_coefficient": {"value": 100, "unit": "m3/h/bar^0.5"}} | changes
     )
 

@@ -14,6 +14,7 @@ from gemini.plants._utils import loops
 from gemini.plants._utils.plan import Loop
 from gemini.plants.plant import Plant
 from gemini.types import Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 from tests.fixtures.parity import BACKENDS
 
@@ -77,7 +78,7 @@ class Circuit(Plant):
         super().__init__()
 
         # Modules
-        self.pump = CirculationPump()
+        self.pump = with_values(CirculationPump())
         self.relaxer = self.relaxer_class()
 
         # Inlets
@@ -165,7 +166,7 @@ def test_a_stateful_module_in_a_trial_is_refused():
     with raises(
         gm.errors.ValidationError, "invalid_design", match="stateless module for a trial call"
     ):
-        ThermalStorage()._trial()
+        with_values(ThermalStorage())._trial()
 
 
 def test_a_trial_keeps_the_runtime_settings_and_is_not_recorded():

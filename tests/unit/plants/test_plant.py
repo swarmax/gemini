@@ -6,6 +6,7 @@ import pytest
 
 import gemini as gm
 from gemini.errors import NotImplementedYet, ValidationError
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 
 
@@ -21,7 +22,7 @@ def chain():
     plant.connect("first.fluid_out", "second.fluid_in")
     plant.connect("degasser.gas_out", "gas_out")
     plant.connect("second.fluid_out", "product")
-    return plant
+    return with_values(plant)
 
 
 def stream():
@@ -59,6 +60,7 @@ def test_an_unconnected_port_is_reported_with_its_path():
     plant.add("Degasser", "degasser")
     plant.connect("feed", "degasser.fluid_in")
     plant.connect("degasser.liquid_out", "product")
+    with_values(plant)
     found = [(item["path"], item["code"]) for item in gm.plants.validate(plant, on_error="record")]
     assert ("degasser.gas_out", "unconnected_port") in found
     with raises(ValidationError, "unconnected_port"):
@@ -149,12 +151,13 @@ def test_a_cycle_is_a_loop_and_a_state_connection_waits_for_scan():
     plant.add("Filter", "second")
     plant.connect("first.fluid_out", "second.fluid_in")
     plant.connect("second.fluid_out", "first.fluid_in")
-    assert plant._compiled().iterates
+    assert with_values(plant)._compiled().iterates
     plant = gm.Plant("Loop")
     plant.add("Filter", "first")
     plant.add("Filter", "second")
     plant.connect("first.fluid_out", "second.fluid_in")
     plant.connect("second.fluid_out", "first.fluid_in", type="state")
+    with_values(plant)
     with pytest.raises(NotImplementedYet):
         plant()
 
@@ -188,7 +191,7 @@ def test_connections_reach_through_groups_but_never_into_plants():
 
 def test_a_plant_child_in_a_false_cycle_is_opened():
     """The doublet loop through the surface equipment runs the doublet's children directly."""
-    plant = gm.plants.get("DoubletHeatPlant")
+    plant = with_values(gm.plants.get("DoubletHeatPlant"))
     paths = [step.path for step in plant._compiled().steps]
     assert [path for path in paths if path != "doublet.formation"] == [
         "doublet.reservoir",
@@ -218,7 +221,7 @@ def test_a_plant_child_outside_a_cycle_is_called_as_one_unit():
 
 def test_the_doublet_runs_injection_before_production():
     """Ties go to the first appearance in the connection list, as the handwritten forward."""
-    plant = gm.plants.get("Doublet")
+    plant = with_values(gm.plants.get("Doublet"))
     paths = [step.path for step in plant._compiled().steps]
     assert [path for path in paths if path != "formation"] == [
         "injector",
@@ -252,7 +255,7 @@ def test_a_plant_has_no_run_method():
 def test_a_standalone_plant_path_is_its_snake_case_name():
     """The root path keeps the name the class-based plant had, in events and messages."""
     assert gm.Plant("DoubletHeatPlant").path == "doublet_heat_plant"
-    assert gm.plants.get("DoubletHeatPlant").path == "doublet_heat_plant"
+    assert with_values(gm.plants.get("DoubletHeatPlant")).path == "doublet_heat_plant"
 
 
 def test_add_takes_one_dict_of_parameters_the_dict_of_set_params():

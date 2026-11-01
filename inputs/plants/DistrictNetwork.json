@@ -1,6 +1,18 @@
 {
   "plant": "DistrictNetwork",
   "params": {
+    "substations.0.heat_exchanger.fouling_threshold": 0.15,
+    "substations.1.heat_exchanger.fouling_threshold": 0.15,
+    "supply_pipe.roughness": {"value": 4.5e-05, "unit": "m"},
+    "substations.0.valve.characteristic": "equal_percentage",
+    "substations.0.valve.rangeability": 50.0,
+    "substations.0.heat_exchanger.arrangement": "counterflow",
+    "substations.0.pump.efficiency": 0.55,
+    "substations.1.valve.characteristic": "equal_percentage",
+    "substations.1.valve.rangeability": 50.0,
+    "substations.1.heat_exchanger.arrangement": "counterflow",
+    "substations.1.pump.efficiency": 0.55,
+    "return_pipe.roughness": {"value": 4.5e-05, "unit": "m"},
     "pump.head_coefficients": [
       400000.0,
       0.0,

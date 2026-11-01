@@ -1,6 +1,9 @@
 {
   "plant": "DistrictEnergyPlant",
   "params": {
+    "heating.substations.0.pump.efficiency": 0.55,
+    "heating.substations.1.pump.efficiency": 0.55,
+    "cooling.substations.0.pump.efficiency": 0.55,
     "heating.pump.head_coefficients": [
       300000.0,
       0.0,

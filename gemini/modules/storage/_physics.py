@@ -27,9 +27,6 @@ Pruss 2002)."""
 DEFAULT_ICE_HEAT_CAPACITY = 2096.8
 """Specific heat capacity [J/kg/K] of ice Ih at the triple point (IAPWS R10-06)."""
 
-DEFAULT_TANK_TEMPERATURE = 293.15
-"""Initial temperature [K] of a hot or chilled water tank: 20 degC, a room-temperature start."""
-
 MAX_SEGMENTS = 3
 """Most phase segments one step can cross: liquid, freezing or melting, then solid (or back)."""
 

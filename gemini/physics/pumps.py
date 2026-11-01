@@ -23,14 +23,6 @@ CENTRIFUGAL_HEAD_COEFFICIENT_COUNT = 3
 """Number of coefficients ``c0, c1, c2`` of the quadratic centrifugal head curve."""
 
 
-DEFAULT_CIRCULATION_PUMP_EFFICIENCY = 0.55
-"""Efficiency of a building circulation pump [-], from the electricity to the water.
-
-The low end of the 55 to 70 % peak of larger circulators in the trade press (Siegenthaler,
-Plumbing & Mechanical, Modern Hydronics), low because a fixed flow runs away from the peak.
-"""
-
-
 @ops.physics
 def power(volume_flow, frequency, stages, coefficients):
     """Return power [W] from flow [m3/s], frequency [Hz], stages and bhp coefficients.

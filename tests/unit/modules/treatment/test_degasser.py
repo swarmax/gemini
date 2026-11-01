@@ -6,6 +6,7 @@ from gemini.modules._utils.balance import energy_balance, mass_balance
 from gemini.modules.treatment import Degasser
 from gemini.types import Fluid
 from gemini.types.flows import Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.reading import reading
 
@@ -14,7 +15,7 @@ GASSY = Fluid(gas_mass_fraction=0.02)
 
 def test_equipment_forward():
     """Equipment preserves mass and valid pressure/temperature."""
-    c = Degasser().set_params("", {"heat_transfer_coefficient": 100000})
+    c = with_values(Degasser()).set_params("", {"heat_transfer_coefficient": 100000})
     result = c(fluid_in=Stream(m_dot=1, T=300, p=1e6))
     assert sum(s.m_dot for s in result.outlets.values() if isinstance(s, Stream)) == 1
     assert result.outlets["liquid_out"].T == 300
@@ -24,7 +25,7 @@ def test_equipment_forward():
 def test_default_reproduces_the_liquid_only_model_for_any_fluid():
     """Zero default efficiency: no gas, liquid unchanged except the 0.149 bar loss."""
     inlet = Stream(m_dot=40, T=350, p=1e6, fluid=GASSY)
-    result = Degasser()(fluid_in=inlet)
+    result = with_values(Degasser())(fluid_in=inlet)
     assert result.outlets.liquid_out == inlet.with_(p=1e6 - 14900)
     assert result.outlets.gas_out == inlet.with_(p=1e6 - 14900, m_dot=0)
     assert reading(result).gas_mass_flow == 0
@@ -33,7 +34,9 @@ def test_default_reproduces_the_liquid_only_model_for_any_fluid():
 
 def test_separation_conserves_gas_mass_and_energy():
     """The separated share of the free gas leaves through gas; the rest stays in the liquid."""
-    degasser = Degasser().set_params("", {"separation_efficiency": 0.75, "outlet_pressure": 2e5})
+    degasser = with_values(Degasser()).set_params(
+        "", {"separation_efficiency": 0.75, "outlet_pressure": 2e5}
+    )
     inlet = Stream(m_dot=10, T=350, p=1e6, fluid=GASSY)
     result = degasser(fluid_in=inlet)
     liquid, gas = result.outlets.liquid_out, result.outlets.gas_out
@@ -50,7 +53,7 @@ def test_separation_conserves_gas_mass_and_energy():
 
 def test_full_efficiency_and_zero_flow():
     """Perfect separation leaves a gas-free liquid; zero flow separates nothing."""
-    degasser = Degasser().set_params("", {"separation_efficiency": 1})
+    degasser = with_values(Degasser()).set_params("", {"separation_efficiency": 1})
     result = degasser(fluid_in=Stream(m_dot=5, T=350, p=1e6, fluid=GASSY))
     assert result.outlets.liquid_out.fluid.gas_mass_fraction == 0
     assert result.outlets.gas_out.m_dot == pytest.approx(0.1)
@@ -62,7 +65,7 @@ def test_degasser_matches_traced():
     """The split traces for a gassy fluid, a gas-free fluid and a set vessel pressure."""
     for fluid in (GASSY, Fluid()):
         for settings in (dict(separation_efficiency=0.75), dict(outlet_pressure=2e5)):
-            module = Degasser().set_params("", settings)
+            module = with_values(Degasser()).set_params("", settings)
             rows = [
                 dict(fluid_in=Stream(m_dot=m_dot, T=350, p=1e6, fluid=fluid))
                 for m_dot in (0, 1, 10)

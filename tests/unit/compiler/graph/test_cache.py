@@ -7,6 +7,7 @@ import numpy as np
 
 import gemini as gm
 from gemini.compiler.graph import GraphCache, evaluate, graph_cache, graph_feeds
+from tests.fixtures.designs import with_values
 
 
 def _wired(first, second):
@@ -17,7 +18,7 @@ def _wired(first, second):
     plant.connect("fluid_in", f"{first}.fluid_in")
     plant.connect(f"{first}.fluid_out", f"{second}.fluid_in")
     plant.connect(f"{second}.fluid_out", "fluid_out")
-    return plant
+    return with_values(plant)
 
 
 def _inlets(fluid):

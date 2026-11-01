@@ -5,6 +5,7 @@ from gemini.modules import Filter, Module
 from gemini.modules._utils.wiring import trace_wiring
 from gemini.modules.declarations import Inlet, Outlet
 from gemini.types import Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 
 STREAM = Stream(m_dot=10, T=330, p=1e6)
@@ -18,8 +19,8 @@ class Train(Module):
         super().__init__()
 
         # Modules
-        self.first = Filter()
-        self.second = Filter()
+        self.first = with_values(Filter())
+        self.second = with_values(Filter())
 
         # Inlets
         self.fluid_in = Inlet(Stream)

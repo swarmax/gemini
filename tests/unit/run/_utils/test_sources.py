@@ -10,6 +10,7 @@ from gemini.case import CO2, Assumptions, Case, Emissions, Finance, Opex, Time
 from gemini.physics import refrigeration
 from gemini.run._utils import sources
 from gemini.units import Quantity
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 
 
@@ -57,7 +58,7 @@ def test_a_missing_price_is_a_missing_assumption_with_its_path():
 
 def _heat_pump(**params):
     """Return a heat pump with the values of ``params``."""
-    return gm.modules.HeatPump().set_params(
+    return with_values(gm.modules.HeatPump()).set_params(
         "", {"mode": "heating", "capacity": {"value": 1, "unit": "MW"}} | params
     )
 
@@ -76,9 +77,11 @@ def test_a_lorenz_machine_is_estimated_with_its_own_fraction():
     assert sources.heat_pump_cop(_heat_pump(**lorenz), True, 373.15, 323.15) == plain
 
 
-def test_the_default_fraction_is_a_named_value_with_a_source():
-    """The default of the parameter is the named constant, and its docstring cites the source."""
-    assert gm.modules.HeatPump().carnot_fraction == refrigeration.DEFAULT_CARNOT_FRACTION
+def test_the_cited_fraction_is_a_named_value_with_a_source_and_no_default():
+    """The module holds no fraction: a plant states it; the cited figure is a constant."""
+    with raises(gm.errors.ValidationError, "missing_value", match="carnot_fraction"):
+        gm.modules.HeatPump().carnot_fraction
+    assert refrigeration.DEFAULT_CARNOT_FRACTION == 0.5
     assert "ABB Review 5/1996" in Path(refrigeration.__file__).read_text()
 
 

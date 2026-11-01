@@ -12,11 +12,12 @@ from gemini.modules.pumps import ESP, InjectionPump
 from gemini.types import Power, Stream
 from gemini.types.ports import Ports
 from gemini.types.results import ModuleResult, Values
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import STREAM_FIELDS, assert_close
 from tests.fixtures.esp_design import ESP_MODULE
 from tests.fixtures.reading import reading
 
-GRID_GAS = GasGrid()._offered()["gas_out"]
+GRID_GAS = with_values(GasGrid())._offered()["gas_out"]
 
 
 class Radiator(Module):

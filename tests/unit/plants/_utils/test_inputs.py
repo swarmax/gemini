@@ -5,6 +5,7 @@ import pytest
 import gemini as gm
 from gemini.errors import ValidationError
 from gemini.plants._utils.schema import schema
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 from tests.fixtures.heating_cooling import days_case
 from tests.fixtures.json_schema import check as check_schema
@@ -34,7 +35,7 @@ def boiler_plant():
     plant.connect("pump_heater.flue_out", "flue")
     plant.connect("pump_heater.loss_out", "loss")
     plant.users.fluid = gm.WATER
-    return plant
+    return with_values(plant)
 
 
 def test_set_inputs_validates_and_persists_a_setpoint():
@@ -55,7 +56,7 @@ def test_an_input_without_a_value_reads_none():
 @pytest.mark.parametrize("structure", [False, True])
 def test_inputs_round_trip_in_both_dict_forms(structure):
     """The stated value stays as written, and ``from_dict`` applies it."""
-    plant = gm.plants.get("HeatingPlant")
+    plant = with_values(gm.plants.get("HeatingPlant"))
     path = "peak_boiler.temperature_setpoint"
     plant.set_inputs({path: {"value": 100, "unit": "degC"}})
     data = plant.to_dict(structure=structure)
@@ -67,7 +68,7 @@ def test_inputs_round_trip_in_both_dict_forms(structure):
 
 def test_a_plant_without_inputs_has_no_key():
     """Stored plants that set nothing keep the dict they had."""
-    assert "inputs" not in gm.plants.get("HeatingPlant").to_dict()
+    assert "inputs" not in with_values(gm.plants.get("HeatingPlant")).to_dict()
 
 
 def test_a_run_does_not_become_a_stored_input():
@@ -79,7 +80,7 @@ def test_a_run_does_not_become_a_stored_input():
 
 def test_a_plant_inlet_field_is_an_input():
     """``port.field`` holds what ``root_inputs`` held: it feeds the root stream of a run."""
-    plant = gm.plants.get("Doublet")
+    plant = with_values(gm.plants.get("Doublet"))
     plant.set_inputs(
         {
             "return_in.T": {"value": 40, "unit": "degC"},
@@ -145,7 +146,7 @@ def test_set_inputs_changes_nothing_when_one_path_fails():
 
 def test_the_schema_knows_the_key():
     """Both forms of the plant dict take ``inputs`` in the schema."""
-    document = gm.plants.get("HeatingPlant").set_inputs(
+    document = with_values(gm.plants.get("HeatingPlant")).set_inputs(
         {"peak_boiler.temperature_setpoint": {"value": 100, "unit": "degC"}}
     )
     for structure in (False, True):
@@ -154,7 +155,7 @@ def test_the_schema_knows_the_key():
 
 def test_a_unit_string_is_refused_as_an_input_and_as_a_parameter():
     """Values are numbers in SI or quantities; text with a unit is no value."""
-    plant = gm.plants.Doublet()
+    plant = with_values(gm.plants.Doublet())
     with raises(gm.errors.ValidationError, "invalid_value"):
         plant.set_inputs({"esp.frequency": "50 Hz"})
     with raises(gm.errors.ValidationError, "invalid_value"):

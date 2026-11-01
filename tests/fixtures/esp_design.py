@@ -7,6 +7,7 @@ ESP_DESIGN = {
     "esp.maximum_flow": {"value": 1, "unit": "m3/s"},
     "esp.best_efficiency_flow": {"value": 0.04, "unit": "m3/s"},
     "esp.drift_threshold": 0.1,
+    "esp.correction_factors": [1.0, 0.0],
 }
 """What a designed doublet leaves to its plant, under ``esp.``: no flow window, 0.04 m3/s best flow.
 

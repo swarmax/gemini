@@ -10,6 +10,7 @@ from gemini.runtime import settings
 from gemini.types import Stream
 from tests.fixtures.air import air
 from tests.fixtures.balance import assert_plant_closes
+from tests.fixtures.designs import with_values
 from tests.fixtures.parity import BACKENDS
 
 HOT = Stream(m_dot=2.0, T=350.0, p=4e5)
@@ -83,7 +84,7 @@ def test_a_loss_that_reaches_no_edge_module_fails_the_plant_only():
             outlets = dict(fluid_out=passed.outlets.fluid_out)
             return outlets
 
-    pipe = Pipe().set_params(
+    pipe = with_values(Pipe()).set_params(
         "",
         {
             "length": 500,

@@ -8,6 +8,7 @@ from gemini.modules.declarations import Inlet, Outlet, Output
 from gemini.plants import ATESPlant
 from gemini.types import Stream
 from tests.fixtures.balance import assert_plant_closes
+from tests.fixtures.designs import with_values
 from tests.fixtures.reading import reading
 
 CP = 4217.4
@@ -26,7 +27,7 @@ def _season(plant, mode):
 
 def _plant(mode="charge"):
     """Return a 30 kg/s ATES plant with a 1 MW/K exchanger and a 2 MW heat pump."""
-    plant = ATESPlant()
+    plant = with_values(ATESPlant())
     plant.storage.groundwater_flow = 30.0
     plant.storage.set_params(
         "",

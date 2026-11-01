@@ -42,7 +42,7 @@ class AbsorptionUnit(Equipment, Module):
     whether capacity, the characteristic equation or the driving temperature limits it.
 
     Assumptions: constant thermal COP (Herold, Radermacher and Klein 2016, Absorption Chillers
-    and Heat Pumps, 2nd ed., give about 0.7 for single-effect water/LiBr machines, the default),
+    and Heat Pumps, 2nd ed., give about 0.7 for single-effect water/LiBr machines),
     no pressure loss, no casing heat loss, constant liquid heat capacity per stream; the unit
     throttles to the request without changing its COP. Validity: the characteristic
     coefficients ``characteristic_slope``, ``minimum_driving_difference``,
@@ -91,7 +91,6 @@ class AbsorptionUnit(Equipment, Module):
         )
         self.thermal_cop = Parameter(
             Ratio,
-            default=_physics.ABSORPTION_THERMAL_COP,
             gt=0,
             description="Thermal coefficient of performance: useful duty over driving heat",
         )
@@ -100,7 +99,6 @@ class AbsorptionUnit(Equipment, Module):
         )
         self.minimum_driving_temperature = Parameter(
             Temperature,
-            default=_physics.ABSORPTION_MINIMUM_DRIVING_TEMPERATURE,
             description="Lowest driving hot-water temperature at which the machine operates",
         )
 

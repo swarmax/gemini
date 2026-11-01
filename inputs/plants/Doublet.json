@@ -1,6 +1,37 @@
 {
   "plant": "Doublet",
   "params": {
+    "roughness": {"value": 4.5e-05, "unit": "m"},
+    "esp.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "reservoir.decline_threshold": 0.15,
+    "sink.decline_threshold": 0.15,
+    "drainage_radius": {"value": 1000.0, "unit": "m"},
+    "reservoir.skin": 0.0,
+    "well.friction_correlation": "darcy_weisbach",
+    "well.two_phase_friction_correlation": "BeggsBrill",
+    "well.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "well.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "riser.friction_correlation": "darcy_weisbach",
+    "riser.two_phase_friction_correlation": "BeggsBrill",
+    "riser.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "riser.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "injector.friction_correlation": "darcy_weisbach",
+    "injector.two_phase_friction_correlation": "BeggsBrill",
+    "injector.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "injector.heat_transfer_coefficient": {"value": 10.0, "unit": "W/m2/K"},
+    "sink.skin": 0.0,
     "reservoir.pressure": {"value": 220, "unit": "bar"},
     "reservoir.temperature": {"value": 80, "unit": "degC"},
     "reservoir.permeability": {"value": 9.869233e-12, "unit": "m2"},

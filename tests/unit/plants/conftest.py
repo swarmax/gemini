@@ -8,8 +8,17 @@ CP = 4217.4
 
 def configure_heating_substation(substation, demand=1.5e5):
     """Fill a heating substation: 3 kg/s building loop, 20 kW/K exchanger, 30 degC floor."""
-    substation.pump.set_params("", {"flow": 3.0, "pressure_rise": 5e4, "loop_pressure": 3e5})
-    substation.valve.set_params("", {"flow_coefficient": {"value": 20, "unit": "m3/h/bar^0.5"}})
+    substation.pump.set_params(
+        "", {"flow": 3.0, "pressure_rise": 5e4, "loop_pressure": 3e5, "efficiency": 0.55}
+    )
+    substation.valve.set_params(
+        "",
+        {
+            "flow_coefficient": {"value": 20, "unit": "m3/h/bar^0.5"},
+            "characteristic": "equal_percentage",
+            "rangeability": 50.0,
+        },
+    )
     substation.valve.opening = 0.8
     substation.heat_exchanger.set_params(
         "",
@@ -19,6 +28,8 @@ def configure_heating_substation(substation, demand=1.5e5):
             "cold_nominal_pressure_drop": 2e4,
             "hot_nominal_mass_flow": 2,
             "cold_nominal_mass_flow": 3,
+            "arrangement": "counterflow",
+            "fouling_threshold": 0.15,
         },
     )
     substation.consumer.set_params("", {"minimum_return_temperature": 303.15})
@@ -28,8 +39,17 @@ def configure_heating_substation(substation, demand=1.5e5):
 
 def configure_cooling_substation(substation, sensible=6e4, latent=1e4):
     """Fill a cooling substation: 4 kg/s building loop, 30 kW/K exchanger, 18 degC return limit."""
-    substation.pump.set_params("", {"flow": 4.0, "pressure_rise": 5e4, "loop_pressure": 3e5})
-    substation.valve.set_params("", {"flow_coefficient": {"value": 20, "unit": "m3/h/bar^0.5"}})
+    substation.pump.set_params(
+        "", {"flow": 4.0, "pressure_rise": 5e4, "loop_pressure": 3e5, "efficiency": 0.55}
+    )
+    substation.valve.set_params(
+        "",
+        {
+            "flow_coefficient": {"value": 20, "unit": "m3/h/bar^0.5"},
+            "characteristic": "equal_percentage",
+            "rangeability": 50.0,
+        },
+    )
     substation.valve.opening = 1.0
     substation.heat_exchanger.set_params(
         "",
@@ -39,6 +59,8 @@ def configure_cooling_substation(substation, sensible=6e4, latent=1e4):
             "cold_nominal_pressure_drop": 2e4,
             "hot_nominal_mass_flow": 4,
             "cold_nominal_mass_flow": 3,
+            "arrangement": "counterflow",
+            "fouling_threshold": 0.15,
         },
     )
     substation.consumer.set_params(
@@ -80,6 +102,7 @@ def configure_pipe(pipe):
             "inner_diameter": 0.1,
             "elevation_change": 0,
             "heat_transfer_coefficient": 1.0,
+            "roughness": 4.5e-5,
         },
     )
     return pipe

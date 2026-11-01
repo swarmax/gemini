@@ -6,6 +6,7 @@ from gemini.errors import PhysicsError, ValidationError
 from gemini.modules._utils.balance import energy_balance, mass_balance
 from gemini.modules.cooling import AdsorptionChiller
 from gemini.types.flows import Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
@@ -26,7 +27,7 @@ def chiller(**params):
         evaporator_coefficient=1.0,
         auxiliary_power_ratio=0.02,
     )
-    return AdsorptionChiller().set_params("", design | params)
+    return with_values(AdsorptionChiller()).set_params("", design | params)
 
 
 def call(machine, setpoint, **streams):
@@ -104,7 +105,7 @@ def test_traced_call_matches_one_call_per_row():
 
 def test_a_stopped_drive_circuit_has_no_driving_temperature():
     """Water that does not flow drives nothing, whatever its temperature: no limit applies."""
-    chiller = AdsorptionChiller().set_params(
+    chiller = with_values(AdsorptionChiller()).set_params(
         "",
         {
             "capacity": {"value": 100, "unit": "kW"},

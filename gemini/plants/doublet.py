@@ -2,12 +2,12 @@
 
 from gemini.errors import ValidationError
 from gemini.modules._utils.cost import Equipment
-from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
+from gemini.modules.declarations import UNSET, Inlet, Outlet, Output, Parameter
 from gemini.modules.environment import Formation
 from gemini.modules.pumps import ESP
 from gemini.modules.subsurface import InjectionReservoir, ProductionReservoir
 from gemini.modules.wells import InjectionWell, ProductionWell
-from gemini.physics import constants, doublet, ground, pumps
+from gemini.physics import constants, doublet, pumps
 from gemini.plants.plant import Plant
 from gemini.types import (
     Efficiency,
@@ -37,7 +37,7 @@ class Doublet(Equipment, Plant):
     - with ``permeability``, ``thickness`` (both of the case) and ``well_diameter``: the
       productivity and injectivity indices of radial Darcy flow, with the fluid viscosity,
       ``drainage_radius``, the wellbore radius and the ``skin`` of each reservoir, and the vertical
-      pipe paths of the wells;
+      pipe paths of the wells, of the wall ``roughness`` the plant states;
     - with ``nominal_flow``, ``pump_efficiency`` and ``nominal_wellhead_pressure``: the pump setting
       depth, the shallowest that keeps that pressure at the intake, and a one-stage ESP of constant
       head that reaches the wellhead pressure at the nominal flow, with that hydraulic efficiency.
@@ -112,9 +112,13 @@ class Doublet(Equipment, Plant):
         )
         self.drainage_radius = Parameter(
             Length,
-            default=ground.DOUBLET_WELL_SPACING,
             gt=0,
             description="Radius of the drainage area around each well",
+        )
+        self.roughness = Parameter(
+            Length,
+            gt=0,
+            description="Absolute roughness of the inner wall of both vertical wells",
         )
         self.nominal_flow = Parameter(
             VolumeFlow | None,
@@ -166,17 +170,25 @@ class Doublet(Equipment, Plant):
         if path:
             return super().set_params(path, params, valid_from)
         fluid = self.fluid.properties(0, 0)
-        values = self._own_values(params, valid_from)
+        values = {"drainage_radius": None, "roughness": None} | self._own_values(params, valid_from)
         if self._lacking(values):
             return super().set_params("", params, valid_from)
+        skins = self._skins(params)
+        if values["drainage_radius"] is None or None in skins.values():
+            values = values | dict.fromkeys(doublet.FLOW_PATH)
         derived = doublet.design(
-            values,
-            fluid.rho_l,
-            fluid.mu_l,
-            {name: self.get_submodule(name).skin for name in doublet.RESERVOIRS},
-            self._stated_pressure(params),
+            values, fluid.rho_l, fluid.mu_l, skins, self._stated_pressure(params)
         )
         return super().set_params("", self._keep_derived(derived, params) | params, valid_from)
+
+    def _skins(self, params):
+        """Return the skin of each reservoir: stated by this call, else stored, else ``None``."""
+        skins = {}
+        for name in doublet.RESERVOIRS:
+            skin = self.get(f"{name}.skin")
+            stated = params.get(f"{name}.skin", skin.value)
+            skins[name] = None if stated is UNSET else skin.validate(stated)
+        return skins
 
     def _lacking(self, values):
         """Return the names of the geotherm a ``depth`` waits for, which the case gives."""

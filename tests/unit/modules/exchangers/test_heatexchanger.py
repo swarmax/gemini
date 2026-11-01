@@ -13,6 +13,7 @@ from gemini.types.fluid import WATER
 from gemini.types.results import NOT_ASSESSED
 from scripts.legacy import tables as mapping
 from tests.fixtures import OLD_PROJECT
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_health_matches, assert_module_matches
 from tests.fixtures.errors import raises
 
@@ -63,7 +64,7 @@ def exchanger_for(row, measured, ua):
             m_dot=measured["m_dot_cold"], T=measured["cold_in_T"], p=1e6, fluid=WATER
         ),
     }
-    return HeatExchanger().set_params("", params), streams
+    return with_values(HeatExchanger()).set_params("", params), streams
 
 
 def test_measured_heat_exchanger_performance():
@@ -97,7 +98,7 @@ def test_first_law_equal_capacity_and_limits(arrangement):
         hot_nominal_mass_flow=10,
         cold_nominal_mass_flow=10,
     )
-    c = HeatExchanger().set_params("", p)
+    c = with_values(HeatExchanger()).set_params("", p)
     hot, cold = Stream(m_dot=10, T=350, p=1e6), Stream(m_dot=10, T=300, p=1e6)
     result = c(hot_in=hot, cold_in=cold)
     out, streams = result.outputs, result.outlets
@@ -122,7 +123,7 @@ def test_invalid_measurements():
 
 def test_health_is_not_assessed_when_measurements_cannot_determine_ua():
     """E-modules-011/012: zero flow or zero design UA mean not assessed, not an error."""
-    exchanger = HeatExchanger().set_params(
+    exchanger = with_values(HeatExchanger()).set_params(
         "",
         {
             "thermal_conductance": 100000,
@@ -152,7 +153,7 @@ def test_health_is_not_assessed_when_measurements_cannot_determine_ua():
 @pytest.mark.parametrize("arrangement", ["parallel", "counterflow"])
 def test_traced_call_matches_one_call_per_row(arrangement):
     """Unequal, equal, stopped and pinched rows trace and equal one call per row."""
-    exchanger = HeatExchanger().set_params(
+    exchanger = with_values(HeatExchanger()).set_params(
         "",
         {
             "thermal_conductance": 100000,
@@ -179,7 +180,7 @@ def test_traced_call_matches_one_call_per_row(arrangement):
 
 
 def _health_exchanger(arrangement):
-    return HeatExchanger().set_params(
+    return with_values(HeatExchanger()).set_params(
         "",
         {
             "thermal_conductance": 100000,

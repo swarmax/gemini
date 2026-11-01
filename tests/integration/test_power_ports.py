@@ -11,6 +11,7 @@ from gemini.modules import Module
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter
 from gemini.physics import energy
 from gemini.types import Power, Stream
+from tests.fixtures.designs import with_values
 
 STREAM = gm.Stream(m_dot=2.0, T=300.0, p=2e5)
 
@@ -271,6 +272,7 @@ def test_an_offered_outlet_closes_a_loop_without_state():
     plant.add("Filter", "filter")
     plant.connect("source.fluid_out", "filter.fluid_in")
     plant.connect("filter.fluid_out", "source.fluid_in")
+    with_values(plant)
     steps = plant._compiled().steps
     assert [(step.path, step.offer) for step in steps] == [
         ("source", True),

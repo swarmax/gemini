@@ -1,6 +1,6 @@
 """Lumped ice-on-coil or encapsulated ice store on one glycol circuit."""
 
-from gemini import ops, units
+from gemini import ops
 from gemini.errors import ValidationError
 from gemini.modules._utils.flow import require_forward
 from gemini.modules.declarations import Inlet, Outlet, Output, Parameter, State
@@ -50,12 +50,12 @@ class IceStorage(Module):
     at the start of the step (negative while charging with cold); ``energy_balance`` counts it as
     the signed storage outflow, so the store is first-law closed.
 
-    Defaults: ``latent_heat`` 333.55 kJ/kg is the conventional latent heat of fusion of ice at
-    0 degC and 101.325 kPa; IAPWS R10-06 (Feistel and Wagner 2006, *A new equation of state for
-    H2O ice Ih*) gives 333.44 kJ/kg at the triple point, 0.03 % lower. ``freezing_temperature``
-    273.15 K is the normal melting point. ``water_specific_heat`` 4219.9 J/kg/K is saturated
-    liquid water at 0.01 degC (IAPWS-95, Wagner and Pruss 2002) and ``ice_specific_heat``
-    2096.8 J/kg/K is ice Ih at the triple point (IAPWS R10-06).
+    Reference values: ``latent_heat`` 333.55 kJ/kg is the conventional latent heat of fusion of
+    ice at 0 degC and 101.325 kPa; IAPWS R10-06 (Feistel and Wagner 2006, *A new equation of
+    state for H2O ice Ih*) gives 333.44 kJ/kg at the triple point, 0.03 % lower.
+    ``freezing_temperature`` 273.15 K is the normal melting point. ``water_specific_heat``
+    4219.9 J/kg/K is saturated liquid water at 0.01 degC (IAPWS-95, Wagner and Pruss 2002) and
+    ``ice_specific_heat`` 2096.8 J/kg/K is ice Ih at the triple point (IAPWS R10-06).
 
     Simplifications and validity: one lumped store temperature, constant coil UA (in a real
     ice-on-coil store UA falls as the ice layer thickens and depends on the glycol flow regime;
@@ -101,12 +101,19 @@ class IceStorage(Module):
             description="Specific heat capacity of ice",
         )
 
+        self.initial_ice_fraction = Parameter(
+            Fraction, description="Ice fraction of the store at the start of the run"
+        )
+        self.initial_temperature = Parameter(
+            Temperature, description="Temperature of the store at the start of the run"
+        )
+
         # Inlets
         self.fluid_in = Inlet(Stream, kind="chilled_water")
 
         # States
-        self.ice_fraction = State(Fraction, default=0)
-        self.temperature = State(Temperature, default=units.ZERO_CELSIUS)
+        self.ice_fraction = State(Fraction)
+        self.temperature = State(Temperature)
 
         # Outputs
         self.stored_cold = Output(

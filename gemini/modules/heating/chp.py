@@ -19,7 +19,7 @@ class CHP(Equipment, Module):
     F = F_full * (f0 + (1 - f0) * L) for L > 0, with F_full = electric_capacity /
     electric_efficiency and f0 = ``no_load_fuel_fraction`` (Willans-line method in Heywood
     1988, Internal Combustion Engine Fundamentals: fuel flow at constant speed is close to
-    linear in brake load). The default f0 = 0 keeps both efficiencies constant over load; a
+    linear in brake load). An empty f0 (zero) keeps both efficiencies constant over load; a
     typical lean-burn gas engine has its electric efficiency fall by a few points at half load,
     which an f0 of 0.05 to 0.15 reproduces.
 
@@ -57,10 +57,13 @@ class CHP(Equipment, Module):
             Efficiency, description="Useful heat output over fuel energy"
         )
         self.no_load_fuel_fraction = Parameter(
-            Fraction,
-            default=0,
+            Fraction | None,
+            default=None,
             lt=1,
-            description="Fuel use at zero load as a share of the full-load fuel use",
+            description=(
+                "Fuel use at zero load as a share of the full-load fuel use; empty leaves the "
+                "no-load term out"
+            ),
         )
         self.maximum_outlet_temperature = Parameter(
             Temperature, description="Highest water temperature at the unit outlet"
@@ -117,6 +120,10 @@ class CHP(Equipment, Module):
         """Return the cost of the engine from its electric capacity."""
         return self.capex_of(finance, self.electric_capacity)
 
+    def _no_load_fuel_fraction(self):
+        """Return the no-load fuel share; zero when the term is left out."""
+        return 0 if self.no_load_fuel_fraction is None else self.no_load_fuel_fraction
+
     def _load(self, fuel):
         """Return the load: the commanded one, or less when the stream alone must cover it."""
         if _burner.has_grid(fuel):
@@ -125,7 +132,7 @@ class CHP(Equipment, Module):
             self.load_fraction,
             self.electric_capacity,
             self.electric_efficiency,
-            self.no_load_fuel_fraction,
+            self._no_load_fuel_fraction(),
         )
         return combustion.covered_load(self.load_fraction, need, _burner.available_fuel(fuel))
 
@@ -142,7 +149,7 @@ class CHP(Equipment, Module):
         require_forward(self.path, "fluid_in.m_dot", inlet.m_dot)
         load = self._load(fuel_in)
         fuel = combustion.willans_fuel_input(
-            load, self.electric_capacity, self.electric_efficiency, self.no_load_fuel_fraction
+            load, self.electric_capacity, self.electric_efficiency, self._no_load_fuel_fraction()
         )
         engine_heat, generated = combustion.engine_energy_flows(
             fuel, load, self.electric_capacity, self.thermal_efficiency

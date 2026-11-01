@@ -11,6 +11,7 @@ from gemini.modules import CirculationPump, Module
 from gemini.modules.declarations import Control, Inlet, Outlet, Output
 from gemini.plants.plant import Plant
 from gemini.types import Stream
+from tests.fixtures.designs import with_values
 from tests.fixtures.engine_plants import loop_plant
 
 ROWS = 6
@@ -101,7 +102,7 @@ class Circuit(Plant):
         super().__init__()
 
         # Modules
-        self.pump = CirculationPump()
+        self.pump = with_values(CirculationPump())
         self.relaxer = self.relaxer_class()
 
         # Inlets

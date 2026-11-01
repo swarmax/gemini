@@ -56,7 +56,6 @@ class GasCompressor(Module):
         )
         self.stage_count = Parameter(
             Count,
-            default=1,
             description="Number of compression stages sharing the pressure ratio equally",
         )
         self.motor_efficiency = Parameter(

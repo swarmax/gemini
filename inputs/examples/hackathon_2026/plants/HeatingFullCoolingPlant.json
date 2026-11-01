@@ -5,6 +5,172 @@
     "doublets": 2
   },
   "params": {
+    "d0.roughness": {
+      "value": 4.5e-05,
+      "unit": "m"
+    },
+    "d0.esp.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "d1.roughness": {
+      "value": 4.5e-05,
+      "unit": "m"
+    },
+    "d1.esp.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "d0.reservoir.decline_threshold": 0.15,
+    "d0.sink.decline_threshold": 0.15,
+    "d1.reservoir.decline_threshold": 0.15,
+    "d1.sink.decline_threshold": 0.15,
+    "filters.hot.clogging_pressure_drop": {
+      "value": 50000.0,
+      "unit": "Pa"
+    },
+    "filters.cold.clogging_pressure_drop": {
+      "value": 50000.0,
+      "unit": "Pa"
+    },
+    "heat_exchanger.fouling_threshold": 0.15,
+    "d0.drainage_radius": {
+      "value": 1000.0,
+      "unit": "m"
+    },
+    "d0.reservoir.skin": 0.0,
+    "d0.well.friction_correlation": "darcy_weisbach",
+    "d0.well.two_phase_friction_correlation": "BeggsBrill",
+    "d0.well.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "d0.well.heat_transfer_coefficient": {
+      "value": 10.0,
+      "unit": "W/m2/K"
+    },
+    "d0.riser.friction_correlation": "darcy_weisbach",
+    "d0.riser.two_phase_friction_correlation": "BeggsBrill",
+    "d0.riser.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "d0.riser.heat_transfer_coefficient": {
+      "value": 10.0,
+      "unit": "W/m2/K"
+    },
+    "d0.injector.friction_correlation": "darcy_weisbach",
+    "d0.injector.two_phase_friction_correlation": "BeggsBrill",
+    "d0.injector.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "d0.injector.heat_transfer_coefficient": {
+      "value": 10.0,
+      "unit": "W/m2/K"
+    },
+    "d0.sink.skin": 0.0,
+    "d1.drainage_radius": {
+      "value": 1000.0,
+      "unit": "m"
+    },
+    "d1.reservoir.skin": 0.0,
+    "d1.well.friction_correlation": "darcy_weisbach",
+    "d1.well.two_phase_friction_correlation": "BeggsBrill",
+    "d1.well.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "d1.well.heat_transfer_coefficient": {
+      "value": 10.0,
+      "unit": "W/m2/K"
+    },
+    "d1.riser.friction_correlation": "darcy_weisbach",
+    "d1.riser.two_phase_friction_correlation": "BeggsBrill",
+    "d1.riser.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "d1.riser.heat_transfer_coefficient": {
+      "value": 10.0,
+      "unit": "W/m2/K"
+    },
+    "d1.injector.friction_correlation": "darcy_weisbach",
+    "d1.injector.two_phase_friction_correlation": "BeggsBrill",
+    "d1.injector.correction_factors": [
+      1.0,
+      0.0
+    ],
+    "d1.injector.heat_transfer_coefficient": {
+      "value": 10.0,
+      "unit": "W/m2/K"
+    },
+    "d1.sink.skin": 0.0,
+    "degasser.nominal_pressure_drop": {
+      "value": 14900.0,
+      "unit": "Pa"
+    },
+    "filters.hot.nominal_pressure_drop": {
+      "value": 1600.0,
+      "unit": "Pa"
+    },
+    "filters.hot.nominal_mass_flow": {
+      "value": 44.20333333333333,
+      "unit": "kg/s"
+    },
+    "filters.cold.nominal_pressure_drop": {
+      "value": 1600.0,
+      "unit": "Pa"
+    },
+    "filters.cold.nominal_mass_flow": {
+      "value": 44.20333333333333,
+      "unit": "kg/s"
+    },
+    "heat_exchanger.arrangement": "counterflow",
+    "heating_return_pipe.roughness": {
+      "value": 4.5e-05,
+      "unit": "m"
+    },
+    "absorption_chiller.thermal_cop": 0.7,
+    "absorption_chiller.minimum_driving_temperature": {
+      "value": 353.15,
+      "unit": "K"
+    },
+    "adsorption_chiller.thermal_cop": 0.55,
+    "adsorption_chiller.minimum_driving_temperature": {
+      "value": 328.15,
+      "unit": "K"
+    },
+    "adsorption_chiller.maximum_driving_temperature": {
+      "value": 363.15,
+      "unit": "K"
+    },
+    "heating_supply_pipe.roughness": {
+      "value": 4.5e-05,
+      "unit": "m"
+    },
+    "cooling_return_pipe.roughness": {
+      "value": 4.5e-05,
+      "unit": "m"
+    },
+    "compression_chiller.cop_model": "carnot",
+    "compression_chiller.lorenz_fraction": 0.5,
+    "compression_chiller.minimum_temperature_lift": {
+      "value": 10.0,
+      "unit": "K"
+    },
+    "cooling_supply_pipe.roughness": {
+      "value": 4.5e-05,
+      "unit": "m"
+    },
+    "gas_grid.composition": {
+      "CH4": 0.8249507401227822,
+      "C2H6": 0.039549858193534584,
+      "C3H8": 0.012748086337494389,
+      "CO2": 0.011912342910726407,
+      "N2": 0.11083897243546233
+    },
+    "flare.combustion_efficiency": 0.98,
     "depth": {
       "value": 2500,
       "unit": "m"

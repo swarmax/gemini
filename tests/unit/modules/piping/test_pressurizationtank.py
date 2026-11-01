@@ -8,6 +8,7 @@ from gemini.modules.declarations import Inlet, Outlet, Output
 from gemini.modules.piping import Mixer, Pipe, PressurizationTank, Splitter, Valve
 from gemini.types import Stream
 from tests.fixtures.air import air
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.reading import reading
@@ -24,7 +25,7 @@ class Network(Module):
 
         # Modules
         self.splitter = Splitter()
-        self.pipe = Pipe().set_params(
+        self.pipe = with_values(Pipe()).set_params(
             "",
             {
                 "length": 200,
@@ -33,7 +34,7 @@ class Network(Module):
                 "heat_transfer_coefficient": 2.0,
             },
         )
-        self.valve = Valve().set_params(
+        self.valve = with_values(Valve()).set_params(
             "", {"flow_coefficient": {"value": 40, "unit": "m3/h/bar^0.5"}}
         )
         self.mixer = Mixer()

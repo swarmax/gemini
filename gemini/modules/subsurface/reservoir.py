@@ -66,7 +66,6 @@ class _Reservoir(Module):
         )
         self.skin = Parameter(
             Dimensionless,
-            default=0,
             calibratable=True,
             description="Dimensionless skin factor of the near-well zone",
         )
@@ -74,11 +73,14 @@ class _Reservoir(Module):
             Length, gt=0, description="Radius of the wellbore at the aquifer"
         )
         self.decline_threshold = Parameter(
-            Fraction,
-            default=diagnostics.DEFAULT_DECLINE_THRESHOLD,
+            Fraction | None,
+            default=None,
             gt=0,
             le=1,
-            description="Relative productivity decline at which the alarm is raised",
+            description=(
+                "Relative productivity decline at which the alarm is raised; empty switches the "
+                "health check off"
+            ),
         )
 
         # Outputs
@@ -170,6 +172,8 @@ class _Reservoir(Module):
         production = self.role == "production"
         nominal = self.productivity_index if production else self.injectivity_index
         if not {"flow", "bottomhole_pressure"} <= measured.keys() or not nominal:
+            return None
+        if self.decline_threshold is None:
             return None
         pressure = measured["bottomhole_pressure"]
         assessed = pressure != self.pressure

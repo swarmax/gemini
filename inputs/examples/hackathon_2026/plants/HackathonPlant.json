@@ -5,6 +5,52 @@
     "d0": {
       "type": "Doublet",
       "params": {
+        "esp.correction_factors": [
+          1.0,
+          0.0
+        ],
+        "roughness": {
+          "value": 4.5e-05,
+          "unit": "m"
+        },
+        "sink.decline_threshold": 0.15,
+        "reservoir.decline_threshold": 0.15,
+        "sink.skin": 0.0,
+        "injector.heat_transfer_coefficient": {
+          "value": 10.0,
+          "unit": "W/m2/K"
+        },
+        "injector.correction_factors": [
+          1.0,
+          0.0
+        ],
+        "injector.two_phase_friction_correlation": "BeggsBrill",
+        "injector.friction_correlation": "darcy_weisbach",
+        "riser.heat_transfer_coefficient": {
+          "value": 10.0,
+          "unit": "W/m2/K"
+        },
+        "riser.correction_factors": [
+          1.0,
+          0.0
+        ],
+        "riser.two_phase_friction_correlation": "BeggsBrill",
+        "riser.friction_correlation": "darcy_weisbach",
+        "well.heat_transfer_coefficient": {
+          "value": 10.0,
+          "unit": "W/m2/K"
+        },
+        "well.correction_factors": [
+          1.0,
+          0.0
+        ],
+        "well.two_phase_friction_correlation": "BeggsBrill",
+        "well.friction_correlation": "darcy_weisbach",
+        "reservoir.skin": 0.0,
+        "drainage_radius": {
+          "value": 1000.0,
+          "unit": "m"
+        },
         "depth": {
           "value": 2500.0,
           "unit": "m"
@@ -42,6 +88,52 @@
     "d1": {
       "type": "Doublet",
       "params": {
+        "esp.correction_factors": [
+          1.0,
+          0.0
+        ],
+        "roughness": {
+          "value": 4.5e-05,
+          "unit": "m"
+        },
+        "sink.decline_threshold": 0.15,
+        "reservoir.decline_threshold": 0.15,
+        "sink.skin": 0.0,
+        "injector.heat_transfer_coefficient": {
+          "value": 10.0,
+          "unit": "W/m2/K"
+        },
+        "injector.correction_factors": [
+          1.0,
+          0.0
+        ],
+        "injector.two_phase_friction_correlation": "BeggsBrill",
+        "injector.friction_correlation": "darcy_weisbach",
+        "riser.heat_transfer_coefficient": {
+          "value": 10.0,
+          "unit": "W/m2/K"
+        },
+        "riser.correction_factors": [
+          1.0,
+          0.0
+        ],
+        "riser.two_phase_friction_correlation": "BeggsBrill",
+        "riser.friction_correlation": "darcy_weisbach",
+        "well.heat_transfer_coefficient": {
+          "value": 10.0,
+          "unit": "W/m2/K"
+        },
+        "well.correction_factors": [
+          1.0,
+          0.0
+        ],
+        "well.two_phase_friction_correlation": "BeggsBrill",
+        "well.friction_correlation": "darcy_weisbach",
+        "reservoir.skin": 0.0,
+        "drainage_radius": {
+          "value": 1000.0,
+          "unit": "m"
+        },
         "depth": {
           "value": 2500.0,
           "unit": "m"
@@ -83,6 +175,10 @@
     "degasser": {
       "type": "Degasser",
       "params": {
+        "nominal_pressure_drop": {
+          "value": 14900.0,
+          "unit": "Pa"
+        },
         "separation_efficiency": 1.0
       }
     },
@@ -117,6 +213,8 @@
     "hx": {
       "type": "HeatExchanger",
       "params": {
+        "fouling_threshold": 0.15,
+        "arrangement": "counterflow",
         "thermal_conductance": {
           "value": 1500000.0,
           "unit": "W/K"
@@ -145,7 +243,15 @@
     },
     "gas_grid": {
       "type": "GasGrid",
-      "params": {}
+      "params": {
+        "composition": {
+          "CH4": 0.8249507401227822,
+          "C2H6": 0.039549858193534584,
+          "C3H8": 0.012748086337494389,
+          "CO2": 0.011912342910726407,
+          "N2": 0.11083897243546233
+        }
+      }
     },
     "makeup": {
       "type": "GasMakeup",
@@ -163,7 +269,9 @@
     },
     "flare": {
       "type": "Flare",
-      "params": {}
+      "params": {
+        "combustion_efficiency": 0.98
+      }
     },
     "grid": {
       "type": "ElectricityGrid",
@@ -195,6 +303,12 @@
     "heat_pump": {
       "type": "HeatPump",
       "params": {
+        "minimum_temperature_lift": {
+          "value": 10.0,
+          "unit": "K"
+        },
+        "lorenz_fraction": 0.5,
+        "cop_model": "carnot",
         "mode": "heating",
         "capacity": {
           "value": 15000000.0,
@@ -227,6 +341,11 @@
     "chiller": {
       "type": "AbsorptionUnit",
       "params": {
+        "minimum_driving_temperature": {
+          "value": 353.15,
+          "unit": "K"
+        },
+        "thermal_cop": 0.7,
         "mode": "chiller",
         "capacity": {
           "value": 10000000.0,

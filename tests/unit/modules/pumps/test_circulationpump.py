@@ -4,12 +4,13 @@ import pytest
 
 import gemini as gm
 from gemini.modules import CirculationPump
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 
 
 def pump():
     """Return a pump of 4 kg/s and 0.5 bar on a circuit held at 3 bar."""
-    return CirculationPump().set_params(
+    return with_values(CirculationPump()).set_params(
         "",
         {
             "flow": 4.0,

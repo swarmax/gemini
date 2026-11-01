@@ -9,6 +9,7 @@ from gemini.modules.heating import HeatPump
 from gemini.physics import refrigeration
 from gemini.types.flows import Stream
 from gemini.types.fluid import Fluid
+from tests.fixtures.designs import with_values
 from tests.fixtures.equivalence import assert_module_matches
 from tests.fixtures.errors import raises
 from tests.fixtures.parity import BACKENDS
@@ -19,7 +20,7 @@ CP = 4217.4
 
 def heat_pump(mode, **params):
     """Return a configured heat pump."""
-    return HeatPump().set_params("", {"mode": mode, "capacity": 2e6} | params)
+    return with_values(HeatPump()).set_params("", {"mode": mode, "capacity": 2e6} | params)
 
 
 def test_heating_hand_value_and_closure():
@@ -262,7 +263,7 @@ def test_cooling_traced_call_matches_one_call_per_row(params):
 
 def test_a_stopped_heat_pump_has_no_cop_on_every_backend():
     """At zero flow the COP is ``None`` also when a backend gives it as a NaN of no dimension."""
-    pump = HeatPump().set_params(
+    pump = with_values(HeatPump()).set_params(
         "", {"mode": "heating", "capacity": {"value": 2, "unit": "MW"}, "carnot_fraction": 0.5}
     )
     stopped = Stream(m_dot=0.0, T=300.0, p=3e5)

@@ -55,7 +55,7 @@
     }
   ],
   "controls": {},
-  "doc": "Production and injection limbs, with the children's values derived from a design.\n\n    ``depth`` is the true vertical depth of the reservoir midpoint, ``thickness`` its gross\n    thickness and ``well_diameter`` the inner diameter of both vertical wells. ``set_params``\n    derives, through ``gemini/physics/doublet.py``:\n\n    - from ``depth``, ``gradient`` and ``surface_temperature``: a depth waits for the other two,\n      which the case holds (``environment.ground``) and sets for a run on a copy; a run that\n      starts without them raises ``missing_value`` naming the path. They give the reservoir\n      temperature at the midpoint, the reservoir pressure of the case at that depth, the top\n      depth and the soil temperature of the wells, the geotherm at half the depth;\n    - with ``permeability``, ``thickness`` (both of the case) and ``well_diameter``: the\n      productivity and injectivity indices of radial Darcy flow, with the fluid viscosity,\n      ``drainage_radius``, the wellbore radius and the ``skin`` of each reservoir, and the vertical\n      pipe paths of the wells;\n    - with ``nominal_flow``, ``pump_efficiency`` and ``nominal_wellhead_pressure``: the pump setting\n      depth, the shallowest that keeps that pressure at the intake, and a one-stage ESP of constant\n      head that reaches the wellhead pressure at the nominal flow, with that hydraulic efficiency.\n\n    ``volume_imbalance`` is the produced less the injected liquid volume flow. Both sides are the\n    liquid at the density of the brine, which is constant, so it reads the same at standard and at\n    reservoir conditions: the gas a stream carries, or a degasser takes out, does not count.\n\n    ``gradient``, ``surface_temperature``, ``permeability`` and ``thickness`` are not design values:\n    a plant dict refuses them, and a run takes them from the case.\n\n    A group of values that is not complete derives nothing, and the old way, setting every child\n    value directly, works as it did. A child value in the same call wins over the derived one and\n    stays explicit. Setting ``fluid`` gives it to every child and derives again.\n\n    A building block, not schedulable on its own: a run sets ``reservoir.production_rate`` and\n    ``esp.frequency``; ``gm.schedule`` writes them for a doublet inside a plant with a demand.",
+  "doc": "Production and injection limbs, with the children's values derived from a design.\n\n    ``depth`` is the true vertical depth of the reservoir midpoint, ``thickness`` its gross\n    thickness and ``well_diameter`` the inner diameter of both vertical wells. ``set_params``\n    derives, through ``gemini/physics/doublet.py``:\n\n    - from ``depth``, ``gradient`` and ``surface_temperature``: a depth waits for the other two,\n      which the case holds (``environment.ground``) and sets for a run on a copy; a run that\n      starts without them raises ``missing_value`` naming the path. They give the reservoir\n      temperature at the midpoint, the reservoir pressure of the case at that depth, the top\n      depth and the soil temperature of the wells, the geotherm at half the depth;\n    - with ``permeability``, ``thickness`` (both of the case) and ``well_diameter``: the\n      productivity and injectivity indices of radial Darcy flow, with the fluid viscosity,\n      ``drainage_radius``, the wellbore radius and the ``skin`` of each reservoir, and the vertical\n      pipe paths of the wells, of the wall ``roughness`` the plant states;\n    - with ``nominal_flow``, ``pump_efficiency`` and ``nominal_wellhead_pressure``: the pump setting\n      depth, the shallowest that keeps that pressure at the intake, and a one-stage ESP of constant\n      head that reaches the wellhead pressure at the nominal flow, with that hydraulic efficiency.\n\n    ``volume_imbalance`` is the produced less the injected liquid volume flow. Both sides are the\n    liquid at the density of the brine, which is constant, so it reads the same at standard and at\n    reservoir conditions: the gas a stream carries, or a degasser takes out, does not count.\n\n    ``gradient``, ``surface_temperature``, ``permeability`` and ``thickness`` are not design values:\n    a plant dict refuses them, and a run takes them from the case.\n\n    A group of values that is not complete derives nothing, and the old way, setting every child\n    value directly, works as it did. A child value in the same call wins over the derived one and\n    stays explicit. Setting ``fluid`` gives it to every child and derives again.\n\n    A building block, not schedulable on its own: a run sets ``reservoir.production_rate`` and\n    ``esp.frequency``; ``gm.schedule`` writes them for a doublet inside a plant with a demand.",
   "inlets": {
     "power_in": {
       "fields": {
@@ -146,7 +146,7 @@
       "unit": "m"
     },
     "drainage_radius": {
-      "default": 1000.0,
+      "default": null,
       "description": "Radius of the drainage area around each well",
       "enum": null,
       "maximum": null,
@@ -210,6 +210,17 @@
       "section": "parameter",
       "type": "number",
       "unit": "-"
+    },
+    "roughness": {
+      "default": null,
+      "description": "Absolute roughness of the inner wall of both vertical wells",
+      "enum": null,
+      "maximum": null,
+      "minimum": 0,
+      "quantity": "length",
+      "section": "parameter",
+      "type": "number",
+      "unit": "m"
     },
     "surface_temperature": {
       "default": null,
@@ -392,6 +403,7 @@
       "riser.segment": "above_esp",
       "riser.soil_temperature": 288.15,
       "riser.two_phase_friction_correlation": "BeggsBrill",
+      "roughness": 4.5e-05,
       "sink.aquifer_thickness": 45.0,
       "sink.decline_threshold": 0.15,
       "sink.drainage_radius": 0.0,

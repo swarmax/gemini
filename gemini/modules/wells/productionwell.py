@@ -32,7 +32,6 @@ class ProductionWell(_Well):
         # Parameters
         self.segment = Parameter(
             Literal["full", "below_esp", "above_esp"],
-            default="full",
             description="Interval of the well traversed: the full well, below the pump or above it",
         )
         self.esp_depth = Parameter(

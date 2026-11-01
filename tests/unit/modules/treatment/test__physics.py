@@ -30,8 +30,3 @@ def test_dosing_flows_by_hand_and_on_arrays():
     assert product == pytest.approx(1e-3)
     assert active == pytest.approx(3e-4)
     assert_function_matches(_physics.dosing_flows, [(1e-5, 100.0, 0.3), (0.0, 50.0, 0.5)])
-
-
-def test_filter_defaults_keep_their_values():
-    """The design flow is 149 m3/h of 1068 kg/m3 brine."""
-    assert _physics.FILTER_NOMINAL_MASS_FLOW == 149 / 3600 * 1068

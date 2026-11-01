@@ -19,22 +19,25 @@ TEMPLATE_PLANTS = (
 )
 """The plants whose values are the sample problem's, in ``inputs/examples/``, not an example."""
 FORMER_EXAMPLES = {
-    "ATESPlant": "6a0269fce3fa75cb6309b11779cad3ac605aa65d5089020cb76ff8aa7e8b8170",
-    "BoilerChpPlant": "3a2d6449baf8119f953d91dc071b95717273a69d00c4169657e8133f863d59e2",
-    "CoolingSubstation": "64e2a52f01d79151750d6c90bd03b77ee1fef3e0f18111931cb8dd0cc025e24b",
-    "DistrictEnergyPlant": "ebce116425f8cb0bbbb10439e56a05def20c6bb3a9130daf005045042af64095",
-    "DistrictNetwork": "d9c9f286535f517fc5b575bd33d2861a5dcf45f65e1d2181c186d412b0c5ed94",
-    "Doublet": "316603c950435434ab9e4e7e5788e399fb769b71d5ba60aa3ca208d1c0412590",
-    "DoubletHeatPlant": "7ac9c1ec92f92b9a99496998e601c56ecf6d270e255d67500715063f3246e714",
-    "HeatingSubstation": "4f28ac09ac50639d8f0d3be2dfaf53650cb414105622b4401c27ccbe143eb73c",
-    "MultiWellPlant": "5fa362a1da016060c04b0903358f1390838d23b6b21b9de2b60366be312963b0",
-    "NodalDoublet": "8131c8c82e1375bee2cf480b3b9c874832d531f2ee3abb4262dd7da5331fa46c",
-    "ParallelExchangerPlant": "0095dfd55c794fbe0f25544a76a53660d40a5e1397b385751aa6fc6fb8494858",
+    "ATESPlant": "c701873fb9ab3804409b2cede107b27efda830d352bd2f2fe4d17af10da960e5",
+    "BoilerChpPlant": "9f59d42f48d2608f95a4784ce4ecbbf68b8cf84c71f55f8749c76c8a77e41e7e",
+    "CoolingSubstation": "3685c3ebc66824c6e0296386b373306ebe8254e9ad5d72b3cd2983fb7a2ba625",
+    "DistrictEnergyPlant": "dc4fa5c020d5b7367d4c6d1c636998e7204e07fe77a240858a6f05955a27a3e0",
+    "DistrictNetwork": "6f33b4f793e750d6efd7cc52934276a8a3ff2618ae5bd0b1c7c3106c90cdcab0",
+    "Doublet": "edc05bcafb3e3e3fb4cc08aed776aeb1f2783ed0f914afe01d5d31e80dcf9d78",
+    "DoubletHeatPlant": "30df8586e4eb31bf3b287b4f648f28c5091bfaa1b32580faaa197ea76a4540ed",
+    "HeatingSubstation": "efb07bdf6b9e33ccad37d6fc0603938770d4142f3cb9dcacfcde1b12ae5ad48b",
+    "MultiWellPlant": "ae8ad0475f83134e0201f7acf997090a522f3624f21b2f264304ee35eaf99e07",
+    "NodalDoublet": "c9e66f2c96e83152a5cc44cbb6169dd2e7d55d0098077554553666e56299544f",
+    "ParallelExchangerPlant": "bc36d7c313e147191ef5ac30a2480d34fca3da8d44cd9771b6ba20875ad0490f",
 }
 """Hash of ``to_dict()`` of the plant built from each whole example file these values replaced.
 
 The hashes were taken again when the plant dict lost the values of the case and wrote every value
 with a unit as ``{"value", "unit"}``; the design values are those of the files.
+They were taken again when the declarations of the modules lost their default design values: each
+file now states, with the value it effectively used, what a declaration used to default (a
+roughness, an arrangement, an alarm threshold); no value changed.
 
 The template plants have no example: their values are in the sample problem. ``Doublet`` is hashed
 without ``outputs``, which its structure file has and its former example file lacked.
@@ -95,7 +98,9 @@ def test_the_doublet_examples_carry_the_shared_doublet_heat_values():
     """The doublet is the ``doublet`` child of the doublet heat plant."""
     shared = example_plant("DoubletHeatPlant").to_dict(structure=True)
     doublet = example_plant("Doublet")
-    expected = shared["modules"]["doublet"]["params"]
+    expected = {
+        name: value for name, value in shared["modules"]["doublet"]["params"].items() if "." in name
+    }
     assert {
         f"{path}.{name}": value
         for path, entry in doublet.to_dict(structure=True)["modules"].items()

@@ -27,11 +27,11 @@ class FlashTurbine(Module):
     cannot represent the latent heat of the steam, so its residual is not valid for this phase
     change; the unit tests check closure with the steam enthalpies instead.
 
-    Defaults: ``isentropic_efficiency`` (``_physics.DEFAULT_TURBINE_EFFICIENCY``, 0.85) is the dry
-    turbine efficiency DiPippo assumes for geothermal steam turbines and ``baumann_factor`` 1 is
-    the classical Baumann rule (DiPippo, R. (2016), Geothermal Power Plants, 4th ed., section
-    5.5). Assumptions: no non-condensable gases, steam ejector or gland losses; condenser at a
-    fixed pressure. Valid for inlet pressures up to 16.529 MPa above a condenser pressure of at
+    Design values: ``isentropic_efficiency`` and ``baumann_factor`` are set by the plant. DiPippo
+    (R. (2016), Geothermal Power Plants, 4th ed., section 5.5) assumes a dry efficiency of 0.85
+    for geothermal steam turbines and the classical Baumann rule, a factor of 1.
+    Assumptions: no non-condensable gases, steam ejector or gland losses; condenser at a fixed
+    pressure. Valid for inlet pressures up to 16.529 MPa above a condenser pressure of at
     least 611.213 Pa, with a wet exhaust.
     """
 
@@ -42,12 +42,10 @@ class FlashTurbine(Module):
         # Parameters
         self.isentropic_efficiency = Parameter(
             Efficiency,
-            default=_physics.DEFAULT_TURBINE_EFFICIENCY,
             description="Dry-steam isentropic efficiency of the turbine",
         )
         self.baumann_factor = Parameter(
             Ratio,
-            default=1,
             description="Baumann coefficient: efficiency loss per unit of exhaust moisture",
         )
         self.condenser_pressure = Parameter(Pressure, gt=0, description="Pressure in the condenser")

@@ -22,6 +22,7 @@ from gemini.physics import constants
 from gemini.run.schedule import _doublets_above
 from gemini.runtime import settings
 from gemini.units import Quantity
+from tests.fixtures.designs import with_values
 from tests.fixtures.errors import raises
 from tests.fixtures.esp_design import ESP_DESIGN
 from tests.fixtures.parity import BACKENDS
@@ -141,7 +142,7 @@ def plant_of_two(names=("d0", "d1")):
     plant.add("HeatingGrid", name="users", params={"return_pressure": {"value": 6, "unit": "bar"}})
     wire(plant, names)
     plant.boiler.temperature_setpoint = {"value": 100, "unit": "degC"}
-    return plant
+    return with_values(plant)
 
 
 def wire(plant, names=("d0", "d1")):
@@ -421,7 +422,7 @@ def split_sources():
         {"source": "grid.gas_out", "target": "boiler.fuel_in"},
         {"source": "boiler.fluid_out", "target": "users.supply_in"},
     ]
-    built = gm.Plant.from_dict(spec)
+    built = with_values(gm.Plant.from_dict(spec))
     built.boiler.temperature_setpoint = {"value": 100, "unit": "degC"}
     built.heat_pump.temperature_setpoint = {"value": 100, "unit": "degC"}
     return built
@@ -506,7 +507,7 @@ COOLING_INPUTS = {
 
 def cooling_plant(inputs=COOLING_INPUTS):
     """Return the plant with every cooling unit: only what a schedule reads is set."""
-    plant = gm.plants.get("HeatingCoolingPlant")
+    plant = with_values(gm.plants.get("HeatingCoolingPlant"))
     plant.set_params("", COOLING_SIZES)
     plant.set_params("d0", DESIGN)
     return plant.set_inputs(inputs)

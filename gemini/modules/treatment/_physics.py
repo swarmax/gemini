@@ -1,20 +1,7 @@
-"""Treatment relations: gas separation, cyclone sand removal, dosing and filter defaults."""
+"""Treatment relations: gas separation, cyclone sand removal, and dosing."""
 
 from gemini import ops
 from gemini.physics.separation import split_flow
-
-DEFAULT_DEGASSER_DROP = 14900
-"""Default pressure loss [Pa] of a degasser vessel, 0.149 bar from Sep_Pin/Sep_Pout of the
-original GEMINI example."""
-
-
-FILTER_NOMINAL_MASS_FLOW = 149 / 3600 * 1068
-"""Default clean-filter design flow [kg/s]: 149 m3/h of brine at 1068 kg/m3."""
-
-
-FILTER_NOMINAL_DROP = 1600
-"""Default clean-filter pressure loss [Pa] at the design flow, 0.016 bar of the original GEMINI
-example."""
 
 
 @ops.physics
