@@ -261,7 +261,7 @@ def test_a_many_port_may_stay_empty():
     plant = gm.Plant("Idle")
     plant.add(Bus, "bus")
     assert plant()
-    assert gm.plants.validate(plant.to_dict(structure=True), on_error="record") == []
+    assert gm.plants.validate(plant, on_error="record") == []
 
 
 def test_an_offered_outlet_closes_a_loop_without_state():

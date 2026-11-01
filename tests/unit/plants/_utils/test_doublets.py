@@ -78,7 +78,7 @@ def test_every_template_takes_one_to_three_doublets(name, count):
     assert [hasattr(plant, f"d{index}") for index in range(4)] == [
         index < count for index in range(4)
     ]
-    assert gm.plants.validate(plant.to_dict(structure=True), on_error="record") == []
+    assert gm.plants.validate(plant, on_error="record") == []
     assert plant.to_dict()["size"] == {"doublets": count}
 
 

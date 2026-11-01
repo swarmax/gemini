@@ -51,7 +51,7 @@ def chain():
     plant.connect("boiler.fluid_out", "water_out")
     assert {
         item["code"]
-        for item in gm.plants.validate(plant.to_dict(structure=True), on_error="record")
+        for item in gm.plants.validate(plant, on_error="record")
     } == {"root_plant_port"}
     return plant
 

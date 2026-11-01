@@ -102,7 +102,7 @@ def test_params_set_since_and_validation_agree_with_the_builder():
     plant.connect("air", "pipe.air_in")
     plant.connect("pipe.fluid_out", "product")
     plant.connect("pipe.loss_out", "loss")
-    found = gm.plants.validate(plant.to_dict(structure=True), on_error="record")
+    found = gm.plants.validate(plant, on_error="record")
     assert {item["code"] for item in found} == {"root_plant_port"}
     with pytest.raises(gm.errors.ValidationError):
         plant.add("Pipe", "bad", params={"length": {"value": 5, "unit": "bar"}})

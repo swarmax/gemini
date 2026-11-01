@@ -127,7 +127,7 @@ def test_the_treatment_design_is_complete_and_valid():
     """Every port is connected and every parameter has a value."""
     plant = treatment_plant()
     assert plant.is_initialized
-    assert gm.plants.validate(plant.to_dict(structure=True), on_error="record") == []
+    assert gm.plants.validate(plant, on_error="record") == []
     assert plant.d0.reservoir.temperature == plant.d1.reservoir.temperature
     assert plant.heat_users.fluid == gm.WATER
 
@@ -139,3 +139,15 @@ def test_names_lists_the_plants_of_a_purpose():
     assert "Doublet" not in catalogue.names("both") + catalogue.names("heating")
     with raises(gm.errors.ValidationError, "unknown_name"):
         catalogue.names("steam")
+
+
+def test_validate_gives_the_same_for_a_plant_and_its_dict():
+    """A good plant and a broken one: the plant and its structure dict agree."""
+    good = treatment_plant()
+    assert gm.plants.validate(good, on_error="record") == gm.plants.validate(
+        good.to_dict(structure=True), on_error="record"
+    )
+    broken = gm.Plant("Open")
+    broken.add("Degasser", "degasser")
+    found = gm.plants.validate(broken, on_error="record")
+    assert found and found == gm.plants.validate(broken.to_dict(structure=True), on_error="record")

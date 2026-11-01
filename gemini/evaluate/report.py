@@ -31,13 +31,15 @@ class Report(dict):
 
         The values inside the report stay SI; the dict shows them in the display table of
         ``gm.evaluate`` (energy in MWh, power in MW, money in MEUR, LCTS in EUR/MWh, CO2 in kt,
-        flow in m3/h, temperature in degC), also inside ``capacities`` and ``constraints``.
+        flow in m3/h, temperature in degC), also inside ``capacities`` and ``constraints`` and in
+        the parts of a value (annualised cost in MEUR/yr, energy per year in MWh/yr, mass in kt,
+        durations in days). A part that is dimensionless or text stays as it is.
 
         Parameters
         ----------
         units : dict, optional
-            ``{metric: unit}`` that replaces the display unit of a metric of the report, and of the
-            parts of that metric. A name that is not a metric with a display unit raises
+            ``{metric: unit}`` that replaces the display unit of a metric of the report, and of
+            every part of the same SI unit. A name that is not a metric with a display unit raises
             ``invalid_value``; a unit of another dimension raises ``invalid_unit``.
         """
         chosen = display_units(list(self), units)
