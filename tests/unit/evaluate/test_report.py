@@ -6,6 +6,8 @@ import pytest
 
 import gemini as gm
 from gemini.units import SECONDS_PER_YEAR, Quantity
+from gemini.evaluate.report import Report
+from tests.unit.evaluate.test_capacities import boiler_plant, boiler_run
 from tests.fixtures.cases import costed_finance, make_case
 from tests.fixtures.costed_plants import day, heating_plant
 from tests.fixtures.result_tables import make_results
@@ -105,7 +107,11 @@ def test_to_dict_shows_display_units_or_the_ones_given_and_the_report_stays_si()
     plain = report.to_dict()
     assert plain["heat_delivered"]["unit"] == "MWh"
     assert plain["heat_delivered"]["value"] == pytest.approx(0.024)
-    assert {item["capacity"]["unit"] for item in plain["capacities"].values()} == {"MW"}
+    assert plain["capacities"] == {}
+    sized = Report(capacities=gm.evaluate.capacities(boiler_plant(), make_case(count=3), boiler_run()))
+    boiler = sized.to_dict()["capacities"]["boiler"]
+    assert boiler["capacity"] == {"value": pytest.approx(0.01), "unit": "MW"}
+    assert boiler["share"]["unit"] == "-"
     given = report.to_dict(units={"heat_delivered": "GWh", "capex": "EUR"})
     assert given["heat_delivered"]["unit"] == "GWh" and given["capex"]["unit"] == "EUR"
     assert given["capex"]["value"] == pytest.approx(1000.0)
